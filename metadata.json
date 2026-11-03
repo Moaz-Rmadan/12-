@@ -1,0 +1,6 @@
+{
+  "name": "النجار ديزاين - نظام إدارة أوامر الشغل",
+  "description": "نظام احترافي لإدارة أوامر الشغل ومتابعة تشغيل الورش والدهانات والتنجيد وقاعدة البيانات لمصنع أثاث النجار ديزاين.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

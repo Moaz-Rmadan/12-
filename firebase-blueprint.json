@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer entity representing a client of El-Naggar Design Furniture Factory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique customer ID" },
+        "name": { "type": "string", "description": "Customer full name", "minLength": 2, "maxLength": 100 },
+        "phone": { "type": "string", "description": "Customer phone number", "pattern": "^[0-9+\\-\\s]{8,20}$" },
+        "address": { "type": "string", "description": "Customer delivery address", "maxLength": 255 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "phone"]
+    },
+    "JobOrder": {
+      "title": "JobOrder",
+      "description": "Job order document for custom furniture production",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Job order ID" },
+        "order_number": { "type": "string", "description": "Unique order reference number e.g. JO-2026-101", "maxLength": 50 },
+        "customer_id": { "type": "string", "description": "Reference to customer ID" },
+        "room_model_code": { "type": "string", "description": "Room or model code", "maxLength": 100 },
+        "contract_date": { "type": "string", "description": "Contract date YYYY-MM-DD" },
+        "delivery_date": { "type": "string", "description": "Delivery date YYYY-MM-DD" },
+        "general_specs": { "type": "string", "description": "General furniture specifications", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["قيد التشغيل", "تم التنفيذ", "تسليم"] },
+        "total_price": { "type": "number", "description": "Total contract value" },
+        "deposit_paid": { "type": "number", "description": "Deposit amount paid" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "order_number", "customer_id", "room_model_code", "status"]
+    },
+    "JobDetail": {
+      "title": "JobDetail",
+      "description": "Detailed workshop dimensions, paint, and upholstery specs for a job order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "job_order_id": { "type": "string" },
+        "dimensions_cm": { "type": "string", "description": "Detailed dimensions in cm", "maxLength": 500 },
+        "wood_type": { "type": "string", "description": "Wood type", "maxLength": 100 },
+        "paint_details": { "type": "string", "description": "Paint details", "maxLength": 500 },
+        "fabric_source": { "type": "string", "description": "Fabric supplier/source", "maxLength": 100 },
+        "color_code": { "type": "string", "description": "Fabric color code", "maxLength": 100 },
+        "batch_number": { "type": "string", "description": "Fabric batch number", "maxLength": 100 },
+        "installation_notes": { "type": "string", "description": "Site installation notes", "maxLength": 500 },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "job_order_id", "dimensions_cm", "paint_details", "fabric_source", "batch_number"]
+    },
+    "Attachment": {
+      "title": "Attachment",
+      "description": "Attached images including CAD drawings, fabric swatch tags, and 3D renders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "job_order_id": { "type": "string" },
+        "file_type": { "type": "string", "enum": ["drawing", "fabric_sample", "3d_render", "other"] },
+        "file_url": { "type": "string", "description": "Image URL or data URL" },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 500 },
+        "uploaded_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "job_order_id", "file_type", "file_url", "title"]
+    }
+  },
+  "firestore": {
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/Customer" },
+      "description": "Collection storing customer profiles"
+    },
+    "/job_orders/{jobOrderId}": {
+      "schema": { "$ref": "#/entities/JobOrder" },
+      "description": "Collection storing job orders"
+    },
+    "/job_orders/{jobOrderId}/job_details/{detailId}": {
+      "schema": { "$ref": "#/entities/JobDetail" },
+      "description": "Subcollection storing detailed workshop specifications"
+    },
+    "/job_orders/{jobOrderId}/attachments/{attachmentId}": {
+      "schema": { "$ref": "#/entities/Attachment" },
+      "description": "Subcollection storing attached image drawings and swatch tags"
+    }
+  }
+}

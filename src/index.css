@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Professional A4 Print Styling for El-Naggar Design Furniture Job Orders */
+  @media print {
+    @page {
+      size: A4 portrait;
+      margin: 8mm 10mm;
+    }
+
+    html, body {
+      background: #ffffff !important;
+      color: #000000 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Hide UI controls, headers, buttons, and side panels during print */
+    .no-print,
+    header,
+    footer,
+    nav {
+      display: none !important;
+    }
+
+    .print-only {
+      display: block !important;
+    }
+
+    /* Ensure printable document fills A4 page cleanly */
+    .print-card {
+      box-shadow: none !important;
+      border: 3px double #000000 !important;
+      margin: 0 auto !important;
+      padding: 12mm 10mm !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      background: #ffffff !important;
+    }
+
+    /* Preserve distinct text colors (Blue titles, Red technical details) on paper */
+    .text-blue-900, .text-blue-950 {
+      color: #002266 !important;
+    }
+
+    .text-red-600 {
+      color: #cc0000 !important;
+    }
+
+    .text-amber-800 {
+      color: #884400 !important;
+    }
+
+    /* Image optimization for print */
+    img {
+      max-height: 220px !important;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      object-fit: contain !important;
+    }
+
+    .print-signature {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin-top: 10mm !important;
+    }
+  }
+}
