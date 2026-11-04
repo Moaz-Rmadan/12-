@@ -11,8 +11,14 @@ import {
   subscribeToJobOrders,
   subscribeToCustomers,
   saveJobOrderToFirestore,
+  updateJobOrderInFirestore,
   updateOrderStatusInFirestore,
   deleteOrderFromFirestore,
+  deleteCustomerFromFirestore,
+  saveCustomerToFirestore,
+  saveBatchCustomersToFirestore,
+  saveBatchJobOrdersToFirestore,
+  seedWorkshopDataIfMissing,
 } from './lib/firebase';
 
 import {
@@ -39,6 +45,7 @@ export default function App() {
 
   const [selectedOrderForCard, setSelectedOrderForCard] = useState<JobOrderPopulated | null>(null);
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState<boolean>(false);
+  const [orderToEdit, setOrderToEdit] = useState<JobOrderPopulated | null>(null);
 
   // Sync Dark mode with <html> tag
   useEffect(() => {
@@ -49,8 +56,13 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Firebase Real-time Firestore Sync Listeners
+  // Firebase Real-time Firestore Sync Listeners & Workshop Seed Check
   useEffect(() => {
+    // Ensure all 5 customers and 12 workshop orders are stored in Firestore
+    seedWorkshopDataIfMissing(initialCustomers, getPopulatedOrders()).catch((e) =>
+      console.warn('Initial workshop seed check:', e)
+    );
+
     const unsubscribeOrders = subscribeToJobOrders((firestoreOrders) => {
       if (firestoreOrders && firestoreOrders.length > 0) {
         setOrders(firestoreOrders);
@@ -69,26 +81,41 @@ export default function App() {
     };
   }, []);
 
-  // Handle New Order Submission (Firebase Firestore + Local Fallback)
-  const handleCreateOrder = async (payload: CreateJobOrderPayload) => {
+  // Handle Order Create or Edit (Firebase Firestore + Local Fallback)
+  const handleSaveOrder = async (payload: CreateJobOrderPayload, orderId?: string) => {
     try {
-      const newPopulated = await saveJobOrderToFirestore(payload);
-      setOrders((prev) => {
-        const exists = prev.some((o) => o.id === newPopulated.id);
-        if (exists) return prev;
-        return [newPopulated, ...prev];
-      });
-
-      const newCust = newPopulated.customer;
-      if (newCust) {
-        setCustomers((prev) => {
-          const exists = prev.some((c) => c.id === newCust.id);
+      if (orderId) {
+        // Edit existing order in Firestore
+        const updated = await updateJobOrderInFirestore(orderId, payload);
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+        if (updated.customer) {
+          setCustomers((prev) =>
+            prev.map((c) => (c.id === updated.customer?.id ? { ...c, ...updated.customer } : c))
+          );
+        }
+        if (selectedOrderForCard && selectedOrderForCard.id === orderId) {
+          setSelectedOrderForCard(updated);
+        }
+      } else {
+        // Create new order in Firestore
+        const newPopulated = await saveJobOrderToFirestore(payload);
+        setOrders((prev) => {
+          const exists = prev.some((o) => o.id === newPopulated.id);
           if (exists) return prev;
-          return [newCust, ...prev];
+          return [newPopulated, ...prev];
         });
+
+        const newCust = newPopulated.customer;
+        if (newCust) {
+          setCustomers((prev) => {
+            const exists = prev.some((c) => c.id === newCust.id);
+            if (exists) return prev;
+            return [newCust, ...prev];
+          });
+        }
       }
     } catch (e) {
-      console.error('Firebase save error, falling back locally', e);
+      console.error('Firebase save or update error, falling back locally', e);
     }
   };
 
@@ -119,6 +146,74 @@ export default function App() {
     setOrders((prev) => prev.filter((o) => o.id !== id));
   };
 
+  // Handle Customer Deletion (Firebase Firestore)
+  const handleDeleteCustomer = async (id: string) => {
+    try {
+      await deleteCustomerFromFirestore(id);
+    } catch (e) {
+      console.error('Firebase customer delete error', e);
+    }
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  // Handle Batch Customer Import (Firebase Firestore)
+  const handleAddBatchCustomers = async (
+    newCustomersList: Array<{ name: string; phone: string; address?: string }>
+  ): Promise<number> => {
+    try {
+      const added = await saveBatchCustomersToFirestore(newCustomersList);
+      if (added.length > 0) {
+        setCustomers((prev) => {
+          const existingIds = new Set(prev.map((c) => c.id));
+          const filteredNew = added.filter((c) => !existingIds.has(c.id));
+          return [...filteredNew, ...prev];
+        });
+      }
+      return added.length;
+    } catch (e) {
+      console.error('Firebase batch import error', e);
+      return 0;
+    }
+  };
+
+  // Handle Single Customer Quick Add (Firebase Firestore)
+  const handleAddSingleCustomer = async (custData: { name: string; phone: string; address?: string }) => {
+    try {
+      const saved = await saveCustomerToFirestore(custData);
+      setCustomers((prev) => [saved, ...prev.filter((c) => c.id !== saved.id)]);
+    } catch (e) {
+      console.error('Firebase single customer save error', e);
+    }
+  };
+
+  // Handle Batch Job Orders Import (auto-filters customers and orders into Firestore)
+  const handleAddBatchOrders = async (ordersList: CreateJobOrderPayload[]): Promise<number> => {
+    try {
+      const savedOrders = await saveBatchJobOrdersToFirestore(ordersList);
+      if (savedOrders.length > 0) {
+        setOrders((prev) => {
+          const existingIds = new Set(prev.map((o) => o.id));
+          const filteredNew = savedOrders.filter((o) => !existingIds.has(o.id));
+          return [...filteredNew, ...prev];
+        });
+
+        setCustomers((prev) => {
+          const customerMap = new Map(prev.map((c) => [c.id, c]));
+          for (const ord of savedOrders) {
+            if (ord.customer && !customerMap.has(ord.customer.id)) {
+              customerMap.set(ord.customer.id, ord.customer);
+            }
+          }
+          return Array.from(customerMap.values());
+        });
+      }
+      return savedOrders.length;
+    } catch (e) {
+      console.error('Firebase batch job orders error', e);
+      return 0;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fdfbf7] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-200">
       
@@ -126,9 +221,14 @@ export default function App() {
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenNewOrderModal={() => setIsNewOrderModalOpen(true)}
+        onOpenNewOrderModal={() => {
+          setOrderToEdit(null);
+          setIsNewOrderModalOpen(true);
+        }}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
+        orders={orders}
+        onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
       />
 
       {/* Main Content Area */}
@@ -136,7 +236,7 @@ export default function App() {
         
         {/* TAB 0: TEMPLATE STUDIO */}
         {activeTab === 'template-studio' && (
-          <TemplateStudio onSaveToDatabase={handleCreateOrder} />
+          <TemplateStudio onSaveToDatabase={(payload) => handleSaveOrder(payload)} />
         )}
 
         {/* TAB 1: JOB ORDERS MANAGEMENT */}
@@ -150,9 +250,15 @@ export default function App() {
 
             <OrderList
               orders={orders}
+              customers={customers}
               onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
+              onEditOrder={(ord) => {
+                setOrderToEdit(ord);
+                setIsNewOrderModalOpen(true);
+              }}
               onUpdateStatus={handleUpdateStatus}
               onDeleteOrder={handleDeleteOrder}
+              onAddBatchOrders={handleAddBatchOrders}
               activeFilter={activeFilter}
               setActiveFilter={setActiveFilter}
             />
@@ -164,7 +270,13 @@ export default function App() {
           <CustomersManager
             customers={customers}
             orders={orders}
-            onOpenNewOrderForCustomer={() => setIsNewOrderModalOpen(true)}
+            onOpenNewOrderForCustomer={() => {
+              setOrderToEdit(null);
+              setIsNewOrderModalOpen(true);
+            }}
+            onDeleteCustomer={handleDeleteCustomer}
+            onAddBatchCustomers={handleAddBatchCustomers}
+            onAddSingleCustomer={handleAddSingleCustomer}
           />
         )}
 
@@ -188,17 +300,29 @@ export default function App() {
       </footer>
 
       {/* MODALS */}
-      <WorkshopCardModal
-        order={selectedOrderForCard}
-        onClose={() => setSelectedOrderForCard(null)}
-        onUpdateStatus={handleUpdateStatus}
-      />
+      {selectedOrderForCard && (
+        <WorkshopCardModal
+          order={selectedOrderForCard}
+          onClose={() => setSelectedOrderForCard(null)}
+          onUpdateStatus={handleUpdateStatus}
+          onEditOrder={(ord) => {
+            setOrderToEdit(ord);
+            setIsNewOrderModalOpen(true);
+          }}
+        />
+      )}
 
-      <OrderFormModal
-        isOpen={isNewOrderModalOpen}
-        onClose={() => setIsNewOrderModalOpen(false)}
-        onSubmit={handleCreateOrder}
-      />
+      {isNewOrderModalOpen && (
+        <OrderFormModal
+          isOpen={isNewOrderModalOpen}
+          onClose={() => {
+            setIsNewOrderModalOpen(false);
+            setOrderToEdit(null);
+          }}
+          onSubmit={handleSaveOrder}
+          orderToEdit={orderToEdit}
+        />
+      )}
 
     </div>
   );

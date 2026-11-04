@@ -3,15 +3,13 @@ import {
   Hammer,
   ClipboardList,
   Users,
-  Image as ImageIcon,
-  Database,
-  FolderTree,
-  Bot,
   Plus,
   Sun,
   Moon,
   Sparkles,
 } from 'lucide-react';
+import { JobOrderPopulated } from '../types';
+import { NotificationsDropdown } from './NotificationsDropdown';
 
 interface HeaderProps {
   activeTab: string;
@@ -19,6 +17,8 @@ interface HeaderProps {
   onOpenNewOrderModal: () => void;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
+  orders: JobOrderPopulated[];
+  onSelectOrder: (order: JobOrderPopulated) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewOrderModal,
   darkMode,
   setDarkMode,
+  orders,
+  onSelectOrder,
 }) => {
   const navItems = [
     { id: 'template-studio', label: 'مولد أمر الشغل', icon: Sparkles },
@@ -85,6 +87,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Zone 3: Actions & Theme Toggle */}
           <div className="flex items-center gap-3 shrink-0">
+            <NotificationsDropdown orders={orders} onSelectOrder={onSelectOrder} />
+
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"

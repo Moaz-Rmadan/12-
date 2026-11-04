@@ -1,28 +1,28 @@
-import React, { useState } from 'react';
-import { CreateJobOrderPayload, OrderStatus, AttachmentType } from '../types';
-import { X, Save, Hammer, Ruler, Paintbrush, Scissors, Plus, Trash2, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CreateJobOrderPayload, OrderStatus, AttachmentType, JobOrderPopulated } from '../types';
+import { X, Save, Hammer, Ruler, Paintbrush, Scissors, Plus, Trash2, Upload, Edit3, Sparkles } from 'lucide-react';
 import { compressImage } from '../utils/imageCompressor';
 
 interface OrderFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (payload: CreateJobOrderPayload) => void;
+  onSubmit: (payload: CreateJobOrderPayload, orderId?: string) => void;
+  orderToEdit?: JobOrderPopulated | null;
 }
 
 export const OrderFormModal: React.FC<OrderFormModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  orderToEdit,
 }) => {
-  if (!isOpen) return null;
-
-  const defaultOrderNum = `JO-2026-${Math.floor(100 + Math.random() * 900)}`;
+  const isEditMode = Boolean(orderToEdit);
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
 
-  const [orderNumber, setOrderNumber] = useState(defaultOrderNum);
+  const [orderNumber, setOrderNumber] = useState('');
   const [roomModelCode, setRoomModelCode] = useState('RM-BED-LUX-01');
   const [contractDate, setContractDate] = useState(new Date().toISOString().split('T')[0]);
   const [deliveryDate, setDeliveryDate] = useState(
@@ -38,23 +38,84 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
   const [paintDetails, setPaintDetails] = useState('دهان بولي يوريثان مط عالي الثبات على قشرة أرو');
   const [fabricSource, setFabricSource] = useState('وكالة النحاس للأقمشة - قطيفة فاخرة');
   const [colorCode, setColorCode] = useState('VELVET-NVY-904');
-  const [batchNumber, setBatchNumber] = useState(`BATCH-2026-${Math.floor(100 + Math.random() * 900)}`);
+  const [batchNumber, setBatchNumber] = useState('');
   const [installationNotes, setInstallationNotes] = useState('تركيب دور 2، التأكد من استواء الأرضيات');
 
   const [attachmentsList, setAttachmentsList] = useState<
     Array<{ file_type: AttachmentType; file_url: string; title: string }>
-  >([
-    {
-      file_type: 'drawing',
-      file_url: '/src/assets/images/bedroom_cad_drawing_1793738336612.jpg',
-      title: 'الرسم الهيكلي والتنفيذي (CAD)',
-    },
-    {
-      file_type: 'fabric_sample',
-      file_url: '/src/assets/images/fabric_sample_swatch_1793738336334.jpg',
-      title: 'كرت عينة القماش واللون',
-    },
-  ]);
+  >([]);
+
+  useEffect(() => {
+    if (orderToEdit) {
+      setCustomerName(orderToEdit.customer?.name || '');
+      setCustomerPhone(orderToEdit.customer?.phone || '');
+      setCustomerAddress(orderToEdit.customer?.address || '');
+
+      setOrderNumber(orderToEdit.order_number);
+      setRoomModelCode(orderToEdit.room_model_code);
+      setContractDate(orderToEdit.contract_date);
+      setDeliveryDate(orderToEdit.delivery_date);
+      setGeneralSpecs(orderToEdit.general_specs);
+      setStatus(orderToEdit.status);
+      setTotalPrice(orderToEdit.total_price);
+      setDepositPaid(orderToEdit.deposit_paid);
+
+      setDimensionsCm(orderToEdit.job_details?.dimensions_cm || '');
+      setWoodType(orderToEdit.job_details?.wood_type || 'خشب زان أحمر روماني + أبلكاش سه');
+      setPaintDetails(orderToEdit.job_details?.paint_details || '');
+      setFabricSource(orderToEdit.job_details?.fabric_source || '');
+      setColorCode(orderToEdit.job_details?.color_code || '');
+      setBatchNumber(orderToEdit.job_details?.batch_number || '');
+      setInstallationNotes(orderToEdit.job_details?.installation_notes || '');
+
+      if (orderToEdit.attachments && orderToEdit.attachments.length > 0) {
+        setAttachmentsList(
+          orderToEdit.attachments.map((a) => ({
+            file_type: a.file_type,
+            file_url: a.file_url,
+            title: a.title,
+          }))
+        );
+      } else {
+        setAttachmentsList([]);
+      }
+    } else {
+      // New Order defaults
+      const defaultOrderNum = `JO-2026-${Math.floor(100 + Math.random() * 900)}`;
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerAddress('');
+      setOrderNumber(defaultOrderNum);
+      setRoomModelCode('RM-BED-LUX-01');
+      setContractDate(new Date().toISOString().split('T')[0]);
+      setDeliveryDate(
+        new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      );
+      setGeneralSpecs('');
+      setStatus('قيد التشغيل');
+      setTotalPrice(150000);
+      setDepositPaid(80000);
+      setDimensionsCm('الدولاب: 280 × 220 × 65 سم | السرير: 180 × 200 سم');
+      setWoodType('خشب زان أحمر روماني + أبلكاش سه');
+      setPaintDetails('دهان بولي يوريثان مط عالي الثبات على قشرة أرو');
+      setFabricSource('وكالة النحاس للأقمشة - قطيفة فاخرة');
+      setColorCode('VELVET-NVY-904');
+      setBatchNumber(`BATCH-2026-${Math.floor(100 + Math.random() * 900)}`);
+      setInstallationNotes('تركيب دور 2، التأكد من استواء الأرضيات');
+      setAttachmentsList([
+        {
+          file_type: 'drawing',
+          file_url: '/src/assets/images/bedroom_cad_drawing_1793738336612.jpg',
+          title: 'الرسم الهيكلي والتنفيذي (CAD)',
+        },
+        {
+          file_type: 'fabric_sample',
+          file_url: '/src/assets/images/fabric_sample_swatch_1793738336334.jpg',
+          title: 'كرت عينة القماش واللون',
+        },
+      ]);
+    }
+  }, [orderToEdit, isOpen]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: AttachmentType) => {
     const files = e.target.files;
@@ -124,9 +185,11 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
       attachments: attachmentsList.filter((a) => a.file_url.trim() !== ''),
     };
 
-    onSubmit(payload);
+    onSubmit(payload, orderToEdit?.id);
     onClose();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
@@ -135,15 +198,24 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
         {/* Header */}
         <div className="sticky top-0 z-10 bg-gradient-to-r from-amber-900 via-amber-950 to-slate-900 text-amber-50 px-6 py-4 flex items-center justify-between border-b border-amber-800/50">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/20 text-amber-300">
-              <Hammer className="w-5 h-5" />
+            <div className={`p-2 rounded-lg ${isEditMode ? 'bg-amber-400/20 text-amber-300' : 'bg-amber-500/20 text-amber-300'}`}>
+              {isEditMode ? <Edit3 className="w-5 h-5 text-amber-300" /> : <Hammer className="w-5 h-5" />}
             </div>
             <div>
-              <h2 className="text-lg font-bold font-serif text-amber-100">
-                إنشاء أمر شغل جديد - النجار ديزاين
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold font-serif text-amber-100">
+                  {isEditMode ? `تعديل أمر الشغل (${orderToEdit?.order_number})` : 'إنشاء أمر شغل جديد'}
+                </h2>
+                {isEditMode && (
+                  <span className="text-[10px] bg-amber-400 text-amber-950 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    أمر تعديل مواصفة / ECO
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-amber-300/80">
-                إدخال بيانات العميل، الموديل، الدهانات، والتنجيد برقم الـ Batch
+                {isEditMode
+                  ? 'تعديل المقاسات، نوع الخشب، كود القماش أو رقم الباتش وحفظها في قاعدة البيانات'
+                  : 'إدخال بيانات العميل، الموديل، الدهانات، والتنجيد برقم الـ Batch'}
               </p>
             </div>
           </div>
@@ -501,7 +573,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
               className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-amber-800 to-amber-950 hover:from-amber-900 hover:to-slate-900 shadow-sm transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              <span>حفظ أمر الشغل</span>
+              <span>{isEditMode ? 'تحديث وحفظ التعديل' : 'حفظ أمر الشغل'}</span>
             </button>
           </div>
 
