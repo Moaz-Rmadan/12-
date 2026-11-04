@@ -91,7 +91,11 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        className={`relative p-2 sm:p-2.5 rounded-xl border transition-all cursor-pointer ${
+          isOpen
+            ? 'bg-amber-100 dark:bg-amber-950/80 border-amber-400 text-amber-900 dark:text-amber-200 shadow-xs ring-2 ring-amber-500/20'
+            : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+        }`}
         title="تنبيهات مواعيد التسليم (خلال 48 ساعة)"
         aria-label="تنبيهات مواعيد التسليم"
       >
@@ -111,9 +115,9 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
         />
       )}
 
-      {/* Dropdown Menu - Fully Responsive for Mobile & Desktop */}
+      {/* Dropdown Menu - Perfectly Positioned for Desktop RTL & Mobile */}
       {isOpen && (
-        <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-96 max-w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden font-sans flex flex-col max-h-[82vh] sm:max-h-none">
+        <div className="fixed left-3 right-3 top-20 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2.5 w-auto sm:w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[100] overflow-hidden font-sans flex flex-col max-h-[82vh] sm:max-h-[500px]">
           
           {/* Header */}
           <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
@@ -133,7 +137,8 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
               </span>
               <button
                 onClick={() => setIsOpen(false)}
-                className="sm:hidden p-1 rounded-lg text-slate-400 hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-white"
+                title="إغلاق التنبيهات"
               >
                 <X className="w-4 h-4" />
               </button>

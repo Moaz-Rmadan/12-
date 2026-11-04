@@ -105,3 +105,28 @@ export interface TemplateJobOrder {
   approverName: string; // e.g. "محمد عبد الله"
   logoUrl?: string; // Optional custom logo image URL
 }
+
+// Truck Manifest / Delivery Cargo Load Trip Sheet Types ("حمولة العربية")
+export interface TruckManifestItem {
+  id: string;
+  customerName: string; // e.g. "عمرو ابو حشيش" or "المعرض"
+  qty: number; // e.g. 1
+  itemName: string; // e.g. "مكتبة عش النحل"
+  specsDetails: string; // e.g. "جزء سفلي فقط"
+  notes: string; // e.g. "الدهان كما هو بالمعرض"
+  salesperson: string; // e.g. "محمد حسين"
+  orderId?: string;
+  itemType?: 'delivery' | 'return'; // 'delivery' = تسليم, 'return' = مرتجع
+  returnReason?: string; // سبب الارجاع (صيانة، تعديل دهان، الخ)
+}
+
+export interface TruckManifest {
+  id: string;
+  tripDate: string; // YYYY/MM/DD e.g. "2026/03/04"
+  tripDay: string; // e.g. "الأربعاء"
+  truckNumber: string; // e.g. "1697"
+  driverName: string; // e.g. "عصام"
+  items: TruckManifestItem[];
+  createdAt?: string;
+  updatedAt?: string;
+}

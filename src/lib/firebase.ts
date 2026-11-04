@@ -16,7 +16,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Customer, JobOrderPopulated, CreateJobOrderPayload, OrderStatus } from '../types';
+import { Customer, JobOrderPopulated, CreateJobOrderPayload, OrderStatus, TruckManifest } from '../types';
 import { initialCustomers, initialOrders, getPopulatedOrders } from '../data/mockData';
 
 // Initialize Firebase App & Firestore Database
@@ -554,6 +554,48 @@ export async function seedWorkshopDataIfMissing(
     console.error('[Firebase] Error syncing workshop orders to Firestore:', err);
     return false;
   }
+}
+
+// -----------------------------------------------------------------------------
+// TRUCK MANIFEST FIRESTORE SERVICES ("حمولة العربية")
+// -----------------------------------------------------------------------------
+
+export async function saveTruckManifestToFirestore(manifest: TruckManifest): Promise<TruckManifest> {
+  // Strip all undefined fields to prevent Firestore "Unsupported field value: undefined" error
+  const cleanManifest = JSON.parse(JSON.stringify(manifest)) as TruckManifest;
+
+  try {
+    const docRef = doc(db, 'truck_manifests', cleanManifest.id);
+    await setDoc(docRef, cleanManifest, { merge: true });
+    console.log('[Firebase] Saved truck manifest to Firestore:', cleanManifest.id);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `truck_manifests/${cleanManifest.id}`);
+  }
+
+  return cleanManifest;
+}
+
+export function subscribeToTruckManifests(callback: (manifests: TruckManifest[]) => void) {
+  const colRef = collection(db, 'truck_manifests');
+
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      if (!snapshot.empty) {
+        const list: TruckManifest[] = [];
+        snapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data() as TruckManifest;
+          if (data && data.id) {
+            list.push(data);
+          }
+        });
+        callback(list);
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'truck_manifests');
+    }
+  );
 }
 
 

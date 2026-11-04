@@ -8,6 +8,7 @@ import {
   Moon,
   Sparkles,
   FileCheck,
+  Truck,
 } from 'lucide-react';
 import { JobOrderPopulated } from '../types';
 import { NotificationsDropdown } from './NotificationsDropdown';
@@ -36,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'orders', label: 'أوامر الشغل', icon: ClipboardList },
     { id: 'customers', label: 'العملاء', icon: Users },
     { id: 'receipt', label: 'إقرار استلام عميل', icon: FileCheck },
+    { id: 'truck-manifest', label: 'حمولة العربية', icon: Truck },
   ];
 
   return (

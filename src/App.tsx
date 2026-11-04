@@ -7,10 +7,13 @@ import { OrderFormModal } from './components/OrderFormModal';
 import { CustomersManager } from './components/CustomersManager';
 import { TemplateStudio } from './components/TemplateStudio';
 import { CustomerDeliveryReceiptView } from './components/CustomerDeliveryReceiptView';
+import { TruckManifestStudio } from './components/TruckManifestStudio';
 
 import {
   subscribeToJobOrders,
   subscribeToCustomers,
+  subscribeToTruckManifests,
+  saveTruckManifestToFirestore,
   saveJobOrderToFirestore,
   updateJobOrderInFirestore,
   updateOrderStatusInFirestore,
@@ -28,11 +31,13 @@ import {
   Customer,
   OrderStatus,
   CreateJobOrderPayload,
+  TruckManifest,
 } from './types';
 import {
   initialCustomers,
   getPopulatedOrders,
 } from './data/mockData';
+import { initialTruckManifests } from './data/truckManifestData';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -44,6 +49,7 @@ export default function App() {
 
   const [orders, setOrders] = useState<JobOrderPopulated[]>(() => getPopulatedOrders());
   const [customers, setCustomers] = useState<Customer[]>(() => initialCustomers);
+  const [truckManifests, setTruckManifests] = useState<TruckManifest[]>(() => initialTruckManifests);
 
   const [selectedOrderForCard, setSelectedOrderForCard] = useState<JobOrderPopulated | null>(null);
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState<boolean>(false);
@@ -78,9 +84,16 @@ export default function App() {
       }
     });
 
+    const unsubscribeManifests = subscribeToTruckManifests((firestoreManifests) => {
+      if (firestoreManifests && firestoreManifests.length > 0) {
+        setTruckManifests(firestoreManifests);
+      }
+    });
+
     return () => {
       unsubscribeOrders();
       unsubscribeCustomers();
+      unsubscribeManifests();
     };
   }, []);
 
@@ -314,6 +327,21 @@ export default function App() {
           />
         )}
 
+        {/* TAB 4: TRUCK MANIFEST STUDIO (حمولة العربية) */}
+        {activeTab === 'truck-manifest' && (
+          <TruckManifestStudio
+            customers={customers}
+            orders={orders}
+            manifests={truckManifests}
+            onSaveManifestToDb={async (manifest) => {
+              const saved = await saveTruckManifestToFirestore(manifest);
+              if (saved && saved.id) {
+                setTruckManifests((prev) => [saved, ...(prev || []).filter((m) => m && m.id && m.id !== saved.id)]);
+              }
+            }}
+          />
+        )}
+
       </main>
 
       {/* Footer */}
@@ -322,12 +350,10 @@ export default function App() {
           <div className="flex items-center gap-2 font-serif font-bold text-amber-950 dark:text-amber-200">
             <span>مصنع النجار فيرنتشر للأثاث والديكور</span>
             <span>·</span>
-            <span>نظام إدارة أوامر الشغل المربوط بـ Firebase Firestore</span>
+            <span>ديفلوبر معاذ رمضان</span>
           </div>
 
           <div className="flex items-center gap-4 text-[11px]">
-            <span>Firebase Firestore Database</span>
-            <span>·</span>
             <span>© {new Date().getFullYear()} El-Naggar Furniture</span>
           </div>
         </div>
