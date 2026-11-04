@@ -767,19 +767,19 @@ export const OrderList: React.FC<OrderListProps> = ({
         </div>
 
         {/* ROW 2: STATUS TABS & ACTIONS */}
-        <div className="p-3 bg-slate-50/80 dark:bg-slate-850 px-4 sm:px-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-3 bg-slate-50/80 dark:bg-slate-850 px-3 sm:px-5 flex flex-wrap items-center justify-between gap-3">
           
           {/* Status Filters */}
-          <div className="flex items-center gap-1 p-0.5 bg-slate-200/70 dark:bg-slate-800 rounded-lg">
+          <div className="flex items-center gap-1 p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl overflow-x-auto scrollbar-none max-w-full">
             {['الكل', 'قيد التشغيل', 'تم التنفيذ', 'تسليم', 'الأرشيف'].map((filter) => {
               const isActive = activeFilter === filter;
               return (
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer shrink-0 min-h-[34px] ${
                     isActive
-                      ? 'bg-white dark:bg-slate-900 text-amber-950 dark:text-amber-200 shadow-2xs font-extrabold'
+                      ? 'bg-white dark:bg-slate-900 text-amber-950 dark:text-amber-200 shadow-2xs font-black'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                   }`}
                 >
@@ -790,31 +790,34 @@ export const OrderList: React.FC<OrderListProps> = ({
           </div>
 
           {/* Results Summary & Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-3 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800">
             <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
-              عرض <strong className="text-amber-800 dark:text-amber-400 font-mono text-sm">{uniqueFilteredOrders.length}</strong> من أصل <span className="font-mono">{orders.length}</span> أمر شغل
+              عرض <strong className="text-amber-800 dark:text-amber-400 font-mono text-sm">{uniqueFilteredOrders.length}</strong> من أصل <span className="font-mono">{orders.length}</span> أمر
             </span>
 
-            {hasActiveFilters && (
-              <button
-                onClick={handleResetFilters}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 transition-colors cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>إلغاء الفلاتر</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
+                <button
+                  onClick={handleResetFilters}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>إلغاء الفلاتر</span>
+                </button>
+              )}
 
-            {onAddBatchOrders && (
-              <button
-                onClick={() => setIsBatchImportOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-100 hover:bg-amber-200/80 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 transition-colors cursor-pointer"
-                title="استيراد وتوزيع أوامر الشغل والعملاء تلقائياً"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
-                <span>استيراد وفرز</span>
-              </button>
-            )}
+              {onAddBatchOrders && (
+                <button
+                  onClick={() => setIsBatchImportOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-100 hover:bg-amber-200/80 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 transition-colors cursor-pointer shrink-0"
+                  title="استيراد وتوزيع أوامر الشغل والعملاء تلقائياً"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
+                  <span className="hidden xs:inline">استيراد وفرز</span>
+                  <span className="xs:hidden">استيراد</span>
+                </button>
+              )}
+            </div>
           </div>
 
         </div>

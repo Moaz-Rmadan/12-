@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { JobOrderPopulated } from '../types';
-import { Bell, Clock, AlertTriangle, Calendar, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { Bell, Clock, AlertTriangle, Calendar, ChevronLeft, CheckCircle2, X } from 'lucide-react';
 
 interface NotificationsDropdownProps {
   orders: JobOrderPopulated[];
@@ -32,6 +32,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
 
     return orders
       .filter((ord) => {
+        if (ord.is_archived) return false;
         if (ord.status === 'تسليم') return false; // Already delivered
         if (!ord.delivery_date) return false;
 
@@ -43,9 +44,8 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
 
         const diffTime = targetDate.getTime() - now.getTime();
         const diffHours = diffTime / (1000 * 60 * 60);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        // Overdue or within next 48 hours (diffHours <= 48, which covers diffDays <= 2 and past due)
+        // Overdue or within next 48 hours
         return diffHours <= 48;
       })
       .sort((a, b) => (a.delivery_date || '').localeCompare(b.delivery_date || ''));
@@ -65,22 +65,22 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
     if (diffDays < 0) {
       return (
         <span className="text-[10px] bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold px-2 py-0.5 rounded-full border border-rose-300 flex items-center gap-1">
-          <AlertTriangle className="w-3 h-3" />
-          <span>متأخر عن موعد التسليم ({Math.abs(diffDays)} يوم)</span>
+          <AlertTriangle className="w-3 h-3 shrink-0" />
+          <span>متأخر عن الموعد ({Math.abs(diffDays)} يوم)</span>
         </span>
       );
     }
     if (diffDays === 0) {
       return (
         <span className="text-[10px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 font-extrabold px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1 animate-pulse">
-          <Clock className="w-3 h-3" />
+          <Clock className="w-3 h-3 shrink-0" />
           <span>موعـد الاستلام اليـوم!</span>
         </span>
       );
     }
     return (
       <span className="text-[10px] bg-amber-50 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-        <Clock className="w-3 h-3 text-amber-600" />
+        <Clock className="w-3 h-3 text-amber-600 shrink-0" />
         <span>متبقي {diffDays} أيام (خلال 48 ساعة)</span>
       </span>
     );
@@ -91,7 +91,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        className="relative p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
         title="تنبيهات مواعيد التسليم (خلال 48 ساعة)"
         aria-label="تنبيهات مواعيد التسليم"
       >
@@ -103,14 +103,22 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
         )}
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Mobile Backdrop Overlay */}
       {isOpen && (
-        <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden font-sans">
+        <div
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 sm:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Dropdown Menu - Fully Responsive for Mobile & Desktop */}
+      {isOpen && (
+        <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-96 max-w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden font-sans flex flex-col max-h-[82vh] sm:max-h-none">
           
           {/* Header */}
-          <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+          <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
             <div className="flex items-center gap-2">
-              <div className="p-1 rounded bg-amber-500/20 text-amber-400">
+              <div className="p-1 rounded bg-amber-500/20 text-amber-400 shrink-0">
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
@@ -118,13 +126,22 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
                 <p className="text-[10px] text-slate-400">أوامر الشغل المستحقة خلال 48 ساعة أو المتأخرة</p>
               </div>
             </div>
-            <span className="px-2 py-0.5 text-xs font-mono font-bold bg-amber-500 text-amber-950 rounded-full">
-              {count} تنبيه
-            </span>
+
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 text-xs font-mono font-bold bg-amber-500 text-amber-950 rounded-full shrink-0">
+                {count} تنبيه
+              </span>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="sm:hidden p-1 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* List */}
-          <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="max-h-[360px] sm:max-h-[380px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 flex-1">
             {urgentOrders.length === 0 ? (
               <div className="p-8 text-center space-y-2">
                 <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
@@ -165,9 +182,9 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center justify-between gap-2 pt-1">
                     {getUrgencyBadge(ord.delivery_date)}
-                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 group-hover:underline flex items-center gap-0.5">
+                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 group-hover:underline flex items-center gap-0.5 shrink-0">
                       <span>عرض الكارت</span>
                       <ChevronLeft className="w-3 h-3" />
                     </span>
@@ -178,7 +195,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 text-center">
+          <div className="p-2.5 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 text-center shrink-0">
             <span className="text-[10px] text-slate-500 dark:text-slate-400">
               النظام يقوم بالتحديث تلقائياً وفقاً لمواعيد الورشة
             </span>
