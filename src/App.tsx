@@ -6,6 +6,7 @@ import { WorkshopCardModal } from './components/WorkshopCardModal';
 import { OrderFormModal } from './components/OrderFormModal';
 import { CustomersManager } from './components/CustomersManager';
 import { TemplateStudio } from './components/TemplateStudio';
+import { CustomerDeliveryReceiptView } from './components/CustomerDeliveryReceiptView';
 
 import {
   subscribeToJobOrders,
@@ -47,6 +48,7 @@ export default function App() {
   const [selectedOrderForCard, setSelectedOrderForCard] = useState<JobOrderPopulated | null>(null);
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState<boolean>(false);
   const [orderToEdit, setOrderToEdit] = useState<JobOrderPopulated | null>(null);
+  const [selectedCustomerForReceiptId, setSelectedCustomerForReceiptId] = useState<string>('');
 
   // Sync Dark mode with <html> tag
   useEffect(() => {
@@ -293,9 +295,22 @@ export default function App() {
               setOrderToEdit(null);
               setIsNewOrderModalOpen(true);
             }}
+            onOpenDeliveryReceiptForCustomer={(cust) => {
+              setSelectedCustomerForReceiptId(cust.id);
+              setActiveTab('receipt');
+            }}
             onDeleteCustomer={handleDeleteCustomer}
             onAddBatchCustomers={handleAddBatchCustomers}
             onAddSingleCustomer={handleAddSingleCustomer}
+          />
+        )}
+
+        {/* TAB 3: CUSTOMER DELIVERY RECEIPT REPORT */}
+        {activeTab === 'receipt' && (
+          <CustomerDeliveryReceiptView
+            customers={customers}
+            orders={orders}
+            initialCustomerId={selectedCustomerForReceiptId}
           />
         )}
 
@@ -305,7 +320,7 @@ export default function App() {
       <footer className="no-print bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 mt-12 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2 font-serif font-bold text-amber-950 dark:text-amber-200">
-            <span>مصنع النجار ديزاين للأثاث والديكور</span>
+            <span>مصنع النجار فيرنتشر للأثاث والديكور</span>
             <span>·</span>
             <span>نظام إدارة أوامر الشغل المربوط بـ Firebase Firestore</span>
           </div>
@@ -313,7 +328,7 @@ export default function App() {
           <div className="flex items-center gap-4 text-[11px]">
             <span>Firebase Firestore Database</span>
             <span>·</span>
-            <span>© {new Date().getFullYear()} El-Naggar Design</span>
+            <span>© {new Date().getFullYear()} El-Naggar Furniture</span>
           </div>
         </div>
       </footer>

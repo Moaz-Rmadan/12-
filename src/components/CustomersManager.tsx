@@ -15,12 +15,14 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  FileCheck,
 } from 'lucide-react';
 
 interface CustomersManagerProps {
   customers: Customer[];
   orders: JobOrderPopulated[];
   onOpenNewOrderForCustomer?: (customer: Customer) => void;
+  onOpenDeliveryReceiptForCustomer?: (customer: Customer) => void;
   onDeleteCustomer?: (customerId: string) => void;
   onAddBatchCustomers?: (newCustomers: Array<{ name: string; phone: string; address?: string }>) => Promise<number>;
   onAddSingleCustomer?: (customer: { name: string; phone: string; address?: string }) => Promise<void>;
@@ -30,6 +32,7 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
   customers,
   orders,
   onOpenNewOrderForCustomer,
+  onOpenDeliveryReceiptForCustomer,
   onDeleteCustomer,
   onAddBatchCustomers,
   onAddSingleCustomer,
@@ -345,7 +348,7 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
                   <a
                     href={`https://wa.me/2${cust.phone.replace(/[^0-9]/g, '')}`}
                     target="_blank"
@@ -353,18 +356,31 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
                     className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span>تواصل واتساب</span>
+                    <span>واتساب</span>
                   </a>
 
-                  {onOpenNewOrderForCustomer && (
-                    <button
-                      onClick={() => onOpenNewOrderForCustomer(cust)}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold text-amber-950 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/80 hover:bg-amber-200 transition-colors cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>أمر جديد</span>
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {onOpenDeliveryReceiptForCustomer && (
+                      <button
+                        onClick={() => onOpenDeliveryReceiptForCustomer(cust)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/80 hover:bg-amber-200 transition-colors cursor-pointer"
+                        title="طباعة إقرار استلام منتجات العميل"
+                      >
+                        <FileCheck className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
+                        <span>إقرار استلام</span>
+                      </button>
+                    )}
+
+                    {onOpenNewOrderForCustomer && (
+                      <button
+                        onClick={() => onOpenNewOrderForCustomer(cust)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-800 hover:bg-amber-900 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>أمر جديد</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
               </div>

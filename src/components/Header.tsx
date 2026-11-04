@@ -7,6 +7,7 @@ import {
   Sun,
   Moon,
   Sparkles,
+  FileCheck,
 } from 'lucide-react';
 import { JobOrderPopulated } from '../types';
 import { NotificationsDropdown } from './NotificationsDropdown';
@@ -34,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'template-studio', label: 'مولد أمر الشغل', icon: Sparkles },
     { id: 'orders', label: 'أوامر الشغل', icon: ClipboardList },
     { id: 'customers', label: 'العملاء', icon: Users },
+    { id: 'receipt', label: 'إقرار استلام عميل', icon: FileCheck },
   ];
 
   return (
@@ -55,10 +57,10 @@ export const Header: React.FC<HeaderProps> = ({
                 }}
                 className="text-base sm:text-xl font-extrabold tracking-tight text-amber-950 dark:text-amber-100 font-serif whitespace-nowrap block"
               >
-                النجار ديزاين
+                النجار فيرنتشر
               </a>
               <span className="text-[9px] sm:text-[11px] text-amber-800/80 dark:text-amber-400 font-medium block -mt-0.5 tracking-wider uppercase">
-                El-Naggar Design
+                El-Naggar Furniture
               </span>
             </div>
           </div>

@@ -557,7 +557,7 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
 
                     {/* Factory Stamp & Sign line */}
                     <div className="text-right sm:text-left font-serif text-[11px] sm:text-xs text-slate-400 italic">
-                      مصنع النجار ديزاين للأثاث والديكور
+                      مصنع النجار فيرنتشر للأثاث والديكور
                     </div>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 /**
  * Utility to reliably trigger printing inside iframe preview sandboxes and popups
  * Supports A4 portrait and A4 landscape for optimal fitting of single-page work orders,
- * including 100% full-bleed high-res original work order sheets (بالملي).
+ * including 100% full-bleed high-res original work order sheets and delivery receipts.
  */
 export function printElementById(elementId: string, orientation: 'portrait' | 'landscape' = 'portrait') {
   try {
@@ -23,7 +23,7 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
           <html lang="ar" dir="rtl">
             <head>
               <meta charset="utf-8">
-              <title>طباعة أمر الشغل الأصلي - مصنع النجار ديزاين</title>
+              <title>مصنع النجار فيرنتشر</title>
               <link rel="preconnect" href="https://fonts.googleapis.com">
               <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
               <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
@@ -31,7 +31,7 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
               <style>
                 @page {
                   size: A4 ${orientation};
-                  margin: ${orientation === 'landscape' ? '4mm 6mm' : '5mm 8mm'};
+                  margin: ${orientation === 'landscape' ? '3mm 5mm' : '4mm 6mm'};
                 }
                 * {
                   -webkit-print-color-adjust: exact !important;
@@ -46,34 +46,41 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
                   padding: 0 !important;
                   direction: rtl !important;
                   width: 100% !important;
+                  height: 100% !important;
+                  overflow: hidden !important;
                 }
                 .print-container {
                   width: 100% !important;
                   max-width: 100% !important;
                   margin: 0 auto !important;
+                  page-break-after: avoid !important;
+                  page-break-before: avoid !important;
                   page-break-inside: avoid !important;
                   break-inside: avoid !important;
-                  font-size: ${orientation === 'landscape' ? '13px' : '14px'} !important;
-                  line-height: 1.35 !important;
+                  font-size: ${orientation === 'landscape' ? '12px' : '13px'} !important;
+                  line-height: 1.3 !important;
                 }
-                /* Ensure single page fit for digital card */
-                #printable-workshop-card {
+                /* Ensure single page fit for digital card and delivery receipts */
+                #printable-workshop-card, #printable-delivery-receipt, #printable-job-order-sheet {
                   border: 2px solid #000 !important;
                   box-shadow: none !important;
                   max-width: 100% !important;
                   margin: 0 auto !important;
-                  padding: ${orientation === 'landscape' ? '8px 12px' : '12px 16px'} !important;
+                  padding: ${orientation === 'landscape' ? '6px 10px' : '10px 14px'} !important;
+                  page-break-after: avoid !important;
+                  page-break-before: avoid !important;
                   page-break-inside: avoid !important;
                   break-inside: avoid !important;
                 }
                 .text-blue-900, .text-blue-950 { color: #002266 !important; }
+                .text-emerald-800, .text-emerald-950 { color: #064e3b !important; }
                 .text-red-600 { color: #cc0000 !important; }
                 .text-amber-800 { color: #884400 !important; }
                 .no-print { display: none !important; }
                 
                 /* Standard embedded thumbnails vs 100% Full Sheet Images */
                 img {
-                  max-height: ${orientation === 'landscape' ? '140px' : '220px'} !important;
+                  max-height: ${orientation === 'landscape' ? '120px' : '180px'} !important;
                   object-fit: contain !important;
                   page-break-inside: avoid !important;
                 }
@@ -135,22 +142,29 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
         <html lang="ar" dir="rtl">
           <head>
             <meta charset="utf-8">
-            <title>أمر شغل - مصنع النجار ديزاين</title>
+            <title>مصنع النجار فيرنتشر</title>
             <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
             <script src="https://cdn.tailwindcss.com"></script>
             <style>
-              @page { size: A4 ${orientation}; margin: 5mm 8mm; }
-              body { font-family: 'Cairo', sans-serif !important; background: #fff !important; color: #000 !important; direction: rtl !important; }
+              @page { size: A4 ${orientation}; margin: 4mm 6mm; }
+              body { font-family: 'Cairo', sans-serif !important; background: #fff !important; color: #000 !important; direction: rtl !important; overflow: hidden !important; }
               .text-blue-900, .text-blue-950 { color: #002266 !important; }
+              .text-emerald-800, .text-emerald-950 { color: #064e3b !important; }
               .text-red-600 { color: #cc0000 !important; }
               .text-amber-800 { color: #884400 !important; }
               .no-print { display: none !important; }
-              img { max-height: 200px; object-fit: contain; }
+              #printable-workshop-card, #printable-delivery-receipt, #printable-job-order-sheet {
+                page-break-after: avoid !important;
+                page-break-before: avoid !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+              img { max-height: 180px; object-fit: contain; }
               img.full-sheet-img { max-height: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; }
             </style>
           </head>
           <body>
-            <div style="width: 100%; max-width: 210mm; margin: 0 auto;">
+            <div style="width: 100%; max-width: 210mm; margin: 0 auto; page-break-inside: avoid;">
               ${htmlContent}
             </div>
           </body>

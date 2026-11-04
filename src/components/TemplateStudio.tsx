@@ -259,7 +259,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
             <span>Interactive Job Order Sheet Generator &amp; Template Studio</span>
           </div>
           <h2 className="text-lg sm:text-xl font-black font-serif text-amber-100">
-            مولد ومصمم قالب أمر الشغل القياسي (النجار ديزاين)
+            مولد ومصمم قالب أمر الشغل القياسي (النجار فيرنتشر)
           </h2>
           <p className="text-xs text-amber-200/80 mt-1 max-w-2xl leading-relaxed">
             اختر قالباً جاهزاً مستوحى من أوامر الشغل المرفقة، عدل البيانات والألوان، ارفع صور العينات، واطبع الورقة المعتمدة مباشرة!
