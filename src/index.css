@@ -4,7 +4,17 @@
 
 @layer base {
   body {
-    font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
+    font-family: 'Tajawal', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cairo', sans-serif;
+    font-weight: 800;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
   }
 
   /* Professional A4 Print Styling for El-Naggar Design Furniture Job Orders */

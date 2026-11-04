@@ -13,6 +13,7 @@ import {
   saveJobOrderToFirestore,
   updateJobOrderInFirestore,
   updateOrderStatusInFirestore,
+  updateOrderArchiveStatusInFirestore,
   deleteOrderFromFirestore,
   deleteCustomerFromFirestore,
   saveCustomerToFirestore,
@@ -133,6 +134,23 @@ export default function App() {
 
     if (selectedOrderForCard && selectedOrderForCard.id === id) {
       setSelectedOrderForCard((prev) => (prev ? { ...prev, status: newStatus } : null));
+    }
+  };
+
+  // Handle Archive Status Update (Firebase Firestore)
+  const handleUpdateArchiveStatus = async (id: string, isArchived: boolean) => {
+    try {
+      await updateOrderArchiveStatusInFirestore(id, isArchived);
+    } catch (e) {
+      console.error('Firebase archive update error', e);
+    }
+
+    setOrders((prev) =>
+      prev.map((ord) => (ord.id === id ? { ...ord, is_archived: isArchived } : ord))
+    );
+
+    if (selectedOrderForCard && selectedOrderForCard.id === id) {
+      setSelectedOrderForCard((prev) => (prev ? { ...prev, is_archived: isArchived } : null));
     }
   };
 
@@ -257,6 +275,7 @@ export default function App() {
                 setIsNewOrderModalOpen(true);
               }}
               onUpdateStatus={handleUpdateStatus}
+              onUpdateArchiveStatus={handleUpdateArchiveStatus}
               onDeleteOrder={handleDeleteOrder}
               onAddBatchOrders={handleAddBatchOrders}
               activeFilter={activeFilter}
@@ -305,6 +324,7 @@ export default function App() {
           order={selectedOrderForCard}
           onClose={() => setSelectedOrderForCard(null)}
           onUpdateStatus={handleUpdateStatus}
+          onUpdateArchiveStatus={handleUpdateArchiveStatus}
           onEditOrder={(ord) => {
             setOrderToEdit(ord);
             setIsNewOrderModalOpen(true);

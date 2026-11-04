@@ -251,6 +251,20 @@ export async function updateOrderStatusInFirestore(orderId: string, newStatus: O
   }
 }
 
+// Update Order Archive Status in Firestore
+export async function updateOrderArchiveStatusInFirestore(orderId: string, isArchived: boolean) {
+  try {
+    const orderDocRef = doc(db, 'job_orders', orderId);
+    await updateDoc(orderDocRef, {
+      is_archived: isArchived,
+      updated_at: new Date().toISOString(),
+    });
+    console.log('[Firebase] Order archive status updated:', orderId, isArchived);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
+  }
+}
+
 // Update Complete Job Order in Firestore (for modifications / amendments)
 export async function updateJobOrderInFirestore(
   orderId: string,

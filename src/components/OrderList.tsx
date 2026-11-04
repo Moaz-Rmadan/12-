@@ -27,6 +27,7 @@ import {
   Layers,
   CalendarDays,
   CheckCircle2,
+  Archive,
 } from 'lucide-react';
 import { BatchOrderImportModal } from './BatchOrderImportModal';
 import {
@@ -43,6 +44,7 @@ interface OrderListProps {
   onSelectOrder: (order: JobOrderPopulated) => void;
   onEditOrder: (order: JobOrderPopulated) => void;
   onUpdateStatus: (id: string, newStatus: OrderStatus) => void;
+  onUpdateArchiveStatus?: (id: string, isArchived: boolean) => void;
   onDeleteOrder: (id: string) => void;
   onAddBatchOrders?: (ordersList: CreateJobOrderPayload[]) => Promise<number>;
   activeFilter: string;
@@ -55,6 +57,7 @@ export const OrderList: React.FC<OrderListProps> = ({
   onSelectOrder,
   onEditOrder,
   onUpdateStatus,
+  onUpdateArchiveStatus,
   onDeleteOrder,
   onAddBatchOrders,
   activeFilter,
@@ -110,8 +113,9 @@ export const OrderList: React.FC<OrderListProps> = ({
   // Base orders for category counts (filtered by month/date and status)
   const baseOrdersForCounts = useMemo(() => {
     return orders.filter((ord) => {
+      if (ord.is_archived) return false;
       // 1. Status Filter
-      if (activeFilter !== 'الكل' && ord.status !== activeFilter) {
+      if (activeFilter !== 'الكل' && activeFilter !== 'الأرشيف' && ord.status !== activeFilter) {
         return false;
       }
       // 2. Month / Date Filter
@@ -140,10 +144,12 @@ export const OrderList: React.FC<OrderListProps> = ({
   const monthCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     orders.forEach((o) => {
-      const d = o.delivery_date?.trim();
-      if (d && d.length >= 7) {
-        const monthKey = d.substring(0, 7);
-        counts[monthKey] = (counts[monthKey] || 0) + 1;
+      if (!o.is_archived) {
+        const d = o.delivery_date?.trim();
+        if (d && d.length >= 7) {
+          const monthKey = d.substring(0, 7);
+          counts[monthKey] = (counts[monthKey] || 0) + 1;
+        }
       }
     });
     return counts;
@@ -216,9 +222,15 @@ export const OrderList: React.FC<OrderListProps> = ({
   const filteredAndSortedOrders = useMemo(() => {
     return orders
       .filter((ord) => {
-        // 1. Status Filter
-        if (activeFilter !== 'الكل' && ord.status !== activeFilter) {
-          return false;
+        // 0. Archive filter check
+        if (activeFilter === 'الأرشيف') {
+          if (!ord.is_archived) return false;
+        } else {
+          if (ord.is_archived) return false; // Hide archived orders from active lists
+          // 1. Status Filter
+          if (activeFilter !== 'الكل' && ord.status !== activeFilter) {
+            return false;
+          }
         }
 
         // 2. Customer Name Filter (Exact or partial substring)
@@ -230,7 +242,7 @@ export const OrderList: React.FC<OrderListProps> = ({
           }
         }
 
-        // 3. Furniture Category Filter (غرفة نوم كبيرة، انتريه، غرفة شبابي، ركنة، ليزي بوي، جزامة، سفرة)
+        // 3. Furniture Category Filter
         if (selectedCategory !== 'all') {
           const ordCat = getOrderCategory(ord);
           if (ordCat !== selectedCategory) {
@@ -247,7 +259,7 @@ export const OrderList: React.FC<OrderListProps> = ({
           }
         }
 
-        // 5. General Search (Order Number, Specs, Code, Phone, Wood, Dimensions)
+        // 5. General Search
         if (generalSearch.trim()) {
           const q = generalSearch.toLowerCase().trim();
           const matches =
@@ -759,7 +771,7 @@ export const OrderList: React.FC<OrderListProps> = ({
           
           {/* Status Filters */}
           <div className="flex items-center gap-1 p-0.5 bg-slate-200/70 dark:bg-slate-800 rounded-lg">
-            {['الكل', 'قيد التشغيل', 'تم التنفيذ', 'تسليم'].map((filter) => {
+            {['الكل', 'قيد التشغيل', 'تم التنفيذ', 'تسليم', 'الأرشيف'].map((filter) => {
               const isActive = activeFilter === filter;
               return (
                 <button
@@ -896,83 +908,90 @@ export const OrderList: React.FC<OrderListProps> = ({
             return (
             <div
               key={ord.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1 relative"
             >
+              {/* Top Gradient Accent Strip */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-600 via-amber-400 to-amber-700 opacity-90" />
+
               <div>
                 {/* Order Top Banner */}
-                <div className="p-4 bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                <div className="p-4 bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-black px-2.5 py-1 rounded-md bg-amber-950 text-amber-200">
+                    <span className="font-mono text-xs font-black px-2.5 py-1 rounded-lg bg-amber-950 text-amber-200 shadow-2xs">
                       {ord.order_number}
                     </span>
-                    <span className="text-[11px] font-bold font-mono text-slate-500 dark:text-slate-400">
-                      [{ord.room_model_code}]
+                    <span className="text-[11px] font-extrabold font-mono text-slate-500 dark:text-slate-400 bg-slate-200/70 dark:bg-slate-800 px-2 py-0.5 rounded">
+                      {ord.room_model_code}
                     </span>
                     {catInfo && (
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md border ${catInfo.badgeClass}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${catInfo.dotColor}`} />
+                      <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs ${catInfo.badgeClass}`}>
+                        <span className={`w-2 h-2 rounded-full ${catInfo.dotColor}`} />
                         <span>{catInfo.shortName}</span>
                       </span>
                     )}
                     {ord.updated_at && ord.created_at && ord.updated_at !== ord.created_at && (
-                      <span className="text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold border border-amber-400/40">
+                      <span className="text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-400/40">
                         معدّل
                       </span>
                     )}
                   </div>
 
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${getStatusStyle(ord.status)} shrink-0`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold border shadow-2xs ${getStatusStyle(ord.status)} shrink-0`}>
                     {ord.status}
                   </span>
                 </div>
 
                 {/* Card Body */}
                 <div className="p-5 space-y-4">
-                  {/* General Specs */}
+                  {/* General Specs Title */}
                   <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-amber-900 dark:group-hover:text-amber-300 transition-colors line-clamp-2">
+                    <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 group-hover:text-amber-900 dark:group-hover:text-amber-300 transition-colors line-clamp-2 leading-relaxed">
                       {ord.general_specs}
                     </h3>
                   </div>
 
                   {/* Customer Info Card */}
-                  <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 p-2.5 rounded-lg bg-amber-50/40 dark:bg-slate-800/40 border border-amber-200/30 dark:border-slate-800">
+                  <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 p-3 rounded-xl bg-amber-50/50 dark:bg-slate-800/40 border border-amber-200/40 dark:border-slate-800">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                        <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-amber-800/10 text-amber-900 dark:text-amber-300 flex items-center justify-center shrink-0">
+                          <User className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm font-serif">
                           {ord.customer?.name || 'عميل غير مسجل'}
                         </span>
                       </div>
-                      <span className="text-[10px] text-amber-800 dark:text-amber-400 font-bold font-mono">
-                        {ord.customer?.phone || ''}
+                      <span className="text-xs text-amber-900 dark:text-amber-400 font-bold font-mono bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-amber-200/60 dark:border-slate-700">
+                        {ord.customer?.phone || 'بدون هاتف'}
                       </span>
                     </div>
                   </div>
 
                   {/* Specs Snapshot */}
-                  <div className="space-y-1 text-[11px] text-slate-600 dark:text-slate-400">
-                    <div className="flex items-start gap-1.5 truncate">
-                      <Ruler className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 px-1">
+                    <div className="flex items-start gap-2">
+                      <Ruler className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
                       <span className="truncate">
-                        المقاسات: <strong className="font-mono text-slate-800 dark:text-slate-200">{ord.job_details?.dimensions_cm || 'حسب الكارت'}</strong>
+                        المقاسات: <strong className="font-mono text-slate-900 dark:text-slate-100 font-bold">{ord.job_details?.dimensions_cm || 'حسب الكارت المعتمد'}</strong>
                       </span>
                     </div>
 
-                    <div className="flex items-start gap-1.5 truncate">
-                      <Scissors className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-2">
+                      <Scissors className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
                       <span className="truncate">
-                        التنجيد: <strong className="text-slate-800 dark:text-slate-200">{ord.job_details?.fabric_source || ord.job_details?.color_code || 'كما بالمعرض'}</strong>
+                        التنجيد: <strong className="text-slate-900 dark:text-slate-100 font-bold">{ord.job_details?.fabric_source || ord.job_details?.color_code || 'كما بالمعرض'}</strong>
                       </span>
                     </div>
                   </div>
 
                   {/* Delivery Date Highlight & Due Countdown */}
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4 text-amber-700 shrink-0" />
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300">
+                        <Calendar className="w-4 h-4" />
+                      </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 block leading-none">تاريخ الاستلام:</span>
+                        <span className="text-[10px] text-slate-400 font-bold block leading-none">موعد التسليم:</span>
                         <strong className="font-mono text-xs font-black text-amber-950 dark:text-amber-200">
                           {ord.delivery_date}
                         </strong>
@@ -985,18 +1004,18 @@ export const OrderList: React.FC<OrderListProps> = ({
               </div>
 
               {/* Card Footer Actions */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+              <div className="p-3 bg-slate-50/90 dark:bg-slate-800/60 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2">
                 <button
                   onClick={() => onSelectOrder(ord)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-amber-950 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/80 hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors cursor-pointer"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-amber-700 via-amber-800 to-amber-950 hover:from-amber-800 hover:to-slate-900 shadow-sm hover:shadow transition-all cursor-pointer active:scale-95"
                 >
-                  <Eye className="w-3.5 h-3.5" />
+                  <Eye className="w-4 h-4 text-amber-200" />
                   <span>كارت الورشة المطابق</span>
                 </button>
 
                 <button
                   onClick={() => onEditOrder(ord)}
-                  className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                  className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                   title="تعديل بيانات ومواصفات الأمر"
                 >
                   <Edit3 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
@@ -1008,7 +1027,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                     value={ord.status}
                     onChange={(e) => onUpdateStatus(ord.id, e.target.value as OrderStatus)}
                     aria-label="تغيير حالة الأمر"
-                    className="text-[11px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2 py-1.5 font-bold cursor-pointer"
+                    className="text-[11px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-black cursor-pointer text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500/50"
                     title="تغيير حالة الأمر"
                   >
                     <option value="قيد التشغيل">تشغيل</option>
@@ -1019,11 +1038,25 @@ export const OrderList: React.FC<OrderListProps> = ({
                   <button
                     onClick={() => setOrderToDelete(ord)}
                     aria-label="حذف أمر الشغل"
-                    className="p-1.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                     title="حذف الأمر"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+
+                  {onUpdateArchiveStatus && (
+                    <button
+                      onClick={() => onUpdateArchiveStatus(ord.id, !ord.is_archived)}
+                      className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                        ord.is_archived
+                          ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
+                          : 'text-amber-800 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300'
+                      }`}
+                      title={ord.is_archived ? 'استعادة من الأرشيف' : 'أرشفة أمر الشغل'}
+                    >
+                      <Archive className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 

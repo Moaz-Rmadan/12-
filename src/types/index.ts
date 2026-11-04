@@ -22,6 +22,7 @@ export interface JobOrder {
   status: OrderStatus;
   total_price: number;
   deposit_paid: number;
+  is_archived?: boolean; // أرشفة أمر الشغل
   created_at?: string;
   updated_at?: string;
 }

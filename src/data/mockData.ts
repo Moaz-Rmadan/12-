@@ -169,6 +169,13 @@ export const initialCustomers: Customer[] = [
     address: 'القاهرة - استلام الثلاثاء 01-11-2026 ضرورى جداً (ركنة ريلاكس مخصوص)',
     created_at: '2026-10-15T10:00:00Z',
   },
+  {
+    id: 'cust-hamdoon',
+    name: 'ا. حمدون تيجاني',
+    phone: '01089012355',
+    address: 'القاهرة - استلام الثلاثاء 10-11-2026 (ركنة اوميجا - إشراف م. محمود زايد)',
+    created_at: '2026-11-03T10:00:00Z',
+  },
 ];
 
 export const initialOrders: JobOrder[] = [
@@ -779,6 +786,22 @@ export const initialOrders: JobOrder[] = [
     created_at: '2026-10-15T10:00:00Z',
     updated_at: '2026-11-01T12:00:00Z',
   },
+
+  // --- 32. ا. حمدون تيجاني (أمر شغل 1 - ركنة اوميجا) ---
+  {
+    id: 'ord-hamdoon-1',
+    order_number: 'JO-2026-HMD-01',
+    customer_id: 'cust-hamdoon',
+    room_model_code: 'ركنة اوميجا',
+    contract_date: '2026-11-03',
+    delivery_date: '2026-11-10',
+    general_specs: 'عدد واحد ركنة اوميجا (اتجاه الركنة مثل الصورة المرفقة، ارتفاع الظهر الثابتة بالكامل سوي بعض). يعتمد / محمود زايد.',
+    status: 'قيد التشغيل',
+    total_price: 88000,
+    deposit_paid: 50000,
+    created_at: '2026-11-03T10:00:00Z',
+    updated_at: '2026-11-04T12:00:00Z',
+  },
 ];
 
 export const initialDetails: JobDetail[] = [
@@ -1311,6 +1334,20 @@ export const initialDetails: JobDetail[] = [
     installation_notes: 'الاستلام يوم الثلاثاء 2026 / 11 / 1 ضرورى جدا.\nالمواصفات: ركنه ريلاكس مخصوص *\nالتنجيد : ميديم\nالتنجيد : الركنه : رقم 3 كارتله TOKYO\nالخدديات : عدد 2 : رقم 12 كارتله TOKYO | عدد 2 : رقم 5 كارتله TOKYO\nالدهان : بنى غامق\nيعتمد: الإدارة الفنية',
     created_at: '2026-10-15T10:00:00Z',
   },
+
+  // تفاصيل ا. حمدون تيجاني (ركنة اوميجا)
+  {
+    id: 'det-hamdoon-1',
+    job_order_id: 'ord-hamdoon-1',
+    dimensions_cm: 'ركنة زاوية اوميجا مقاسات استندر (ارتفاع الظهر الثابتة بالكامل سوي بعض)',
+    wood_type: 'شاسيه خشب زان أحمر روماني عالي المتانة',
+    paint_details: 'كما هو بالمعرض',
+    fabric_source: 'الركنة بالكامل BMD - 9199 [18]',
+    color_code: 'BMD-9199-18',
+    batch_number: 'BATCH-2026-HMD-OMEGA',
+    installation_notes: 'الاستلام يوم الثلاثاء 10 / 11 / 2026.\nالمواصفات : عدد واحد ركنة اوميجا\nالتفاصيل :\n1- اتجاة الركنة مثل الصورة المرفقة.\n2- ارتفاع الظهر الثابتة بالكامل سوي بعض\nالتنجيد : الركنة بالكامل BMD - 9199 [18]\nيعتمد / محمود زايد',
+    created_at: '2026-11-03T10:00:00Z',
+  },
 ];
 
 export const initialAttachments: Attachment[] = [
@@ -1457,9 +1494,9 @@ export const initialAttachments: Attachment[] = [
     id: 'att-zeinab-1',
     job_order_id: 'ord-zeinab-1',
     file_type: 'drawing',
-    file_url: '/assets/aistudio/_______________-______________3b8f96d3.jpeg',
-    title: 'أمر شغل وصور كرسي سفرة فرجينيا ولوجو A - زينب عبد الفتاح',
-    description: 'صورة الكرسي بالظهر الخشب ولوجو A للأرجل بكعب ذهبي وكارتلة قماش BMD GERMANY 2 معتمدة من م/ محمد عبد الله',
+    file_url: '/assets/aistudio/_______________-____________________c59f1248.jpeg',
+    title: 'أمر شغل وصور كرسي سفرة فرجينيا ولوجو A وقماش BMD GERMANY [2] - زينب عبد الفتاح',
+    description: 'صورة الكرسي بالظهر الخشب الجوز ولوجو A للأرجل بكعب ذهبي وكارتلة قماش BMD GERMANY 2 معتمدة من م/ محمد عبد الله',
     uploaded_at: '2026-10-31T10:40:00Z',
   },
 
@@ -1677,6 +1714,17 @@ export const initialAttachments: Attachment[] = [
     title: 'أمر شغل وصورة انتريه مارفيل بالمعرض - محمد محمد عثمان',
     description: 'أمر شغل طقم انتريه مارفيل 2 كنبة وواحد فوتيه مع تبديل الـ 4 كوشن الجلد لبني فاتح معتمد من م النجار: بشير',
     uploaded_at: '2026-10-22T10:30:00Z',
+  },
+
+  // 6. ا. حمدون تيجاني
+  {
+    id: 'att-hamdoon-1',
+    job_order_id: 'ord-hamdoon-1',
+    file_type: 'drawing',
+    file_url: '/assets/aistudio/_____________-____________a2329ec1.jpeg',
+    title: 'أمر شغل وصور ركنة اوميجا وقماش BMD 9199-#18 - ا. حمدون تيجاني',
+    description: 'أمر شغل ركنة اوميجا مع صورة الركنة وتأكيد مساواة ارتفاع الظهر وصورة كارت القماش 9199-#18 معتمدة من م/ محمود زايد',
+    uploaded_at: '2026-11-03T10:00:00Z',
   },
 ];
 
