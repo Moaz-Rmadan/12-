@@ -16,6 +16,8 @@ import {
   Sparkles,
   Layers,
   Award,
+  Eye,
+  Edit3,
 } from 'lucide-react';
 
 interface TemplateStudioProps {
@@ -116,6 +118,9 @@ export const presetTemplates: TemplateJobOrder[] = [
 export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateJobOrder>(presetTemplates[0]);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Mobile active view tab: 'editor' vs 'preview'
+  const [mobileActiveTab, setMobileActiveTab] = useState<'editor' | 'preview'>('editor');
 
   // Form Field Handlers
   const handleFieldChange = (field: keyof TemplateJobOrder, value: any) => {
@@ -244,27 +249,27 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       
       {/* Top Banner */}
-      <div className="no-print bg-gradient-to-r from-amber-950 via-slate-900 to-amber-900 text-amber-50 p-6 rounded-2xl border border-amber-800/40 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="no-print bg-gradient-to-r from-amber-950 via-slate-900 to-amber-900 text-amber-50 p-4 sm:p-6 rounded-2xl border border-amber-800/40 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-amber-400 text-xs font-mono font-bold uppercase tracking-wider mb-1">
-            <Sparkles className="w-4 h-4" />
+          <div className="flex items-center gap-1.5 text-amber-400 text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider mb-1">
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span>Interactive Job Order Sheet Generator &amp; Template Studio</span>
           </div>
-          <h2 className="text-xl font-black font-serif text-amber-100">
+          <h2 className="text-lg sm:text-xl font-black font-serif text-amber-100">
             مولد ومصمم قالب أمر الشغل القياسي (النجار ديزاين)
           </h2>
-          <p className="text-xs text-amber-200/80 mt-1 max-w-2xl">
-            يمكنك اختيار قالب جاهز مستوحى من أوامر الشغل المرفقة، تعديل النصوص والألوان، رفع صور كروت القماش والـ Batch، وطباعة المستند فوراً بنفس التنسيق المعتمد!
+          <p className="text-xs text-amber-200/80 mt-1 max-w-2xl leading-relaxed">
+            اختر قالباً جاهزاً مستوحى من أوامر الشغل المرفقة، عدل البيانات والألوان، ارفع صور العينات، واطبع الورقة المعتمدة مباشرة!
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between w-full md:w-auto gap-2.5 pt-2 md:pt-0 border-t md:border-t-0 border-amber-800/60 shrink-0">
           <button
             onClick={handleSaveToDb}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-amber-950 bg-amber-400 hover:bg-amber-300 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+            className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-extrabold text-amber-950 bg-amber-400 hover:bg-amber-300 shadow-sm transition-all cursor-pointer whitespace-nowrap active:scale-95"
           >
             {savedSuccess ? <Check className="w-4 h-4 text-emerald-900" /> : <Save className="w-4 h-4" />}
             <span>{savedSuccess ? 'تم الحفظ بالنظام!' : 'حفظ بقاعدة البيانات'}</span>
@@ -272,7 +277,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
 
           <button
             onClick={handlePrint}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-amber-700 hover:bg-amber-600 shadow-md transition-all cursor-pointer whitespace-nowrap"
+            className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-amber-700 hover:bg-amber-600 shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95"
           >
             <Printer className="w-4 h-4" />
             <span>طباعة القالب (A4)</span>
@@ -281,26 +286,29 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
       </div>
 
       {/* Preset Templates Selector Bar */}
-      <div className="no-print bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
-        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block">
-          اختر قالباً محتمداً للتعديل عليه (مبني على صورك المرفقة):
+      <div className="no-print bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
+        <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">
+          اختر قالباً معتمداً للتعديل عليه (مبني على صورك المرفقة):
         </span>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {presetTemplates.map((t, idx) => (
             <button
               key={t.id}
-              onClick={() => setSelectedTemplate(t)}
-              className={`p-3 rounded-xl border text-right transition-all cursor-pointer ${
+              onClick={() => {
+                setSelectedTemplate(t);
+                setSavedSuccess(false);
+              }}
+              className={`p-2.5 sm:p-3 rounded-xl border text-right transition-all cursor-pointer flex flex-col justify-between ${
                 selectedTemplate.id === t.id
                   ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-600 shadow-xs ring-2 ring-amber-500/20'
                   : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-amber-400'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-900 text-amber-200">
+                <span className="text-[9px] sm:text-[10px] font-bold font-mono px-1.5 py-0.2 rounded bg-amber-950 text-amber-200">
                   قالب {idx + 1}
                 </span>
-                <Award className="w-3.5 h-3.5 text-amber-600" />
+                <Award className="w-3.5 h-3.5 text-amber-600 shrink-0" />
               </div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                 {t.roomCode}
@@ -313,13 +321,42 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
         </div>
       </div>
 
+      {/* MOBILE SWITCHER TABS (Editor vs Preview) */}
+      <div className="no-print lg:hidden flex items-center p-1 bg-slate-200 dark:bg-slate-800 rounded-xl">
+        <button
+          onClick={() => setMobileActiveTab('editor')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
+            mobileActiveTab === 'editor'
+              ? 'bg-amber-950 text-amber-200 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400'
+          }`}
+        >
+          <Edit3 className="w-4 h-4" />
+          <span>محرر وتعديل البيانات</span>
+        </button>
+
+        <button
+          onClick={() => setMobileActiveTab('preview')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
+            mobileActiveTab === 'preview'
+              ? 'bg-amber-950 text-amber-200 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400'
+          }`}
+        >
+          <Eye className="w-4 h-4" />
+          <span>معاينة ورقة أمر الشغل</span>
+        </button>
+      </div>
+
       {/* Main Studio Grid: Editor Side Panel + Live Printed Template Canvas */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
         
         {/* LEFT COLUMN: INTERACTIVE EDITOR FORM (Hidden on print) */}
-        <div className="no-print lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-6">
+        <div className={`no-print lg:col-span-5 bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-5 sm:space-y-6 ${
+          mobileActiveTab === 'preview' ? 'hidden lg:block' : 'block'
+        }`}>
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-amber-950 dark:text-amber-100 flex items-center gap-2">
+            <h3 className="text-sm font-extrabold text-amber-950 dark:text-amber-100 flex items-center gap-2">
               <FileText className="w-4 h-4 text-amber-700" />
               <span>محرر القالب وتغيير القيم</span>
             </h3>
@@ -358,12 +395,12 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                 type="text"
                 value={selectedTemplate.customerName}
                 onChange={(e) => handleFieldChange('customerName', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold"
               />
             </div>
 
             {/* Customer Phone & Address */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                   رقم هاتف العميل
@@ -372,7 +409,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                   type="text"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
                 />
               </div>
 
@@ -384,7 +421,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                   type="text"
                   value={customerAddress}
                   onChange={(e) => setCustomerAddress(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>
@@ -398,7 +435,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                 type="text"
                 value={selectedTemplate.roomCode}
                 onChange={(e) => handleFieldChange('roomCode', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold"
               />
             </div>
 
@@ -412,7 +449,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                   type="text"
                   value={selectedTemplate.contractDate}
                   onChange={(e) => handleFieldChange('contractDate', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono text-center"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono text-center"
                 />
               </div>
 
@@ -424,7 +461,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                   type="text"
                   value={selectedTemplate.deliveryDate}
                   onChange={(e) => handleFieldChange('deliveryDate', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono text-center font-bold text-amber-700"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono text-center font-bold text-amber-700"
                 />
               </div>
             </div>
@@ -438,14 +475,14 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                 type="text"
                 value={selectedTemplate.specs}
                 onChange={(e) => handleFieldChange('specs', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold"
               />
             </div>
 
             {/* Numbered Details List */}
             <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between">
-                <label className="font-bold text-amber-900 dark:text-amber-400">
+                <label className="font-extrabold text-amber-900 dark:text-amber-400">
                   التفاصيل الرقمية (المقاسات والملاحظات)
                 </label>
                 <button
@@ -464,12 +501,12 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                     type="text"
                     value={dt}
                     onChange={(e) => handleDetailChange(idx, e.target.value)}
-                    className="flex-1 px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs"
+                    className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs"
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveDetail(idx)}
-                    className="p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded cursor-pointer"
+                    className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg cursor-pointer shrink-0"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -479,7 +516,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
 
             {/* Paint & Upholstery Info */}
             <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                     الدهان
@@ -488,7 +525,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                     type="text"
                     value={selectedTemplate.paintDetails || 'كما بالمعرض'}
                     onChange={(e) => handleFieldChange('paintDetails', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
 
@@ -500,7 +537,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                     type="text"
                     value={selectedTemplate.upholsterySource}
                     onChange={(e) => handleFieldChange('upholsterySource', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
@@ -509,7 +546,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-slate-700 dark:text-slate-300">
-                    ت توزيع الأقمشة والخداديات
+                    توزيع الأقمشة والخداديات
                   </label>
                   <button
                     type="button"
@@ -528,19 +565,19 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                       placeholder="القطع / الخداديات"
                       value={row.item}
                       onChange={(e) => handleBreakdownChange(idx, 'item', e.target.value)}
-                      className="flex-1 px-2 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                      className="flex-1 px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
                     />
                     <input
                       type="text"
                       placeholder="اللون"
                       value={row.color}
                       onChange={(e) => handleBreakdownChange(idx, 'color', e.target.value)}
-                      className="w-32 px-2 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-rose-600 font-bold"
+                      className="w-28 sm:w-32 px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-rose-600 font-bold"
                     />
                     <button
                       type="button"
                       onClick={() => handleRemoveBreakdown(idx)}
-                      className="p-1 text-rose-600 hover:bg-rose-50 rounded cursor-pointer"
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer shrink-0"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -552,7 +589,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
             {/* IMAGE UPLOADERS SECTION */}
             <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
               <label className="block font-bold text-amber-900 dark:text-amber-400">
-                رفع وصور المرفقات (كروت القماش والموديل)
+                رفع صور المرفقات (كروت القماش والموديل)
               </label>
 
               {/* Upload Fabric Tag Image */}
@@ -565,12 +602,12 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                   accept="image/*"
                   multiple
                   onChange={(e) => handleFileUpload(e, 'fabricTagImages')}
-                  className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-800 file:text-amber-100 hover:file:bg-amber-900 cursor-pointer"
+                  className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-800 file:text-amber-100 hover:file:bg-amber-900 cursor-pointer w-full"
                 />
 
                 <div className="flex flex-wrap gap-2 pt-1">
                   {selectedTemplate.fabricTagImages.map((img, idx) => (
-                    <div key={idx} className="relative w-16 h-16 rounded border overflow-hidden bg-black">
+                    <div key={idx} className="relative w-16 h-16 rounded-lg border overflow-hidden bg-black shrink-0">
                       <img src={img} alt="Tag" className="w-full h-full object-cover" />
                       <button
                         type="button"
@@ -594,12 +631,12 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                   accept="image/*"
                   multiple
                   onChange={(e) => handleFileUpload(e, 'modelImages')}
-                  className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-100 hover:file:bg-slate-900 cursor-pointer"
+                  className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-100 hover:file:bg-slate-900 cursor-pointer w-full"
                 />
 
                 <div className="flex flex-wrap gap-2 pt-1">
                   {selectedTemplate.modelImages.map((img, idx) => (
-                    <div key={idx} className="relative w-16 h-16 rounded border overflow-hidden bg-black">
+                    <div key={idx} className="relative w-16 h-16 rounded-lg border overflow-hidden bg-black shrink-0">
                       <img src={img} alt="Model" className="w-full h-full object-cover" />
                       <button
                         type="button"
@@ -623,36 +660,46 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                 type="text"
                 value={selectedTemplate.approverName}
                 onChange={(e) => handleFieldChange('approverName', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
               />
             </div>
 
           </div>
         </div>
 
-        {/* RIGHT COLUMN: LIVE CANVAS - EXACT DOCUMENT LAYOUT AS PRINTED IN USER PDF */}
-        <div className="lg:col-span-7 flex justify-center">
+        {/* RIGHT COLUMN: LIVE CANVAS - EXACT DOCUMENT LAYOUT */}
+        <div className={`lg:col-span-7 flex justify-center w-full overflow-x-auto ${
+          mobileActiveTab === 'editor' ? 'hidden lg:flex' : 'flex'
+        }`}>
           
-          <div id="printable-job-order-sheet" className="bg-white text-black p-8 rounded-none border-4 border-double border-slate-900 shadow-2xl max-w-[210mm] w-full min-h-[297mm] font-serif text-sm leading-relaxed relative flex flex-col justify-between print-card">
+          <div
+            id="printable-job-order-sheet"
+            className="bg-white text-black p-4 sm:p-8 rounded-none border-2 sm:border-4 border-double border-slate-900 shadow-xl max-w-[210mm] w-full font-serif text-xs sm:text-sm leading-relaxed relative flex flex-col justify-between print-card my-auto"
+            style={{
+              color: '#000000',
+              backgroundColor: '#ffffff',
+              boxSizing: 'border-box',
+            }}
+          >
             
             {/* DOCUMENT CONTENT */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               
               {/* HEADER: GOLD METALLIC LOGO + "أمر شغل" TITLE */}
-              <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4">
+              <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3 sm:pb-4 gap-2">
                 
                 {/* Gold Logo Badge matching uploaded document */}
-                <div className="flex items-center gap-2">
-                  <div className="w-14 h-14 bg-gradient-to-tr from-amber-600 via-amber-300 to-amber-700 p-0.5 rounded-lg shadow-md flex items-center justify-center">
-                    <div className="w-full h-full bg-amber-950 rounded flex items-center justify-center text-amber-300 font-black text-2xl font-serif">
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-tr from-amber-600 via-amber-300 to-amber-700 p-0.5 rounded-lg shadow-md flex items-center justify-center">
+                    <div className="w-full h-full bg-amber-950 rounded flex items-center justify-center text-amber-300 font-black text-xl sm:text-2xl font-serif">
                       A
                     </div>
                   </div>
                 </div>
 
                 {/* Main Header Text */}
-                <div className="text-center flex-1 pr-6">
-                  <h1 className="text-4xl font-extrabold text-amber-800 tracking-wider font-serif">
+                <div className="text-center flex-1 pr-2 sm:pr-6">
+                  <h1 className="text-2xl sm:text-4xl font-extrabold text-amber-800 tracking-wider font-serif">
                     أمر شغل
                   </h1>
                 </div>
@@ -660,82 +707,80 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
               </div>
 
               {/* TABLE HEADER: CUSTOMER, CODE, DATES */}
-              <div className="space-y-3 font-semibold text-base">
+              <div className="space-y-2.5 sm:space-y-3 font-semibold text-sm sm:text-base">
                 
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-300 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-900 font-bold underline">أسم العميل :</span>
-                    <span className="font-bold text-blue-950 text-lg">{selectedTemplate.customerName}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4 border-b border-slate-300 pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-blue-900 font-bold underline shrink-0">أسم العميل :</span>
+                    <span className="font-bold text-blue-950 text-sm sm:text-lg">{selectedTemplate.customerName}</span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-900 font-bold underline">كود الغرفه :</span>
-                    <span className="font-bold text-blue-950 text-lg">{selectedTemplate.roomCode}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-blue-900 font-bold underline shrink-0">كود الغرفه :</span>
+                    <span className="font-bold text-blue-950 text-sm sm:text-lg">{selectedTemplate.roomCode}</span>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-slate-900 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-900 font-bold underline">تاريخ التعاقد :</span>
-                    <span className="font-mono font-bold text-blue-900">{selectedTemplate.contractDate}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4 border-b-2 border-slate-900 pb-2.5 sm:pb-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-blue-900 font-bold underline shrink-0">تاريخ التعاقد :</span>
+                    <span className="font-mono font-bold text-blue-900 text-sm sm:text-base">{selectedTemplate.contractDate}</span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-900 font-bold underline">تاريخ الاستلام :</span>
-                    <span className="font-mono font-bold text-blue-900">{selectedTemplate.deliveryDate}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-blue-900 font-bold underline shrink-0">تاريخ الاستلام :</span>
+                    <span className="font-mono font-bold text-blue-900 text-sm sm:text-base">{selectedTemplate.deliveryDate}</span>
                   </div>
                 </div>
 
               </div>
 
               {/* GENERAL SPECS */}
-              <div className="border-b-2 border-slate-900 pb-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-blue-900 font-extrabold text-lg underline shrink-0">المواصفات :</span>
-                  <span className="text-blue-900 font-extrabold text-lg leading-snug">
+              <div className="border-b-2 border-slate-900 pb-2.5 sm:pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
+                  <span className="text-blue-900 font-extrabold text-sm sm:text-lg underline shrink-0">المواصفات :</span>
+                  <span className="text-blue-900 font-extrabold text-sm sm:text-lg leading-snug">
                     {selectedTemplate.specs}
                   </span>
                 </div>
               </div>
 
               {/* NUMBERED DETAILS LIST IN RED FONT */}
-              <div className="space-y-3 border-b-2 border-slate-900 pb-4">
-                <span className="text-blue-900 font-extrabold text-lg underline block">التفاصيل :</span>
+              <div className="space-y-2 sm:space-y-3 border-b-2 border-slate-900 pb-3 sm:pb-4">
+                <span className="text-blue-900 font-extrabold text-sm sm:text-lg underline block">التفاصيل :</span>
                 
-                <div className="space-y-2 pr-2">
+                <div className="space-y-1.5 pr-1 sm:pr-2">
                   {selectedTemplate.detailsList.map((dt, idx) => (
-                    <p key={idx} className="text-red-600 font-bold text-base leading-relaxed">
+                    <p key={idx} className="text-red-600 font-bold text-xs sm:text-base leading-relaxed">
                       {dt}
                     </p>
                   ))}
                 </div>
               </div>
 
-              {/* DOTTED DIVIDER LINE */}
-              <div className="text-center font-mono text-slate-400 tracking-widest my-2 select-none">
-                ----------------------------------------------------------------------------------------------------
-              </div>
+              {/* DOTTED DIVIDER LINE - ZERO OVERFLOW */}
+              <div className="border-b-2 border-dashed border-slate-400 my-3 w-full" />
 
               {/* PAINT & UPHOLSTERY SECTION */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 
                 {selectedTemplate.paintDetails && (
-                  <div className="flex items-center justify-between font-bold text-base">
-                    <span className="text-blue-900 underline">الدهان :</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 font-bold text-xs sm:text-base">
+                    <span className="text-blue-900 underline shrink-0">الدهان :</span>
                     <span className="text-red-600">{selectedTemplate.paintDetails}</span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between font-bold text-base">
-                  <span className="text-blue-900 underline">التنجيد :</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 font-bold text-xs sm:text-base">
+                  <span className="text-blue-900 underline shrink-0">التنجيد :</span>
                   <span className="text-red-600 font-bold">{selectedTemplate.upholsterySource}</span>
                 </div>
 
                 {/* Upholstery Breakdown Table */}
                 {selectedTemplate.upholsteryBreakdown.length > 0 && (
-                  <div className="space-y-2 pr-4 pt-1">
+                  <div className="space-y-1.5 pr-2 sm:pr-4 pt-1">
                     {selectedTemplate.upholsteryBreakdown.map((row, idx) => (
-                      <div key={idx} className="flex items-center justify-between font-bold text-base">
+                      <div key={idx} className="flex items-center justify-between font-bold text-xs sm:text-base">
                         <span className="text-slate-900">{row.item}</span>
                         <span className="text-red-600">{row.color}</span>
                       </div>
@@ -746,16 +791,16 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
               </div>
 
               {/* EMBEDDED FABRIC TAGS & MODEL PHOTOS */}
-              <div className="pt-4 space-y-4 border-t border-slate-300">
+              <div className="pt-3 space-y-3 border-t border-slate-300">
                 
                 {/* Fabric Tags Grid */}
                 {selectedTemplate.fabricTagImages.length > 0 && (
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-500 block">كروت عينات القماش والـ Batch المرفقة:</span>
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-bold text-slate-500 block">كروت عينات القماش والـ Batch المرفقة:</span>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       {selectedTemplate.fabricTagImages.map((img, idx) => (
                         <div key={idx} className="border border-slate-400 p-1 bg-white rounded shadow-2xs">
-                          <img src={img} alt="Fabric Tag" className="w-full h-auto max-h-48 object-contain" />
+                          <img src={img} alt="Fabric Tag" className="w-full h-auto max-h-36 sm:max-h-48 object-contain" />
                         </div>
                       ))}
                     </div>
@@ -764,12 +809,12 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
 
                 {/* Model or Diagram Photos */}
                 {selectedTemplate.modelImages.length > 0 && (
-                  <div className="space-y-2 pt-2">
-                    <span className="text-xs font-bold text-slate-500 block">صورة الموديل أو الرسم الهيكلي التوضيحي:</span>
-                    <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-bold text-slate-500 block">صورة الموديل أو الرسم الهيكلي التوضيحي:</span>
+                    <div className="grid grid-cols-1 gap-2 sm:gap-3">
                       {selectedTemplate.modelImages.map((img, idx) => (
                         <div key={idx} className="border border-slate-400 p-1 bg-white rounded shadow-2xs flex justify-center">
-                          <img src={img} alt="Model Diagram" className="w-full h-auto max-h-72 object-contain" />
+                          <img src={img} alt="Model Diagram" className="w-full h-auto max-h-52 sm:max-h-72 object-contain" />
                         </div>
                       ))}
                     </div>
@@ -781,7 +826,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
             </div>
 
             {/* FOOTER APPROVAL */}
-            <div className="pt-8 border-t border-slate-400 mt-8 flex items-center justify-start text-base font-bold text-slate-900">
+            <div className="pt-6 sm:pt-8 border-t border-slate-400 mt-6 sm:mt-8 flex items-center justify-start text-sm sm:text-base font-bold text-slate-900">
               <span>يعتمد / </span>
               <span className="mr-2 text-slate-800">{selectedTemplate.approverName}</span>
             </div>
