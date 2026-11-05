@@ -60,7 +60,7 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
                   font-size: ${orientation === 'landscape' ? '12px' : '13px'} !important;
                   line-height: 1.3 !important;
                 }
-                /* Ensure single page fit for digital card and delivery receipts */
+                /* Ensure single page fit for digital card, delivery receipts, and truck manifest */
                 #printable-workshop-card, #printable-delivery-receipt, #printable-job-order-sheet {
                   border: 2px solid #000 !important;
                   box-shadow: none !important;
@@ -72,6 +72,188 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
                   page-break-inside: avoid !important;
                   break-inside: avoid !important;
                 }
+
+                /* Dedicated single-page fit for Truck Manifest with Adaptive Full-Height Auto-Scale */
+                #printable-truck-manifest {
+                  border: 2px solid #000 !important;
+                  box-shadow: none !important;
+                  max-width: 100% !important;
+                  width: 100% !important;
+                  margin: 0 auto !important;
+                  box-sizing: border-box !important;
+                  page-break-after: avoid !important;
+                  page-break-before: avoid !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                  justify-content: space-between !important;
+                  min-height: ${orientation === 'landscape' ? '195mm' : '272mm'} !important;
+                  height: 100% !important;
+                }
+                #printable-truck-manifest .manifest-content-wrapper {
+                  flex: 1 1 auto !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                }
+                #printable-truck-manifest .manifest-table-wrapper {
+                  flex: 1 1 auto !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                }
+                #printable-truck-manifest table {
+                  width: 100% !important;
+                  border-collapse: collapse !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                  height: 100% !important;
+                  flex: 1 1 auto !important;
+                }
+                #printable-truck-manifest tbody {
+                  height: 100% !important;
+                }
+                #printable-truck-manifest th {
+                  background-color: #fff200 !important;
+                  color: #000000 !important;
+                  font-weight: 900 !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                #printable-truck-manifest td {
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                #printable-truck-manifest .manifest-footer {
+                  margin-top: auto !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+
+                /* 1. Spacious Density (1-4 items): Large font, tall rows, fills the entire page */
+                #printable-truck-manifest.density-spacious {
+                  padding: 6mm 7mm !important;
+                }
+                #printable-truck-manifest.density-spacious th {
+                  font-size: 15px !important;
+                  padding: 10px 8px !important;
+                }
+                #printable-truck-manifest.density-spacious td {
+                  font-size: 14px !important;
+                  padding: 12px 8px !important;
+                  line-height: 1.4 !important;
+                }
+                #printable-truck-manifest.density-spacious .manifest-header-block div {
+                  padding: 6px 8px !important;
+                  font-size: 14px !important;
+                }
+                #printable-truck-manifest.density-spacious .manifest-brand-title {
+                  font-size: 22px !important;
+                }
+                #printable-truck-manifest.density-spacious .manifest-footer {
+                  padding-top: 14px !important;
+                  font-size: 13px !important;
+                }
+
+                /* 2. Comfortable Density (5-8 items): Medium-large fonts and balanced filling */
+                #printable-truck-manifest.density-comfortable {
+                  padding: 4mm 6mm !important;
+                }
+                #printable-truck-manifest.density-comfortable th {
+                  font-size: 12.5px !important;
+                  padding: 6px 6px !important;
+                }
+                #printable-truck-manifest.density-comfortable td {
+                  font-size: 12px !important;
+                  padding: 7px 6px !important;
+                  line-height: 1.3 !important;
+                }
+                #printable-truck-manifest.density-comfortable .manifest-header-block div {
+                  padding: 4px 6px !important;
+                  font-size: 12px !important;
+                }
+                #printable-truck-manifest.density-comfortable .manifest-brand-title {
+                  font-size: 18px !important;
+                }
+                #printable-truck-manifest.density-comfortable .manifest-footer {
+                  padding-top: 8px !important;
+                  font-size: 11.5px !important;
+                }
+
+                /* 3. Balanced Density (9-13 items): Standard Factory Sheet */
+                #printable-truck-manifest.density-balanced {
+                  padding: 3mm 4mm !important;
+                }
+                #printable-truck-manifest.density-balanced th {
+                  font-size: 11px !important;
+                  padding: 3.5px 4px !important;
+                }
+                #printable-truck-manifest.density-balanced td {
+                  font-size: 10.5px !important;
+                  padding: 3.5px 4px !important;
+                  line-height: 1.2 !important;
+                }
+                #printable-truck-manifest.density-balanced .manifest-header-block div {
+                  padding: 2.5px 4px !important;
+                  font-size: 11px !important;
+                }
+                #printable-truck-manifest.density-balanced .manifest-brand-title {
+                  font-size: 16px !important;
+                }
+                #printable-truck-manifest.density-balanced .manifest-footer {
+                  padding-top: 4px !important;
+                  font-size: 10px !important;
+                }
+
+                /* 4. Compact Density (14-17 items or heavy text) */
+                #printable-truck-manifest.density-compact {
+                  padding: 2.5mm 3.5mm !important;
+                }
+                #printable-truck-manifest.density-compact th {
+                  font-size: 9.5px !important;
+                  padding: 2px 3px !important;
+                }
+                #printable-truck-manifest.density-compact td {
+                  font-size: 9px !important;
+                  padding: 2px 3px !important;
+                  line-height: 1.15 !important;
+                }
+                #printable-truck-manifest.density-compact .manifest-header-block div {
+                  padding: 1.5px 3px !important;
+                  font-size: 9.5px !important;
+                }
+                #printable-truck-manifest.density-compact .manifest-brand-title {
+                  font-size: 14px !important;
+                }
+                #printable-truck-manifest.density-compact .manifest-footer {
+                  padding-top: 2px !important;
+                  font-size: 9px !important;
+                }
+
+                /* 5. Micro Density (18+ items or extreme text) */
+                #printable-truck-manifest.density-micro {
+                  padding: 2mm 3mm !important;
+                }
+                #printable-truck-manifest.density-micro th {
+                  font-size: 8.5px !important;
+                  padding: 1.5px 2px !important;
+                }
+                #printable-truck-manifest.density-micro td {
+                  font-size: 8px !important;
+                  padding: 1.5px 2px !important;
+                  line-height: 1.1 !important;
+                }
+                #printable-truck-manifest.density-micro .manifest-header-block div {
+                  padding: 1px 2px !important;
+                  font-size: 8.5px !important;
+                }
+                #printable-truck-manifest.density-micro .manifest-brand-title {
+                  font-size: 13px !important;
+                }
+                #printable-truck-manifest.density-micro .manifest-footer {
+                  padding-top: 1.5px !important;
+                  font-size: 8px !important;
+                }
+
                 .text-blue-900, .text-blue-950 { color: #002266 !important; }
                 .text-emerald-800, .text-emerald-950 { color: #064e3b !important; }
                 .text-red-600 { color: #cc0000 !important; }
@@ -159,6 +341,78 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
               }
+              #printable-truck-manifest {
+                border: 2px solid #000 !important;
+                box-sizing: border-box !important;
+                page-break-after: avoid !important;
+                page-break-before: avoid !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                min-height: ${orientation === 'landscape' ? '195mm' : '272mm'} !important;
+                height: 100% !important;
+              }
+              #printable-truck-manifest .manifest-content-wrapper {
+                flex: 1 1 auto !important;
+                display: flex !important;
+                flex-direction: column !important;
+              }
+              #printable-truck-manifest .manifest-table-wrapper {
+                flex: 1 1 auto !important;
+                display: flex !important;
+                flex-direction: column !important;
+              }
+              #printable-truck-manifest table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                height: 100% !important;
+                flex: 1 1 auto !important;
+              }
+              #printable-truck-manifest th {
+                background-color: #fff200 !important;
+                color: #000 !important;
+                font-weight: 900 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              #printable-truck-manifest td {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              #printable-truck-manifest.density-spacious { padding: 6mm 7mm !important; }
+              #printable-truck-manifest.density-spacious th { font-size: 15px !important; padding: 10px 8px !important; }
+              #printable-truck-manifest.density-spacious td { font-size: 14px !important; padding: 12px 8px !important; line-height: 1.4 !important; }
+              #printable-truck-manifest.density-spacious .manifest-brand-title { font-size: 22px !important; }
+              #printable-truck-manifest.density-spacious .manifest-footer { padding-top: 14px !important; font-size: 13px !important; }
+
+              #printable-truck-manifest.density-comfortable { padding: 4mm 6mm !important; }
+              #printable-truck-manifest.density-comfortable th { font-size: 12.5px !important; padding: 6px 6px !important; }
+              #printable-truck-manifest.density-comfortable td { font-size: 12px !important; padding: 7px 6px !important; line-height: 1.3 !important; }
+              #printable-truck-manifest.density-comfortable .manifest-brand-title { font-size: 18px !important; }
+              #printable-truck-manifest.density-comfortable .manifest-footer { padding-top: 8px !important; font-size: 11.5px !important; }
+
+              #printable-truck-manifest.density-balanced { padding: 3mm 4mm !important; }
+              #printable-truck-manifest.density-balanced th { font-size: 11px !important; padding: 3.5px 4px !important; }
+              #printable-truck-manifest.density-balanced td { font-size: 10.5px !important; padding: 3.5px 4px !important; line-height: 1.2 !important; }
+              #printable-truck-manifest.density-balanced .manifest-brand-title { font-size: 16px !important; }
+              #printable-truck-manifest.density-balanced .manifest-footer { padding-top: 4px !important; font-size: 10px !important; }
+
+              #printable-truck-manifest.density-compact { padding: 2.5mm 3.5mm !important; }
+              #printable-truck-manifest.density-compact th { font-size: 9.5px !important; padding: 2px 3px !important; }
+              #printable-truck-manifest.density-compact td { font-size: 9px !important; padding: 2px 3px !important; line-height: 1.15 !important; }
+              #printable-truck-manifest.density-compact .manifest-brand-title { font-size: 14px !important; }
+              #printable-truck-manifest.density-compact .manifest-footer { padding-top: 2px !important; font-size: 9px !important; }
+
+              #printable-truck-manifest.density-micro { padding: 2mm 3mm !important; }
+              #printable-truck-manifest.density-micro th { font-size: 8.5px !important; padding: 1.5px 2px !important; }
+              #printable-truck-manifest.density-micro td { font-size: 8px !important; padding: 1.5px 2px !important; line-height: 1.1 !important; }
+              #printable-truck-manifest.density-micro .manifest-brand-title { font-size: 13px !important; }
+              #printable-truck-manifest.density-micro .manifest-footer { padding-top: 1.5px !important; font-size: 8px !important; }
+
               img { max-height: 180px; object-fit: contain; }
               img.full-sheet-img { max-height: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; }
             </style>

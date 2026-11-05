@@ -1,11 +1,10 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import {
-  getFirestore,
+  initializeFirestore,
   doc,
   collection,
   getDocs,
-  getDocFromServer,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -19,23 +18,12 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { Customer, JobOrderPopulated, CreateJobOrderPayload, OrderStatus, TruckManifest } from '../types';
 import { initialCustomers, initialOrders, getPopulatedOrders } from '../data/mockData';
 
-// Initialize Firebase App & Firestore Database
+// Initialize Firebase App & Firestore Database with fast auto-detect long-polling for iframe/cloud run
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+}, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
-
-// Test Firestore Connection on Boot
-export async function testFirestoreConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log('[Firebase] Firestore connected successfully');
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('[Firebase] Client appears offline or pending connection.');
-    }
-  }
-}
-testFirestoreConnection();
 
 export enum OperationType {
   CREATE = 'create',
@@ -519,7 +507,7 @@ export async function seedWorkshopDataIfMissing(
     for (const cust of customers) {
       if (!existingCustIds.has(cust.id)) {
         const custRef = doc(db, 'customers', cust.id);
-        batch.set(custRef, cust);
+        batch.set(custRef, JSON.parse(JSON.stringify(cust)));
         hasChanges = true;
       }
     }
@@ -528,7 +516,7 @@ export async function seedWorkshopDataIfMissing(
     for (const ord of populatedOrders) {
       if (!existingOrderIds.has(ord.id)) {
         const ordRef = doc(db, 'job_orders', ord.id);
-        batch.set(ordRef, ord);
+        batch.set(ordRef, JSON.parse(JSON.stringify(ord)));
         hasChanges = true;
       }
     }

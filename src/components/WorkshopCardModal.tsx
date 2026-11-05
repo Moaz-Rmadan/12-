@@ -49,6 +49,9 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
     if (fullText.includes('بشير')) {
       return 'م النجار: بشير';
     }
+    if (fullText.includes('مروان هلال') || fullText.includes('مروان')) {
+      return 'مروان هلال';
+    }
     if (fullText.includes('محمد عبد الله') || fullText.includes('محمد عبدالله')) {
       return 'محمد عبد الله';
     }
