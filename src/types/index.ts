@@ -131,7 +131,7 @@ export interface TruckManifestItem {
   notes: string; // e.g. "الدهان كما هو بالمعرض"
   salesperson: string; // e.g. "محمد حسين"
   orderId?: string;
-  itemType?: 'delivery' | 'return'; // 'delivery' = تسليم, 'return' = مرتجع
+  itemType?: 'delivery' | 'showroom' | 'accessories' | 'return'; // 'delivery' = تسليم عميل, 'showroom' = عروض وقواطع المعرض, 'accessories' = نواقص وتكميلي, 'return' = مرتجع وصيانة
   returnReason?: string; // سبب الارجاع (صيانة، تعديل دهان، الخ)
 }
 

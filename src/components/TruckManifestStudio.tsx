@@ -141,7 +141,7 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
   const [newItemDetails, setNewItemDetails] = useState<string>('');
   const [newItemNotes, setNewItemNotes] = useState<string>('الدهان كماهو بالمعرض');
   const [newItemSalesperson, setNewItemSalesperson] = useState<string>('م/ بشير النجار');
-  const [newItemType, setNewItemType] = useState<'delivery' | 'return'>('delivery');
+  const [newItemType, setNewItemType] = useState<'delivery' | 'showroom' | 'accessories' | 'return'>('delivery');
   const [newItemReturnReason, setNewItemReturnReason] = useState<string>('صيانة دهان وتعديل');
 
   // Search filter for manifest list
@@ -181,26 +181,35 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
     e.preventDefault();
     if (!newItemCustomer.trim() || !newItemName.trim()) return;
 
-    const isReturn = newItemType === 'return';
-    const computedNotes = isReturn
-      ? `[ 🔁 مرتجع للورشة ] ${newItemReturnReason ? `- السبب: ${newItemReturnReason.trim()}` : ''}`
-      : newItemNotes.trim() || 'الدهان كماهو بالمعرض';
+    let computedNotes = newItemNotes.trim() || 'الدهان كماهو بالمعرض';
+    let defaultSpecs = '-';
+
+    if (newItemType === 'return') {
+      computedNotes = `[ 🔁 مرتجع للورشة ] ${newItemReturnReason ? `- السبب: ${newItemReturnReason.trim()}` : ''}`;
+      defaultSpecs = 'استلام مرتجع من العميل للصيانة';
+    } else if (newItemType === 'showroom') {
+      computedNotes = `[ 🏢 عروض المعرض ] ${newItemNotes.trim() || 'بضاعة وتغذية صالة المعرض'}`;
+      defaultSpecs = 'عروض وقواطع تجهيز المعرض الرئيسي';
+    } else if (newItemType === 'accessories') {
+      computedNotes = `[ 🧩 نواقص وتكميلي ] ${newItemNotes.trim() || 'استكمال أجزاء ومشتملات متبقية'}`;
+      defaultSpecs = 'نواقص واكسسوارات تسليم تكميلية';
+    }
 
     const newItem: TruckManifestItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       customerName: newItemCustomer.trim(),
       qty: Number(newItemQty) || 1,
       itemName: newItemName.trim(),
-      specsDetails: newItemDetails.trim() || (isReturn ? 'استلام مرتجع من العميل' : '-'),
+      specsDetails: newItemDetails.trim() || defaultSpecs,
       notes: computedNotes,
       salesperson: newItemSalesperson.trim() || 'إدارة الورشة',
       itemType: newItemType,
-      returnReason: isReturn ? newItemReturnReason.trim() : undefined,
+      returnReason: newItemType === 'return' ? newItemReturnReason.trim() : undefined,
     };
 
     setItems((prev) => [...prev, newItem]);
 
-    // Reset inputs but preserve customer
+    // Reset inputs
     setNewItemName('');
     setNewItemDetails('');
   };
@@ -1045,18 +1054,22 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
           </div>
 
           <form onSubmit={handleAddItem} className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Plus className="w-4 h-4 text-amber-800 dark:text-amber-400" />
-                <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                  إضافة صنف أو مرتجع يدوياً للبيان:
-                </span>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-amber-800 dark:text-amber-400" />
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                    تصنيف البضائع والمنقولات بالسيارة:
+                  </span>
+                </div>
 
-                {/* Operation Type Toggle (Delivery vs Return) */}
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 me-2">
+                {/* 4 Cargo Operation Types */}
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setNewItemType('delivery')}
+                    onClick={() => {
+                      setNewItemType('delivery');
+                    }}
                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       newItemType === 'delivery'
                         ? 'bg-amber-900 text-amber-100 shadow-xs'
@@ -1065,9 +1078,42 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
                   >
                     📦 تسليم عميل
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => setNewItemType('return')}
+                    onClick={() => {
+                      setNewItemType('showroom');
+                      setNewItemCustomer('المعرض الرئيسي');
+                      setNewItemSalesperson('م/ بشير النجار');
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      newItemType === 'showroom'
+                        ? 'bg-amber-600 text-white shadow-xs font-extrabold'
+                        : 'text-amber-800 dark:text-amber-400 hover:bg-amber-50'
+                    }`}
+                  >
+                    🏢 عروض المعرض
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewItemType('accessories');
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      newItemType === 'accessories'
+                        ? 'bg-purple-800 text-white shadow-xs font-extrabold'
+                        : 'text-purple-800 dark:text-purple-300 hover:bg-purple-50'
+                    }`}
+                  >
+                    🧩 نواقص وتكميلي
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewItemType('return');
+                    }}
                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       newItemType === 'return'
                         ? 'bg-rose-700 text-white shadow-xs font-extrabold'
@@ -1077,6 +1123,71 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
                     🔁 مرتجع للورشة
                   </button>
                 </div>
+              </div>
+
+              {/* Quick Presets Bar for Showroom Items & Accessories */}
+              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-bold text-slate-500 text-[11px] shrink-0">اختصارات سريعة بنقرة واحدة:</span>
+
+                {/* Showroom Presets */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewItemType('showroom');
+                    setNewItemCustomer('المعرض الرئيسي');
+                    setNewItemName('غرفة نوم رئيسية للعرض بالمعرض');
+                    setNewItemQty(1);
+                    setNewItemDetails('دولاب 6 ضلفة + سرير كابوتونيه + 2 كمود + تسريحة');
+                    setNewItemNotes('تغذية وقواطع عرض المعرض الرئيسي');
+                  }}
+                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-950 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 cursor-pointer"
+                >
+                  🏢 + عرض غرفة نوم بالمعرض
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewItemType('showroom');
+                    setNewItemCustomer('المعرض الرئيسي');
+                    setNewItemName('طقم انتريه صالة المعرض');
+                    setNewItemQty(1);
+                    setNewItemDetails('2 كنبة مخصوص + 1 فوتيه للبيع والعرض');
+                    setNewItemNotes('الدهان والتنجيد كما هو بكتالوج العرض');
+                  }}
+                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-950 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 cursor-pointer"
+                >
+                  🏢 + طقم انتريه بالمعرض
+                </button>
+
+                {/* Missing Accessories Presets */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewItemType('accessories');
+                    setNewItemName('نواقص دولاب وسرير (أرجُل ومقابض ومفصلات)');
+                    setNewItemQty(1);
+                    setNewItemDetails('مقابض ألومنيوم + أرجُل ستانلس + مفصلات هيدروليك');
+                    setNewItemNotes('استكمال وتسليم نواقص الأوردر بالعميل/المعرض');
+                  }}
+                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-100 hover:bg-purple-200 text-purple-950 dark:bg-purple-950 dark:text-purple-200 border border-purple-300 dark:border-purple-800 cursor-pointer"
+                >
+                  🧩 + نواقص أرجُل ومقابض ومفصلات
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewItemType('accessories');
+                    setNewItemName('نواقص تنجيد وخداديات');
+                    setNewItemQty(4);
+                    setNewItemDetails('خداديات فراري C02 ووسائد تنجيد إضافية');
+                    setNewItemNotes('تكميل تنجيد أوردر العميل');
+                  }}
+                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-100 hover:bg-purple-200 text-purple-950 dark:bg-purple-950 dark:text-purple-200 border border-purple-300 dark:border-purple-800 cursor-pointer"
+                >
+                  🧩 + نواقص خداديات ووسائد
+                </button>
               </div>
 
               {/* Quick Customer Select Pills */}
@@ -1271,11 +1382,19 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
 
                           <td className="p-1.5 font-extrabold text-blue-950 dark:text-blue-300">
                             <div className="flex items-center gap-1">
-                              {isRet && (
-                                <span className="bg-rose-600 text-white px-1 py-0.2 rounded text-[9px] font-black shrink-0">
-                                  مرتجع
+                              {it.itemType === 'showroom' || it.notes.includes('عروض') ? (
+                                <span className="bg-amber-500 text-amber-950 px-1 py-0.2 rounded text-[9px] font-black shrink-0">
+                                  🏢 عروض
                                 </span>
-                              )}
+                              ) : it.itemType === 'accessories' || it.notes.includes('نواقص') ? (
+                                <span className="bg-purple-600 text-white px-1 py-0.2 rounded text-[9px] font-black shrink-0">
+                                  🧩 نواقص
+                                </span>
+                              ) : (it.itemType === 'return' || it.notes.includes('مرتجع')) ? (
+                                <span className="bg-rose-600 text-white px-1 py-0.2 rounded text-[9px] font-black shrink-0">
+                                  🔁 مرتجع
+                                </span>
+                              ) : null}
                               <input
                                 type="text"
                                 value={it.itemName}
@@ -1631,11 +1750,19 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
                                 <td
                                   className={`${manifestDensity.tableTd} border-l-2 border-slate-950 text-right pr-2 font-extrabold align-middle text-blue-950`}
                                 >
-                                  {(item.itemType === 'return' || item.notes.includes('مرتجع')) && (
+                                  {item.itemType === 'showroom' || item.notes.includes('عروض') ? (
+                                    <span className="inline-block bg-amber-200 text-amber-950 px-1 py-0.2 rounded text-[9px] font-black me-1 border border-amber-400">
+                                      🏢 عروض المعرض
+                                    </span>
+                                  ) : item.itemType === 'accessories' || item.notes.includes('نواقص') ? (
+                                    <span className="inline-block bg-purple-200 text-purple-950 px-1 py-0.2 rounded text-[9px] font-black me-1 border border-purple-400">
+                                      🧩 نواقص وتكميلي
+                                    </span>
+                                  ) : (item.itemType === 'return' || item.notes.includes('مرتجع')) ? (
                                     <span className="inline-block bg-rose-200 text-rose-950 px-1 py-0.2 rounded text-[9px] font-black me-1 border border-rose-400">
                                       🔁 مرتجع
                                     </span>
-                                  )}
+                                  ) : null}
                                   {item.itemName}
                                 </td>
 
