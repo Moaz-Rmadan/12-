@@ -12,6 +12,7 @@ import { MonthlyDeliveredReport } from './components/MonthlyDeliveredReport';
 import { TopSellingModelsReport } from './components/TopSellingModelsReport';
 import { CriticalOverdueReport } from './components/CriticalOverdueReport';
 import { BottleneckReport } from './components/BottleneckReport';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 import {
   subscribeToJobOrders,
@@ -435,6 +436,9 @@ export default function App() {
           orderToEdit={orderToEdit}
         />
       )}
+
+      {/* Offline Indicator Banner */}
+      <OfflineIndicator />
 
     </div>
   );

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { JobOrderPopulated } from '../types';
 import { NotificationsDropdown } from './NotificationsDropdown';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderProps {
   activeTab: string;
@@ -99,6 +100,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Zone 3: Actions & Theme Toggle */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <PWAInstallButton />
+
             <NotificationsDropdown orders={orders} onSelectOrder={onSelectOrder} />
 
             <button

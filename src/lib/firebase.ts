@@ -2,6 +2,8 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import {
   initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   doc,
   collection,
   getDocs,
@@ -18,10 +20,11 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { Customer, JobOrderPopulated, CreateJobOrderPayload, OrderStatus, TruckManifest } from '../types';
 import { initialCustomers, initialOrders, getPopulatedOrders } from '../data/mockData';
 
-// Initialize Firebase App & Firestore Database with fast auto-detect long-polling for iframe/cloud run
+// Initialize Firebase App & Firestore Database with persistent offline IndexedDB cache
 const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
   experimentalAutoDetectLongPolling: true,
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 }, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
