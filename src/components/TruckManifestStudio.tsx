@@ -546,28 +546,28 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
     <div className="space-y-6 sm:space-y-8">
       {/* TOP HEADER & ACTION BANNER */}
       <div className="no-print bg-gradient-to-r from-amber-950 via-slate-900 to-amber-900 text-amber-50 p-4 sm:p-6 rounded-2xl border border-amber-800/40 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center shrink-0">
-            <Truck className="w-6 h-6" />
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center shrink-0">
+            <Truck className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <div className="flex items-center gap-2 text-amber-400 text-[11px] font-mono font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Professional Cargo Manifest Studio &amp; Loading Sheet</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-amber-400 text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider truncate">
+              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span className="truncate">Professional Cargo Manifest Studio &amp; Loading Sheet</span>
             </div>
-            <h2 className="text-lg sm:text-xl font-black font-serif text-white">
+            <h2 className="text-base sm:text-xl font-black font-serif text-white truncate">
               بيـان وسـجل حمـولـة السـيارة (حمولة العربية)
             </h2>
-            <p className="text-xs text-amber-200/80 mt-0.5 max-w-xl">
+            <p className="hidden sm:block text-xs text-amber-200/80 mt-0.5 max-w-xl">
               إدارة احترافية لحمولة عربيات نقل الأثاث، تدعم الإضافة السريعة للأوردرات، التعديل المباشر، والمرتجعات، مع طباعة A4 دقيقة بملء الصفحة تلقائياً!
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between w-full md:w-auto gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-amber-800/60 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-amber-800/60 shrink-0">
           <button
             onClick={handleCreateNewTrip}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-200 bg-amber-950/80 border border-amber-800 hover:bg-amber-900 transition-colors cursor-pointer"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-200 bg-amber-950/80 border border-amber-800 hover:bg-amber-900 active:scale-95 transition-all cursor-pointer"
             title="إنشاء كشف حمولة جديد لرحلة جديدة"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -576,7 +576,7 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
 
           <button
             onClick={handleDuplicateManifest}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-200 bg-slate-800/80 border border-slate-700 hover:bg-slate-700 transition-colors cursor-pointer"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-200 bg-slate-800/80 border border-slate-700 hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
             title="نسخ هذا البيان كقالب لرحلة أخرى"
           >
             <Copy className="w-3.5 h-3.5" />
@@ -585,86 +585,80 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
 
           <button
             onClick={handleSaveManifest}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold text-amber-950 bg-amber-400 hover:bg-amber-300 shadow-sm transition-all cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold text-amber-950 bg-amber-400 hover:bg-amber-300 active:scale-95 shadow-sm transition-all cursor-pointer"
             title="حفظ التغييرات في قاعدة البيانات سحابياً"
           >
             {savedSuccess ? <Check className="w-3.5 h-3.5 text-emerald-950" /> : <Save className="w-3.5 h-3.5" />}
             <span>{savedSuccess ? 'تم الحفظ!' : 'حفظ التعديلات'}</span>
           </button>
 
-          <button
-            onClick={handleCopySummaryToClipboard}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-800 hover:bg-emerald-900 transition-colors cursor-pointer"
-            title="نسخ ملخص الحمولة نصياً لإرساله للسائق أو للمصنع عبر واتساب"
-          >
-            {copiedSuccess ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedSuccess ? 'تم النسخ!' : 'نسخ لواتساب'}</span>
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleCopySummaryToClipboard}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-800 hover:bg-emerald-900 active:scale-95 transition-all cursor-pointer"
+              title="نسخ ملخص الحمولة نصياً لإرساله للسائق أو للمصنع عبر واتساب"
+            >
+              {copiedSuccess ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedSuccess ? 'تم النسخ!' : 'نسخ لواتساب'}</span>
+            </button>
 
-          <button
-            onClick={() => handlePrintManifest('portrait')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black text-white bg-amber-700 hover:bg-amber-600 shadow-md transition-all cursor-pointer"
-            title="طباعة بيان الحمولة كاملاً في صفحة A4 واحدة"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>طباعة صفحة A4</span>
-          </button>
-
-          <button
-            onClick={() => handlePrintManifest('landscape')}
-            className="hidden sm:flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold text-amber-200 bg-slate-900 hover:bg-slate-800 border border-amber-700/50 transition-colors cursor-pointer"
-            title="طباعة بنمط أفقي عريض"
-          >
-            <span>أفقي</span>
-          </button>
+            <button
+              onClick={() => handlePrintManifest('portrait')}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black text-white bg-amber-700 hover:bg-amber-600 active:scale-95 shadow-md transition-all cursor-pointer"
+              title="طباعة بيان الحمولة كاملاً في صفحة A4 واحدة"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>طباعة (A4)</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* QUICK STATS SUMMARY STRIP */}
       <div className="no-print grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-800 dark:text-slate-200">
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400 flex items-center justify-center shrink-0">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-amber-400/80 dark:hover:border-amber-600/60 card-motion flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-inner transition-transform duration-200 group-hover:scale-105">
             <Package className="w-5 h-5" />
           </div>
           <div>
             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">إجمالي قطع الحمولة</div>
-            <div className="text-base font-black font-mono text-amber-900 dark:text-amber-300">
-              {manifestStats.totalQty} قطعة ({items.length} صنف)
+            <div className="text-base font-black font-mono text-amber-900 dark:text-amber-300 tabular-nums">
+              {manifestStats.totalQty} قطعة <span className="text-xs font-sans text-slate-500 font-normal">({items.length} صنف)</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-400 flex items-center justify-center shrink-0">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-blue-400/80 dark:hover:border-blue-600/60 card-motion flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-inner transition-transform duration-200 group-hover:scale-105">
             <User className="w-5 h-5" />
           </div>
           <div>
             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">عدد العملاء / المحطات</div>
-            <div className="text-base font-black font-mono text-blue-900 dark:text-blue-300">
+            <div className="text-base font-black font-mono text-blue-900 dark:text-blue-300 tabular-nums">
               {manifestStats.uniqueCustomers} جهات تسليم
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 flex items-center justify-center shrink-0">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-emerald-400/80 dark:hover:border-emerald-600/60 card-motion flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-inner transition-transform duration-200 group-hover:scale-105">
             <PackageCheck className="w-5 h-5" />
           </div>
           <div>
             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">تسليمات جديدة</div>
-            <div className="text-base font-black font-mono text-emerald-900 dark:text-emerald-300">
+            <div className="text-base font-black font-mono text-emerald-900 dark:text-emerald-300 tabular-nums">
               {manifestStats.deliveryCount} أوردر
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-400 flex items-center justify-center shrink-0">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-rose-400/80 dark:hover:border-rose-600/60 card-motion flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-400 flex items-center justify-center shrink-0 shadow-inner transition-transform duration-200 group-hover:scale-105">
             <RotateCcw className="w-5 h-5" />
           </div>
           <div>
             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">مرتجعات للورشة</div>
-            <div className="text-base font-black font-mono text-rose-900 dark:text-rose-300">
+            <div className="text-base font-black font-mono text-rose-900 dark:text-rose-300 tabular-nums">
               {manifestStats.returnCount} صنف مرتجع
             </div>
           </div>
@@ -675,33 +669,33 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
       <div className="no-print bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
         {/* Row 1: Search and Select Trip */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <FileSpreadsheet className="w-4 h-4 text-amber-700 dark:text-amber-400" />
             <label className="text-xs font-black text-slate-800 dark:text-slate-200">
-              اختيار وبيان الحمولة النشط:
+              بيان الحمولة النشط:
             </label>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:min-w-[200px]">
+            <div className="relative flex-1 min-w-[140px] sm:min-w-[200px]">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5" />
               <input
                 type="text"
-                placeholder="بحث بالتاريخ، السائق، رقم العربية..."
+                placeholder="بحث..."
                 value={manifestSearchTerm}
                 onChange={(e) => setManifestSearchTerm(e.target.value)}
-                className="w-full pr-8 pl-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full pr-8 pl-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-amber-500 outline-none"
               />
             </div>
 
             <select
               value={selectedManifestId}
               onChange={(e) => setSelectedManifestId(e.target.value)}
-              className="px-3 py-1.5 text-xs font-bold rounded-xl border border-amber-300 dark:border-slate-700 bg-amber-50/50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 cursor-pointer flex-1 sm:w-auto"
+              className="px-3 py-1.5 text-xs font-bold rounded-xl border border-amber-300 dark:border-slate-700 bg-amber-50/50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 cursor-pointer flex-1 sm:flex-none sm:min-w-[260px] outline-none"
             >
               {filteredManifests.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.tripDate} ({m.tripDay}) - سيارة {m.truckNumber} ({m.driverName}) - [{m.items.length} صنف]
+                  {m.tripDate} - {m.driverName} ({m.items.length} صنف)
                 </option>
               ))}
             </select>
@@ -709,13 +703,13 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
             {/* Delete manifest button */}
             {deleteConfirmOpen ? (
               <div className="flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/60 p-1 rounded-xl border border-rose-300 dark:border-rose-800">
-                <span className="text-[10px] font-bold text-rose-700 dark:text-rose-300">متأكد من الحذف؟</span>
+                <span className="text-[10px] font-bold text-rose-700 dark:text-rose-300">متأكد؟</span>
                 <button
                   type="button"
                   onClick={handleDeleteManifest}
-                  className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
+                  className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white hover:bg-rose-700 active:scale-90 transition-transform cursor-pointer"
                 >
-                  نعم، احذف
+                  حذف
                 </button>
                 <button
                   type="button"
@@ -729,7 +723,7 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
               <button
                 type="button"
                 onClick={() => setDeleteConfirmOpen(true)}
-                className="p-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                className="p-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer active:scale-90"
                 title="حذف هذا البيان بالكامل"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -1305,159 +1299,162 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
           {/* Active Items Interactive Table / Manager */}
           {items.length > 0 && (
             <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                  جدول إدارة أصناف الحمولة الحالية ({items.length} صنف) - تعديل مباشر وترتيب وحذف:
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+                <span className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <Sliders className="w-3.5 h-3.5 text-amber-600" />
+                  إدارة أصناف الحمولة ({items.length} صنف) - تعديل مباشر:
                 </span>
-                <span className="text-[11px] text-slate-500 font-bold">
-                  يمكنك تعديل أي خانة مباشرة بالنقر عليها
+                <span className="text-[10px] text-slate-500 font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                  💡 اسحب الجدول لليسار لمشاهدة كافة الأعمدة
                 </span>
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 max-h-72 overflow-y-auto">
-                <table className="w-full text-right text-xs border-collapse">
-                  <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
-                    <tr>
-                      <th className="p-2 text-center w-10">ترتيب</th>
-                      <th className="p-2 w-32">العميل</th>
-                      <th className="p-2 w-12 text-center">العدد</th>
-                      <th className="p-2 w-40">اسم الصنف</th>
-                      <th className="p-2">البيان والمواصفات</th>
-                      <th className="p-2 w-44">الملاحظات</th>
-                      <th className="p-2 w-28">السيلز</th>
-                      <th className="p-2 text-center w-24">إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-medium">
-                    {items.map((it, idx) => {
-                      const isRet = it.itemType === 'return' || it.notes.includes('مرتجع');
-                      return (
-                        <tr
-                          key={`manager-item-${it.id}-${idx}`}
-                          className={`hover:bg-slate-50 dark:hover:bg-slate-800/60 ${
-                            isRet ? 'bg-rose-50/50 dark:bg-rose-950/20' : ''
-                          }`}
-                        >
-                          <td className="p-1.5 text-center">
-                            <div className="flex flex-col items-center gap-0.5">
-                              <button
-                                type="button"
-                                disabled={idx === 0}
-                                onClick={() => handleMoveItem(idx, 'up')}
-                                className="p-0.5 text-slate-400 hover:text-amber-700 disabled:opacity-20 cursor-pointer"
-                                title="تحريك لأعلى"
-                              >
-                                <ChevronUp className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                disabled={idx === items.length - 1}
-                                onClick={() => handleMoveItem(idx, 'down')}
-                                className="p-0.5 text-slate-400 hover:text-amber-700 disabled:opacity-20 cursor-pointer"
-                                title="تحريك لأسفل"
-                              >
-                                <ChevronDown className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
+              <div className="relative group/table">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 max-h-96 overflow-y-auto scrollbar-thin shadow-inner bg-slate-50/30 dark:bg-slate-900/30">
+                  <table className="w-full text-right text-xs border-collapse min-w-[900px]">
+                    <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
+                      <tr>
+                        <th className="p-3 text-center w-14">ترتيب</th>
+                        <th className="p-3 w-36">العميل</th>
+                        <th className="p-3 w-16 text-center">العدد</th>
+                        <th className="p-3 w-48">اسم الصنف</th>
+                        <th className="p-3">البيان والمواصفات</th>
+                        <th className="p-3 w-52">الملاحظات</th>
+                        <th className="p-3 w-32">السيلز</th>
+                        <th className="p-3 text-center w-28 sticky left-0 bg-slate-100 dark:bg-slate-800 shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-medium">
+                      {items.map((it, idx) => {
+                        const isRet = it.itemType === 'return' || it.notes.includes('مرتجع');
+                        return (
+                          <tr
+                            key={`manager-item-${it.id}-${idx}`}
+                            className={`hover:bg-slate-50 dark:hover:bg-slate-800/60 group/row transition-colors ${
+                              isRet ? 'bg-rose-50/50 dark:bg-rose-950/20' : ''
+                            }`}
+                          >
+                            <td className="p-2 text-center">
+                              <div className="flex flex-col items-center gap-0.5">
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => handleMoveItem(idx, 'up')}
+                                  className="p-1 text-slate-400 hover:text-amber-700 disabled:opacity-20 cursor-pointer active:scale-90 transition-transform"
+                                  title="تحريك لأعلى"
+                                >
+                                  <ChevronUp className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={idx === items.length - 1}
+                                  onClick={() => handleMoveItem(idx, 'down')}
+                                  className="p-1 text-slate-400 hover:text-amber-700 disabled:opacity-20 cursor-pointer active:scale-90 transition-transform"
+                                  title="تحريك لأسفل"
+                                >
+                                  <ChevronDown className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
 
-                          <td className="p-1.5 font-bold">
-                            <input
-                              type="text"
-                              value={it.customerName}
-                              onChange={(e) => handleItemFieldChange(it.id, 'customerName', e.target.value)}
-                              className="w-full px-2 py-1 rounded bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900"
-                            />
-                          </td>
-
-                          <td className="p-1.5 text-center">
-                            <input
-                              type="number"
-                              min={1}
-                              value={it.qty}
-                              onChange={(e) => handleItemFieldChange(it.id, 'qty', Number(e.target.value) || 1)}
-                              className="w-12 px-1 py-1 text-center font-mono font-bold rounded bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900"
-                            />
-                          </td>
-
-                          <td className="p-1.5 font-extrabold text-blue-950 dark:text-blue-300">
-                            <div className="flex items-center gap-1">
-                              {it.itemType === 'showroom' || it.notes.includes('عروض') ? (
-                                <span className="bg-amber-500 text-amber-950 px-1 py-0.2 rounded text-[9px] font-black shrink-0">
-                                  🏢 عروض
-                                </span>
-                              ) : it.itemType === 'accessories' || it.notes.includes('نواقص') ? (
-                                <span className="bg-purple-600 text-white px-1 py-0.2 rounded text-[9px] font-black shrink-0">
-                                  🧩 نواقص
-                                </span>
-                              ) : (it.itemType === 'return' || it.notes.includes('مرتجع')) ? (
-                                <span className="bg-rose-600 text-white px-1 py-0.2 rounded text-[9px] font-black shrink-0">
-                                  🔁 مرتجع
-                                </span>
-                              ) : null}
+                            <td className="p-2 font-bold">
                               <input
                                 type="text"
-                                value={it.itemName}
-                                onChange={(e) => handleItemFieldChange(it.id, 'itemName', e.target.value)}
-                                className="w-full px-2 py-1 rounded bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900"
+                                value={it.customerName}
+                                onChange={(e) => handleItemFieldChange(it.id, 'customerName', e.target.value)}
+                                className="w-full px-2 py-1.5 rounded-lg bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none"
                               />
-                            </div>
-                          </td>
+                            </td>
 
-                          <td className="p-1.5 text-slate-600 dark:text-slate-300">
-                            <input
-                              type="text"
-                              value={it.specsDetails}
-                              onChange={(e) => handleItemFieldChange(it.id, 'specsDetails', e.target.value)}
-                              className="w-full px-2 py-1 rounded bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900"
-                            />
-                          </td>
+                            <td className="p-2 text-center">
+                              <input
+                                type="number"
+                                min={1}
+                                value={it.qty}
+                                onChange={(e) => handleItemFieldChange(it.id, 'qty', Number(e.target.value) || 1)}
+                                className="w-full px-1 py-1.5 text-center font-mono font-bold rounded-lg bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 tabular-nums outline-none"
+                              />
+                            </td>
 
-                          <td className="p-1.5">
-                            <input
-                              type="text"
-                              value={it.notes}
-                              onChange={(e) => handleItemFieldChange(it.id, 'notes', e.target.value)}
-                              className={`w-full px-2 py-1 rounded bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 font-semibold ${
-                                isRet ? 'text-rose-700 dark:text-rose-400 font-bold' : ''
-                              }`}
-                            />
-                          </td>
+                            <td className="p-2 font-extrabold text-blue-950 dark:text-blue-300">
+                              <div className="flex items-center gap-2">
+                                {it.itemType === 'showroom' || it.notes.includes('عروض') ? (
+                                  <span className="bg-amber-500 text-amber-950 px-1.5 py-0.5 rounded text-[9px] font-black shrink-0 shadow-sm">
+                                    🏢 عروض
+                                  </span>
+                                ) : it.itemType === 'accessories' || it.notes.includes('نواقص') ? (
+                                  <span className="bg-purple-600 text-white px-1.5 py-0.5 rounded text-[9px] font-black shrink-0 shadow-sm">
+                                    🧩 نواقص
+                                  </span>
+                                ) : (it.itemType === 'return' || it.notes.includes('مرتجع')) ? (
+                                  <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded text-[9px] font-black shrink-0 shadow-sm">
+                                    🔁 مرتجع
+                                  </span>
+                                ) : null}
+                                <input
+                                  type="text"
+                                  value={it.itemName}
+                                  onChange={(e) => handleItemFieldChange(it.id, 'itemName', e.target.value)}
+                                  className="w-full px-2 py-1.5 rounded-lg bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none"
+                                />
+                              </div>
+                            </td>
 
-                          <td className="p-1.5 font-semibold text-slate-700 dark:text-slate-300">
-                            <input
-                              type="text"
-                              value={it.salesperson}
-                              onChange={(e) => handleItemFieldChange(it.id, 'salesperson', e.target.value)}
-                              className="w-full px-2 py-1 rounded bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900"
-                            />
-                          </td>
+                            <td className="p-2 text-slate-600 dark:text-slate-300">
+                              <input
+                                type="text"
+                                value={it.specsDetails}
+                                onChange={(e) => handleItemFieldChange(it.id, 'specsDetails', e.target.value)}
+                                className="w-full px-2 py-1.5 rounded-lg bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none"
+                              />
+                            </td>
 
-                          <td className="p-1.5 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDuplicateItem(it)}
-                                className="p-1 text-slate-400 hover:text-amber-700 transition-colors cursor-pointer"
-                                title="تكرار هذا الصنف"
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(it.id)}
-                                className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                title="حذف هذا الصنف من البيان"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                value={it.notes}
+                                onChange={(e) => handleItemFieldChange(it.id, 'notes', e.target.value)}
+                                className={`w-full px-2 py-1.5 rounded-lg bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 font-semibold transition-all outline-none ${
+                                  isRet ? 'text-rose-700 dark:text-rose-400 font-bold' : ''
+                                }`}
+                              />
+                            </td>
+
+                            <td className="p-2 font-semibold text-slate-700 dark:text-slate-300">
+                              <input
+                                type="text"
+                                value={it.salesperson}
+                                onChange={(e) => handleItemFieldChange(it.id, 'salesperson', e.target.value)}
+                                className="w-full px-2 py-1.5 rounded-lg bg-transparent border border-transparent hover:border-slate-300 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none"
+                              />
+                            </td>
+
+                            <td className="p-2 text-center sticky left-0 bg-white dark:bg-slate-900 group-hover/row:bg-slate-50 dark:group-hover/row:bg-slate-800/60 shadow-[-4px_0_8px_rgba(0,0,0,0.05)] transition-colors">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDuplicateItem(it)}
+                                  className="p-2 text-slate-400 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition-all cursor-pointer active:scale-90"
+                                  title="تكرار هذا الصنف"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItem(it.id)}
+                                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all cursor-pointer active:scale-90"
+                                  title="حذف هذا الصنف من البيان"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

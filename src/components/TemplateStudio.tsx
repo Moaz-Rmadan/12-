@@ -436,48 +436,55 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 sm:space-y-10">
       
-      {/* Top Banner */}
-      <div className="no-print bg-gradient-to-r from-amber-950 via-slate-900 to-amber-900 text-amber-50 p-4 sm:p-6 rounded-2xl border border-amber-800/40 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-1.5 text-amber-400 text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider mb-1">
-            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span>Interactive Job Order Sheet Generator &amp; Template Studio</span>
+      {/* Top Banner - Interactive & Compact */}
+      <div className="no-print bg-gradient-to-br from-amber-950 via-slate-900 to-amber-900 text-white p-5 sm:p-8 rounded-3xl border border-amber-800/40 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative overflow-hidden">
+        {/* Background Glow */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px] -mr-32 -mt-32 rounded-full" />
+        
+        <div className="relative z-10 min-w-0">
+          <div className="flex items-center gap-2 text-amber-400 text-[10px] sm:text-xs font-mono font-black uppercase tracking-[0.2em] mb-2">
+            <Sparkles className="w-4 h-4 animate-pulse" />
+            <span className="truncate">Production Intelligence • Template Studio</span>
           </div>
-          <h2 className="text-lg sm:text-xl font-black font-serif text-amber-100">
-            مولد ومصمم قالب أمر الشغل القياسي (النجار فيرنتشر)
+          <h2 className="text-xl sm:text-3xl font-black font-serif text-white leading-tight">
+            مصمم قوالب أوامر الشغل
           </h2>
-          <p className="text-xs text-amber-200/80 mt-1 max-w-2xl leading-relaxed">
-            اختر قالباً جاهزاً مستوحى من أوامر الشغل المرفقة، عدل البيانات والألوان، ارفع صور العينات، واطبع الورقة المعتمدة مباشرة!
+          <p className="text-[11px] sm:text-sm text-amber-200/60 mt-2 max-w-2xl leading-relaxed font-bold">
+            قم بإنشاء وتخصيص أوامر الشغل القياسية لمصنع النجار، عدل البيانات لحظياً واطبع النسخة المعتمدة بدقة عالية.
           </p>
         </div>
 
-        <div className="flex items-center justify-between w-full md:w-auto gap-2.5 pt-2 md:pt-0 border-t md:border-t-0 border-amber-800/60 shrink-0">
+        <div className="relative z-10 flex flex-wrap items-center gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-amber-800/30 shrink-0">
           <button
             onClick={handleSaveToDb}
-            className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-extrabold text-amber-950 bg-amber-400 hover:bg-amber-300 shadow-sm transition-all cursor-pointer whitespace-nowrap active:scale-95"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-black text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-xl shadow-amber-900/40 transition-all cursor-pointer whitespace-nowrap active:scale-95 group"
           >
-            {savedSuccess ? <Check className="w-4 h-4 text-emerald-900" /> : <Save className="w-4 h-4" />}
-            <span>{savedSuccess ? 'تم الحفظ بالنظام!' : 'حفظ بقاعدة البيانات'}</span>
+            {savedSuccess ? <Check className="w-5 h-5 text-emerald-900" /> : <Save className="w-5 h-5 group-hover:scale-110 transition-transform" />}
+            <span>{savedSuccess ? 'تم الحفظ بنجاح' : 'حفظ في النظام'}</span>
           </button>
 
           <button
             onClick={handlePrint}
-            className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-amber-700 hover:bg-amber-600 shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-xs sm:text-sm font-black text-white bg-amber-700 hover:bg-amber-600 shadow-xl shadow-amber-950/40 transition-all cursor-pointer whitespace-nowrap active:scale-95 border-b-4 border-amber-900"
           >
-            <Printer className="w-4 h-4" />
-            <span>طباعة القالب (A4)</span>
+            <Printer className="w-5 h-5" />
+            <span>طباعة (A4)</span>
           </button>
         </div>
       </div>
 
-      {/* Preset Templates Selector Bar */}
-      <div className="no-print bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
-        <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">
-          اختر قالباً معتمداً للتعديل عليه (مبني على صورك المرفقة):
-        </span>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 sm:gap-3 max-h-80 overflow-y-auto p-1">
+      {/* Preset Templates Selector - Horizontal Scroll for Mobile */}
+      <div className="no-print bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <Layers className="w-4 h-4 text-amber-600" />
+            <span>نماذج معتمدة للتعديل (قوالب المصنع):</span>
+          </span>
+        </div>
+        
+        <div className="flex items-stretch gap-3 overflow-x-auto scrollbar-none pb-2 px-1 snap-x snap-mandatory">
           {presetTemplates.map((t, idx) => (
             <button
               key={t.id}
@@ -485,53 +492,63 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
                 setSelectedTemplate(t);
                 setSavedSuccess(false);
               }}
-              className={`p-2.5 sm:p-3 rounded-xl border text-right transition-all cursor-pointer flex flex-col justify-between ${
+              className={`min-w-[160px] sm:min-w-[200px] p-4 rounded-2xl border text-right transition-all cursor-pointer flex flex-col justify-between gap-3 snap-start relative overflow-hidden group ${
                 selectedTemplate.id === t.id
-                  ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-600 shadow-xs ring-2 ring-amber-500/20'
-                  : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-amber-400'
+                  ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 shadow-lg ring-4 ring-amber-500/10'
+                  : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 hover:border-amber-300'
               }`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[9px] sm:text-[10px] font-bold font-mono px-1.5 py-0.2 rounded bg-amber-950 text-amber-200">
-                  قالب {idx + 1}
+              <div className="flex items-center justify-between">
+                <span className={`text-[10px] font-black font-mono px-2 py-0.5 rounded-lg ${
+                  selectedTemplate.id === t.id ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                }`}>
+                  T-{idx + 1}
                 </span>
-                <Award className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <Award className={`w-4 h-4 ${selectedTemplate.id === t.id ? 'text-amber-600' : 'text-slate-400 group-hover:text-amber-500 transition-colors'}`} />
               </div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                {t.roomCode}
-              </h4>
-              <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                {t.customerName}
-              </p>
+              <div className="min-w-0">
+                <h4 className={`text-xs font-black truncate mb-0.5 ${selectedTemplate.id === t.id ? 'text-amber-950 dark:text-amber-100' : 'text-slate-900 dark:text-slate-200'}`}>
+                  {t.roomCode}
+                </h4>
+                <p className="text-[10px] font-bold text-slate-500 truncate">
+                  {t.customerName}
+                </p>
+              </div>
+              {/* Active Highlight */}
+              {selectedTemplate.id === t.id && (
+                <div className="absolute bottom-0 right-0 w-8 h-8 bg-amber-500/10 rounded-tl-3xl flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                </div>
+              )}
             </button>
           ))}
         </div>
       </div>
 
-      {/* MOBILE SWITCHER TABS (Editor vs Preview) */}
-      <div className="no-print lg:hidden flex items-center p-1 bg-slate-200 dark:bg-slate-800 rounded-xl">
+      {/* MOBILE SWITCHER TABS - Floating Style */}
+      <div className="no-print lg:hidden sticky top-4 z-30 flex items-center p-1.5 bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/10 mx-auto w-fit">
         <button
           onClick={() => setMobileActiveTab('editor')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-2 px-6 py-2.5 text-[11px] font-black rounded-xl transition-all cursor-pointer ${
             mobileActiveTab === 'editor'
-              ? 'bg-amber-950 text-amber-200 shadow-xs'
-              : 'text-slate-600 dark:text-slate-400'
+              ? 'bg-amber-500 text-slate-950 shadow-lg scale-105'
+              : 'text-slate-400 hover:text-white'
           }`}
         >
           <Edit3 className="w-4 h-4" />
-          <span>محرر وتعديل البيانات</span>
+          <span>محرر البيانات</span>
         </button>
 
         <button
           onClick={() => setMobileActiveTab('preview')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-2 px-6 py-2.5 text-[11px] font-black rounded-xl transition-all cursor-pointer ${
             mobileActiveTab === 'preview'
-              ? 'bg-amber-950 text-amber-200 shadow-xs'
-              : 'text-slate-600 dark:text-slate-400'
+              ? 'bg-amber-500 text-slate-950 shadow-lg scale-105'
+              : 'text-slate-400 hover:text-white'
           }`}
         >
           <Eye className="w-4 h-4" />
-          <span>معاينة ورقة أمر الشغل</span>
+          <span>معاينة الطباعة</span>
         </button>
       </div>
 

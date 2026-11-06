@@ -195,412 +195,431 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="relative bg-white dark:bg-slate-900 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="relative bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl max-w-4xl w-full h-[96vh] sm:h-auto sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-300">
         
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-amber-900 via-amber-950 to-slate-900 text-amber-50 px-6 py-4 flex items-center justify-between border-b border-amber-800/50">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isEditMode ? 'bg-amber-400/20 text-amber-300' : 'bg-amber-500/20 text-amber-300'}`}>
-              {isEditMode ? <Edit3 className="w-5 h-5 text-amber-300" /> : <Hammer className="w-5 h-5" />}
+        {/* Header - Premium Gradient */}
+        <div className="sticky top-0 z-20 bg-gradient-to-br from-amber-900 via-amber-950 to-slate-900 text-white px-5 py-4 sm:px-8 sm:py-6 flex items-center justify-between border-b border-amber-800/50 shrink-0">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-2xl ${isEditMode ? 'bg-amber-400/20 text-amber-300' : 'bg-amber-500/20 text-amber-300'} border border-amber-500/30 shadow-inner`}>
+              {isEditMode ? <Edit3 className="w-6 h-6 sm:w-7 sm:h-7" /> : <Hammer className="w-6 h-6 sm:w-7 sm:h-7" />}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold font-serif text-amber-100">
-                  {isEditMode ? `تعديل أمر الشغل (${orderToEdit?.order_number})` : 'إنشاء أمر شغل جديد'}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                <h2 className="text-lg sm:text-2xl font-black font-serif text-white leading-none">
+                  {isEditMode ? 'تعديل أمر الشغل' : 'إنشاء أمر شغل جديد'}
                 </h2>
-                {isEditMode && (
-                  <span className="text-[10px] bg-amber-400 text-amber-950 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    أمر تعديل مواصفة / ECO
+                {isEditMode ? (
+                  <span className="text-[9px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shadow-sm shrink-0">
+                    {orderToEdit?.order_number}
+                  </span>
+                ) : (
+                  <span className="text-[9px] bg-emerald-500 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shadow-sm shrink-0 animate-pulse">
+                    أمر جديد
                   </span>
                 )}
               </div>
-              <p className="text-xs text-amber-300/80">
+              <p className="text-[10px] sm:text-xs text-amber-200/60 font-bold max-w-xs truncate">
                 {isEditMode
-                  ? 'تعديل المقاسات، نوع الخشب، كود القماش أو رقم الباتش وحفظها في قاعدة البيانات'
-                  : 'إدخال بيانات العميل، الموديل، الدهانات، والتنجيد برقم الـ Batch'}
+                  ? 'تعديل المواصفات الفنية والمقاسات للهيكل والدهان'
+                  : 'إدخال بيانات العميل والموديل برقم الـ Batch'}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-amber-900 text-amber-200 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl bg-white/5 hover:bg-rose-600/20 text-amber-200 hover:text-white transition-all cursor-pointer group active:scale-90"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6 group-hover:rotate-90 transition-transform" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          
-          {/* SECTION 1: CUSTOMER INFO */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-amber-900 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-              <span>1. بيانات العميل والاتصال</span>
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  اسم العميل الثلاثي *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="مثال: د. حسام فاروق"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
-                />
+        {/* Form Body - Scrollable */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="p-5 sm:p-8 space-y-10 pb-24 sm:pb-8">
+            
+            {/* SECTION 1: CUSTOMER INFO */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center font-black text-sm">1</div>
+                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-serif uppercase tracking-tight">
+                  بيانات العميل وجهة الاتصال
+                </h3>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  رقم الهاتف *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="01000000000"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  عنوان التسليم والتركيب التفصيلي
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: القاهرة - التجمع الخامس - فيلا 22"
-                  value={customerAddress}
-                  onChange={(e) => setCustomerAddress(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 2: JOB ORDER MAIN DETAILS */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-amber-900 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-              <span>2. بيانات أمر الشغل والتعاقد</span>
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  رقم الأمر *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={orderNumber}
-                  onChange={(e) => setOrderNumber(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono font-bold focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  كود الغرفة / الموديل *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="RM-BED-09"
-                  value={roomModelCode}
-                  onChange={(e) => setRoomModelCode(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  حالة الطلب الرئيسية
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as OrderStatus)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold cursor-pointer"
-                >
-                  <option value="قيد التشغيل">قيد التشغيل</option>
-                  <option value="تم التنفيذ">تم التنفيذ</option>
-                  <option value="تسليم">تسليم</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  مرحلة الإنتاج الحالية (الورشة)
-                </label>
-                <select
-                  value={currentStage}
-                  onChange={(e) => setCurrentStage(e.target.value as ProductionStage)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-purple-300 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/40 text-purple-950 dark:text-purple-200 font-bold cursor-pointer"
-                >
-                  <option value="لم يبدأ">⏳ لم يبدأ</option>
-                  <option value="نجارة عفش">🪚 نجارة عفش</option>
-                  <option value="نجارة انتريهات">🪵 نجارة انتريهات</option>
-                  <option value="خدمة وتجهيز">⏱️ خدمة وتجهيز</option>
-                  <option value="كابينة أستر">🎨 كابينة أستر</option>
-                  <option value="كابينة دوكو">🖌️ كابينة دوكو</option>
-                  <option value="تنجيد">🛋️ تنجيد</option>
-                  <option value="تشطيب وتغليف">📦 تشطيب وتغليف</option>
-                  <option value="جاهز للتسليم">🚀 جاهز للتسليم</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  تاريخ التعاقد
-                </label>
-                <input
-                  type="date"
-                  value={contractDate}
-                  onChange={(e) => setContractDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  تاريخ التسليم المتوقع
-                </label>
-                <input
-                  type="date"
-                  value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  إجمالي المبلغ (ج.م)
-                </label>
-                <input
-                  type="number"
-                  value={totalPrice}
-                  onChange={(e) => setTotalPrice(Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                المواصفات العامة للطلب *
-              </label>
-              <textarea
-                required
-                rows={2}
-                placeholder="مثال: غرفة نوم رئيسية مودرن تحتوي على دولاب 6 ضلفة وسرير كابوتونيه و2 كومودينو"
-                value={generalSpecs}
-                onChange={(e) => setGeneralSpecs(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
-          </div>
-
-          {/* SECTION 3: WORKSHOP & TECHNICAL DETAILS */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-amber-900 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-              <span>3. تفاصيل الورش والتشغيل (المقاسات والدهان والتنجيد)</span>
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                  <Ruler className="w-3.5 h-3.5 text-amber-700" />
-                  <span>المقاسات والتصاميم الهيكلية (بالسم)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: 240 × 220 × 65 سم"
-                  value={dimensionsCm}
-                  onChange={(e) => setDimensionsCm(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  نوع الخشب المعتمد
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: خشب زان أحمر روماني"
-                  value={woodType}
-                  onChange={(e) => setWoodType(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                  <Paintbrush className="w-3.5 h-3.5 text-amber-700" />
-                  <span>تفاصيل الدهان واللمعة النهاية</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: دهان أستر بني جوز طبيعي بولي يوريثان مط"
-                  value={paintDetails}
-                  onChange={(e) => setPaintDetails(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                  <Scissors className="w-3.5 h-3.5 text-amber-700" />
-                  <span>مصدر القماش</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: النحاس للأقمشة / وارد العميل"
-                  value={fabricSource}
-                  onChange={(e) => setFabricSource(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  كود اللون
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: VELVET-NVY-904"
-                  value={colorCode}
-                  onChange={(e) => setColorCode(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
-                />
-              </div>
-
-              <div className="sm:col-span-2 p-3 rounded-xl bg-amber-50 dark:bg-slate-800/60 border border-amber-300/60 dark:border-amber-800/60">
-                <label className="block text-xs font-bold text-amber-950 dark:text-amber-300 mb-1">
-                  رقم الـ Batch (Batch Number) لضمان تجانس اللون *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="مثال: BATCH-2026-24-0BB73"
-                  value={batchNumber}
-                  onChange={(e) => setBatchNumber(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-amber-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-mono font-bold focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  ملاحظات التركيب بالموقع
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: تثبيت قواعد ستانلس ستيل، موقع التركيب دور 3 بدون أسانسير"
-                  value={installationNotes}
-                  onChange={(e) => setInstallationNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 4: ATTACHMENTS */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-              <h3 className="text-sm font-bold text-amber-900 dark:text-amber-400 uppercase tracking-wider">
-                4. المرفقات (الرسم الهيكلي وكروت العينات)
-              </h3>
-              
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-amber-950 bg-amber-200 hover:bg-amber-300 dark:bg-amber-950 dark:text-amber-200 rounded-lg cursor-pointer transition-all">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>رفع صورة من الجهاز</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'drawing')}
-                  />
-                </label>
-
-                <button
-                  type="button"
-                  onClick={handleAddAttachment}
-                  className="flex items-center gap-1 text-xs font-bold text-amber-800 dark:text-amber-400 hover:underline cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>إضافة رابط</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {attachmentsList.map((att, idx) => (
-                <div key={idx} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
-                  <select
-                    value={att.file_type}
-                    onChange={(e) => {
-                      const updated = [...attachmentsList];
-                      updated[idx].file_type = e.target.value as AttachmentType;
-                      setAttachmentsList(updated);
-                    }}
-                    className="text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 font-semibold cursor-pointer"
-                  >
-                    <option value="drawing">رسم هيكلي (CAD)</option>
-                    <option value="fabric_sample">كرت عينة قماش</option>
-                    <option value="3d_render">رندر 3D</option>
-                    <option value="other">مرفق آخر</option>
-                  </select>
-
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">اسم العميل الثلاثي *</label>
                   <input
                     type="text"
-                    placeholder="رابط الصورة / Image URL"
-                    value={att.file_url}
-                    onChange={(e) => {
-                      const updated = [...attachmentsList];
-                      updated[idx].file_url = e.target.value;
-                      setAttachmentsList(updated);
-                    }}
-                    className="flex-1 min-w-[200px] px-2.5 py-1 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono"
+                    required
+                    placeholder="مثال: د. حسام فاروق"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all shadow-inner"
                   />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">رقم الهاتف *</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="01000000000"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all shadow-inner tabular-nums"
+                  />
+                </div>
+
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">عنوان التسليم والتركيب التفصيلي</label>
+                  <input
+                    type="text"
+                    placeholder="مثال: القاهرة - التجمع الخامس - فيلا 22"
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all shadow-inner"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 2: JOB ORDER MAIN DETAILS */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center font-black text-sm">2</div>
+                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-serif uppercase tracking-tight">
+                  بيانات أمر الشغل والتعاقد الرئيسي
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">رقم الأمر *</label>
+                  <input
+                    type="text"
+                    required
+                    value={orderNumber}
+                    onChange={(e) => setOrderNumber(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all shadow-inner"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">كود الموديل *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="RM-BED-09"
+                    value={roomModelCode}
+                    onChange={(e) => setRoomModelCode(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all shadow-inner"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">حالة الطلب</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as OrderStatus)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 cursor-pointer focus:ring-2 focus:ring-amber-500 outline-none appearance-none"
+                  >
+                    <option value="قيد التشغيل">🔨 قيد التشغيل</option>
+                    <option value="تم التنفيذ">✅ تم التنفيذ</option>
+                    <option value="تسليم">🚚 تسليم</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">مرحلة الورشة</label>
+                  <select
+                    value={currentStage}
+                    onChange={(e) => setCurrentStage(e.target.value as ProductionStage)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-950/20 text-purple-950 dark:text-purple-200 cursor-pointer focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
+                  >
+                    <option value="لم يبدأ">لم يبدأ</option>
+                    <option value="نجارة عفش">نجارة عفش</option>
+                    <option value="نجارة انتريهات">نجارة انتريهات</option>
+                    <option value="خدمة وتجهيز">خدمة وتجهيز</option>
+                    <option value="كابينة أستر">كابينة أستر</option>
+                    <option value="كابينة دوكو">كابينة دوكو</option>
+                    <option value="تنجيد">تنجيد</option>
+                    <option value="تشطيب وتغليف">تشطيب وتغليف</option>
+                    <option value="جاهز للتسليم">جاهز للتسليم</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">تاريخ التعاقد</label>
+                  <input
+                    type="date"
+                    value={contractDate}
+                    onChange={(e) => setContractDate(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">تاريخ التسليم</label>
+                  <input
+                    type="date"
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">إجمالي المبلغ (ج.م)</label>
+                  <input
+                    type="number"
+                    value={totalPrice}
+                    onChange={(e) => setTotalPrice(Number(e.target.value))}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none tabular-nums"
+                  />
+                </div>
+                
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">العربون المدفوع (ج.م)</label>
+                  <input
+                    type="number"
+                    value={depositPaid}
+                    onChange={(e) => setDepositPaid(Number(e.target.value))}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none tabular-nums"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">المواصفات العامة للطلب *</label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="مثال: غرفة نوم رئيسية مودرن تحتوي على دولاب 6 ضلفة وسرير كابوتونيه..."
+                  value={generalSpecs}
+                  onChange={(e) => setGeneralSpecs(e.target.value)}
+                  className="w-full px-4 py-3 text-xs sm:text-sm font-bold rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all shadow-inner leading-relaxed"
+                />
+              </div>
+            </div>
+
+            {/* SECTION 3: WORKSHOP & TECHNICAL DETAILS */}
+            <div className="space-y-5 bg-slate-50/50 dark:bg-slate-800/20 p-5 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800/50">
+              <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-600/10 text-amber-700 flex items-center justify-center font-black text-sm">3</div>
+                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-serif uppercase tracking-tight">
+                  تفاصيل الورش والتشغيل الفنية
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1 px-1 flex items-center gap-2">
+                    <Ruler className="w-3.5 h-3.5 text-amber-600" />
+                    <span>المقاسات والتصميم الهيكلي</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="مثال: 240 × 220 × 65 سم"
+                    value={dimensionsCm}
+                    onChange={(e) => setDimensionsCm(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none shadow-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1 px-1 uppercase tracking-tighter">نوع الخشب</label>
+                  <input
+                    type="text"
+                    placeholder="مثال: خشب زان أحمر روماني"
+                    value={woodType}
+                    onChange={(e) => setWoodType(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 outline-none shadow-sm"
+                  />
+                </div>
+
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1 px-1 flex items-center gap-2 uppercase tracking-tighter">
+                    <Paintbrush className="w-3.5 h-3.5 text-amber-600" />
+                    <span>تفاصيل الدهان واللمعة</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="مثال: دهان أستر بني جوز طبيعي بولي يوريثان مط"
+                    value={paintDetails}
+                    onChange={(e) => setPaintDetails(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 outline-none shadow-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1 px-1 flex items-center gap-2 uppercase tracking-tighter">
+                    <Scissors className="w-3.5 h-3.5 text-amber-600" />
+                    <span>مصدر القماش والنوع</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="مثال: النحاس للأقمشة / وارد العميل"
+                    value={fabricSource}
+                    onChange={(e) => setFabricSource(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 outline-none shadow-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1 px-1 uppercase tracking-tighter">كود اللون</label>
+                  <input
+                    type="text"
+                    placeholder="مثال: VELVET-NVY-904"
+                    value={colorCode}
+                    onChange={(e) => setColorCode(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none shadow-sm"
+                  />
+                </div>
+
+                <div className="md:col-span-2 p-4 rounded-2xl bg-amber-100 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
+                  <label className="block text-[11px] font-black text-amber-900 dark:text-amber-400 mb-2 px-1 uppercase tracking-[0.05em] flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    <span>رقم الـ Batch (Batch Number) لضمان تجانس الألوان *</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="مثال: BATCH-2026-24-0BB73"
+                    value={batchNumber}
+                    onChange={(e) => setBatchNumber(e.target.value)}
+                    className="w-full px-4 py-3.5 text-sm sm:text-base font-black rounded-xl border border-amber-300 dark:border-amber-900/50 bg-white dark:bg-slate-900 text-slate-950 dark:text-amber-100 font-mono focus:ring-4 focus:ring-amber-500/20 outline-none shadow-md"
+                  />
+                  <p className="text-[9px] sm:text-[10px] text-amber-800 dark:text-amber-500/70 mt-2 font-bold px-1">
+                    * هذا الرقم ضروري لمطابقة القماش في حالة إضافة قطع أخرى للأوردر مستقبلاً.
+                  </p>
+                </div>
+
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1 px-1 uppercase tracking-tighter">ملاحظات التركيب والتحميل</label>
+                  <input
+                    type="text"
+                    placeholder="مثال: تثبيت قواعد ستانلس، موقع التركيب دور 3 بدون أسانسير"
+                    value={installationNotes}
+                    onChange={(e) => setInstallationNotes(e.target.value)}
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 outline-none shadow-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 4: ATTACHMENTS */}
+            <div className="space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-sm">4</div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-serif uppercase tracking-tight">
+                    المرفقات الفنية وكروت العينات
+                  </h3>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-4 py-2 text-[10px] sm:text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-xl cursor-pointer transition-all shadow-md active:scale-95">
+                    <Upload className="w-4 h-4" />
+                    <span>رفع صور / رسم</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, 'drawing')}
+                    />
+                  </label>
 
                   <button
                     type="button"
-                    onClick={() => handleRemoveAttachment(idx)}
-                    className="p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded cursor-pointer"
+                    onClick={handleAddAttachment}
+                    className="flex items-center gap-1.5 text-[10px] sm:text-xs font-black text-amber-800 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 px-3 py-2 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-amber-200"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>إضافة رابط</span>
                   </button>
                 </div>
-              ))}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                {attachmentsList.map((att, idx) => (
+                  <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 group transition-all hover:border-amber-300 dark:hover:border-amber-900">
+                    <select
+                      value={att.file_type}
+                      onChange={(e) => {
+                        const updated = [...attachmentsList];
+                        updated[idx].file_type = e.target.value as AttachmentType;
+                        setAttachmentsList(updated);
+                      }}
+                      className="text-[10px] font-black bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 cursor-pointer outline-none focus:ring-2 focus:ring-amber-500 shrink-0"
+                    >
+                      <option value="drawing">📐 رسم CAD</option>
+                      <option value="fabric_sample">🧶 عينة قماش</option>
+                      <option value="3d_render">🧊 رندر 3D</option>
+                      <option value="other">📎 مرفق آخر</option>
+                    </select>
+
+                    <div className="flex-1 relative group/input">
+                      <input
+                        type="text"
+                        placeholder="رابط الصورة المباشر أو مسار الملف المرفوع"
+                        value={att.file_url}
+                        onChange={(e) => {
+                          const updated = [...attachmentsList];
+                          updated[idx].file_url = e.target.value;
+                          setAttachmentsList(updated);
+                        }}
+                        className="w-full px-4 py-2 text-[10px] sm:text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                      />
+                      {att.file_url && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg overflow-hidden border border-slate-200 shadow-sm no-print">
+                          <img src={att.file_url} className="w-full h-full object-cover" alt="preview" />
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAttachment(idx)}
+                      className="p-2 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0"
+                      title="حذف المرفق"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))}
+
+                {attachmentsList.length === 0 && (
+                  <div className="py-10 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
+                    <p className="text-xs font-bold text-slate-400">لا توجد مرفقات حالياً. قم برفع الرسم التنفيذي لضمان دقة التصنيع.</p>
+                  </div>
+                )}
+              </div>
             </div>
+
           </div>
 
-          {/* Modal Actions */}
-          <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-800">
+          {/* Modal Actions - Sticky Bottom for Mobile */}
+          <div className="sticky bottom-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex items-center justify-end gap-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="flex-1 sm:flex-none px-6 py-3 rounded-2xl text-xs font-black text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer active:scale-95"
             >
               إلغاء
             </button>
 
             <button
               type="submit"
-              className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-amber-800 to-amber-950 hover:from-amber-900 hover:to-slate-900 shadow-sm transition-all cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-10 py-3 rounded-2xl text-xs sm:text-sm font-black text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-xl shadow-amber-900/20 transition-all cursor-pointer active:scale-95 whitespace-nowrap border-b-4 border-amber-600"
             >
-              <Save className="w-4 h-4" />
-              <span>{isEditMode ? 'تحديث وحفظ التعديل' : 'حفظ أمر الشغل'}</span>
+              <Save className="w-5 h-5" />
+              <span>{isEditMode ? 'حفظ التعديلات الفنية' : 'اعتماد أمر الشغل'}</span>
             </button>
           </div>
-
         </form>
       </div>
     </div>

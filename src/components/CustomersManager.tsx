@@ -268,25 +268,28 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
             return (
               <div
                 key={cust.id}
-                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs hover:shadow-xl hover:shadow-amber-950/5 hover:border-amber-400/80 dark:hover:border-amber-600/70 card-motion flex flex-col justify-between group relative overflow-hidden"
               >
-                <div className="space-y-4">
+                {/* Top Subtle Amber Hairline Accent */}
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-600 to-amber-800 opacity-80 group-hover:opacity-100 transition-opacity" />
+
+                <div className="space-y-4 pt-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 flex items-center justify-center font-bold text-sm">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 flex items-center justify-center font-black text-sm shadow-inner transition-transform duration-200 group-hover:scale-105">
                         {cust.name.slice(0, 2)}
                       </div>
                       <div>
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-amber-900 dark:group-hover:text-amber-300 transition-colors">
                           {cust.name}
                         </h3>
-                        <span className="text-[11px] text-slate-400">عميل مسجل</span>
+                        <span className="text-[11px] text-slate-400 font-medium">عميل معتمد</span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                        {custOrders.length} أجهزة شغل
+                      <span className="text-[11px] font-mono font-black px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700 tabular-nums">
+                        {custOrders.length} أوامر
                       </span>
 
                       {onDeleteCustomer && (
@@ -294,7 +297,7 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
                           type="button"
                           onClick={() => setCustomerToDelete(cust)}
                           title="حذف العميل"
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer active:scale-90"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -302,42 +305,46 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                  <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300 bg-slate-50/70 dark:bg-slate-850/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 transition-colors group-hover:border-amber-200/50">
                     <div className="flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 text-amber-700" />
+                      <div className="p-1 rounded bg-amber-100/80 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 shrink-0">
+                        <Phone className="w-3.5 h-3.5" />
+                      </div>
                       <a
                         href={`tel:${cust.phone}`}
-                        className="font-mono hover:text-amber-700 underline underline-offset-2"
+                        className="font-mono font-black hover:text-amber-700 dark:hover:text-amber-300 underline underline-offset-2 tabular-nums"
                       >
                         {cust.phone}
                       </a>
                     </div>
 
                     <div className="flex items-start gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
-                      <span className="leading-tight">{cust.address || 'العنوان غير مدخل'}</span>
+                      <div className="p-1 rounded bg-amber-100/80 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 shrink-0 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="leading-relaxed font-medium">{cust.address || 'العنوان غير مدخل'}</span>
                     </div>
                   </div>
 
                   {/* Assigned Orders List */}
                   {custOrders.length > 0 && (
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
-                      <span className="text-[11px] font-bold text-slate-400 block mb-1">
-                        أوامر الشغل الخاصة بالعميل ({custOrders.length}):
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-[11px] font-bold text-slate-400 block mb-1.5">
+                        أوامر الشغل بالورشة ({custOrders.length}):
                       </span>
-                      <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 scrollbar-thin">
                         {custOrders.map((o) => (
                           <div
                             key={o.id}
-                            className="flex items-center justify-between text-xs p-1.5 rounded bg-slate-50 dark:bg-slate-800/50"
+                            className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 hover:border-amber-300 transition-colors"
                           >
-                            <span className="font-mono font-bold text-amber-900 dark:text-amber-300">
+                            <span className="font-mono font-black text-amber-900 dark:text-amber-300 tabular-nums">
                               {o.order_number}
                             </span>
-                            <span className="text-[11px] text-slate-500 truncate max-w-[130px]">
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[130px] leading-relaxed">
                               {o.general_specs}
                             </span>
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-900 tabular-nums">
                               {o.status}
                             </span>
                           </div>
@@ -353,17 +360,17 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
                     href={`https://wa.me/2${cust.phone.replace(/[^0-9]/g, '')}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
+                    className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>واتساب</span>
                   </a>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     {onOpenDeliveryReceiptForCustomer && (
                       <button
                         onClick={() => onOpenDeliveryReceiptForCustomer(cust)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/80 hover:bg-amber-200 transition-colors cursor-pointer"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-100/90 dark:bg-amber-950/80 hover:bg-amber-200 dark:hover:bg-amber-900 border border-amber-300/60 dark:border-amber-800/60 transition-all cursor-pointer active:scale-95 shadow-2xs"
                         title="طباعة إقرار استلام منتجات العميل"
                       >
                         <FileCheck className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
@@ -374,7 +381,7 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
                     {onOpenNewOrderForCustomer && (
                       <button
                         onClick={() => onOpenNewOrderForCustomer(cust)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-800 hover:bg-amber-900 transition-colors shadow-2xs cursor-pointer"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-amber-800 hover:bg-amber-900 transition-all shadow-xs cursor-pointer active:scale-95"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>أمر جديد</span>

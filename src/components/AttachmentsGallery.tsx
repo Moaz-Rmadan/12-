@@ -78,7 +78,7 @@ export const AttachmentsGallery: React.FC<AttachmentsGalleryProps> = ({ orders }
       </div>
 
       {/* Attachments Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {filteredAttachments.map((att) => {
           const badge = getAttachmentBadge(att.file_type);
           const BadgeIcon = badge.icon;
@@ -86,28 +86,28 @@ export const AttachmentsGallery: React.FC<AttachmentsGalleryProps> = ({ orders }
           return (
             <div
               key={att.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs hover:shadow-md transition-all group flex flex-col justify-between"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs hover:shadow-md hover:border-amber-500/30 transition-all group flex flex-col justify-between card-motion"
             >
               <div>
                 {/* Image Aspect ratio Box */}
-                <div className="relative h-52 bg-slate-950 overflow-hidden flex items-center justify-center">
+                <div className="relative h-48 sm:h-52 bg-slate-950 overflow-hidden flex items-center justify-center">
                   <img
                     src={att.file_url}
                     alt={att.title}
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                     <button
                       onClick={() => setPreviewImage(att)}
-                      className="w-full py-2 rounded-lg text-xs font-bold text-white bg-amber-700 hover:bg-amber-600 flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                      className="w-full py-2.5 rounded-xl text-xs font-black text-white bg-amber-600 hover:bg-amber-500 active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all"
                     >
                       <Eye className="w-4 h-4" />
                       <span>تكبير المعاينة</span>
                     </button>
                   </div>
 
-                  <span className={`absolute top-3 right-3 px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 shadow-sm ${badge.color}`}>
+                  <span className={`absolute top-3 right-3 px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-md backdrop-blur-sm ${badge.color}`}>
                     <BadgeIcon className="w-3.5 h-3.5" />
                     <span>{badge.label}</span>
                   </span>
@@ -116,25 +116,26 @@ export const AttachmentsGallery: React.FC<AttachmentsGalleryProps> = ({ orders }
                 {/* Content Details */}
                 <div className="p-4 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-200">
+                    <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-full bg-amber-950 text-amber-200 border border-amber-800/40">
                       أمر: {att.orderNumber}
                     </span>
                   </div>
 
-                  <h3 className="text-xs font-extrabold text-slate-900 dark:text-slate-100 line-clamp-2">
+                  <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 line-clamp-2 leading-relaxed">
                     {att.title}
                   </h3>
 
                   {att.description && (
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
                       {att.description}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 font-mono">
-                {att.uploaded_at ? new Date(att.uploaded_at).toLocaleDateString('ar-EG') : 'مسجل بالمصنع'}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 font-mono font-bold flex justify-between items-center">
+                <span>تاريخ الرفع:</span>
+                <span>{att.uploaded_at ? new Date(att.uploaded_at).toLocaleDateString('ar-EG') : 'مسجل بالمصنع'}</span>
               </div>
             </div>
           );
@@ -143,24 +144,40 @@ export const AttachmentsGallery: React.FC<AttachmentsGalleryProps> = ({ orders }
 
       {/* Lightbox Modal */}
       {previewImage && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative max-w-4xl w-full bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-800">
-            <div className="p-4 bg-slate-950 flex items-center justify-between text-slate-100 border-b border-slate-800">
-              <span className="font-bold text-sm text-amber-400">{previewImage.title}</span>
+        <div 
+          className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-2 sm:p-6"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div 
+            className="relative max-w-5xl w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800/50 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 sm:p-5 bg-slate-950/50 flex items-center justify-between text-slate-100 border-b border-slate-800/50 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                 <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                    <ImageIcon className="w-4 h-4 text-amber-500" />
+                 </div>
+                 <span className="font-black text-sm text-amber-400">{previewImage.title}</span>
+              </div>
               <button
                 onClick={() => setPreviewImage(null)}
-                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                className="p-2 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer active:scale-90"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="p-4 flex items-center justify-center max-h-[80vh] overflow-hidden bg-black">
+            <div className="flex-1 flex items-center justify-center overflow-hidden bg-black/40 p-2 sm:p-4 min-h-[50vh] max-h-[85vh]">
               <img
                 src={previewImage.file_url}
                 alt={previewImage.title}
                 referrerPolicy="no-referrer"
-                className="max-h-[75vh] w-auto object-contain rounded"
+                className="max-h-full w-auto object-contain rounded-xl shadow-2xl"
               />
+            </div>
+            <div className="p-4 bg-slate-950/30 text-center">
+               <p className="text-xs text-slate-400 font-bold">
+                  يمكنك حفظ الصورة بالضغط المطول عليها (في الموبايل) أو كليك يمين (في الكمبيوتر)
+               </p>
             </div>
           </div>
         </div>

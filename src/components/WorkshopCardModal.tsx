@@ -134,177 +134,176 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
       
       <div className="relative bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl max-w-4xl w-full h-[96vh] sm:h-auto sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 my-0 sm:my-4 print-card overflow-hidden">
         
-        {/* TOP TOOLBAR - Mobile Optimized & Sticky */}
-        <div className="sticky top-0 z-30 bg-slate-900 text-slate-100 p-3 sm:px-6 sm:py-3.5 flex flex-col gap-2.5 border-b border-slate-800 shadow-md no-print shrink-0">
-          
-          {/* Row 1: Document Badge, Title & Close Button */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[11px] sm:text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded font-mono font-bold tracking-wide shrink-0">
-                {order.order_number}
-              </span>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs sm:text-sm font-black text-white truncate font-serif">
-                  {cardTitle} - {order.room_model_code}
-                </span>
-                <span className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  العميل: {order.customer?.name || 'غير مسجل'}
-                </span>
+        {/* TOP TOOLBAR - Mobile Optimized & Premium Sticky Header */}
+        <div className="sticky top-0 z-40 bg-slate-900 text-slate-100 border-b border-slate-800 shadow-xl no-print shrink-0">
+          <div className="p-3 sm:px-6 sm:py-4 space-y-3">
+            
+            {/* Row 1: Document Identity & Close */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-mono font-black text-xs shadow-lg shadow-amber-500/20 shrink-0">
+                  {order.order_number.split('-').pop()}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-lg font-black text-white truncate font-serif leading-none mb-1">
+                    {cardTitle} • {order.room_model_code}
+                  </h3>
+                  <div className="flex items-center gap-2 text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-tight">
+                    <span className="truncate max-w-[120px] sm:max-w-none">العميل: {order.customer?.name || 'غير مسجل'}</span>
+                    <span className="w-1 h-1 rounded-full bg-slate-600 shrink-0" />
+                    <span className="font-mono tabular-nums">{order.contract_date}</span>
+                  </div>
+                </div>
               </div>
+
+              <button
+                onClick={onClose}
+                className="p-2.5 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition-all cursor-pointer shrink-0 shadow-inner group active:scale-90"
+              >
+                <X className="w-5 h-5 transition-transform group-hover:rotate-90" />
+              </button>
             </div>
 
-            <button
-              onClick={onClose}
-              aria-label="إغلاق كارت أمر الشغل"
-              className="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer shrink-0"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+            {/* Row 2: Status & Stage Selectors (Touch Ergonomic) */}
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+              {onUpdateStatus && (
+                <div className="relative group">
+                  <select
+                    value={order.status}
+                    onChange={(e) => onUpdateStatus(order.id, e.target.value as OrderStatus)}
+                    className="w-full sm:w-auto appearance-none text-[11px] font-black bg-slate-800 text-amber-400 border border-slate-700 rounded-xl pl-8 pr-3 py-2.5 cursor-pointer hover:border-amber-500 transition-all focus:ring-2 focus:ring-amber-500/40"
+                  >
+                    <option value="قيد التشغيل">قيد التشغيل</option>
+                    <option value="تم التنفيذ">تم التنفيذ</option>
+                    <option value="تسليم">تسليم</option>
+                  </select>
+                  <Activity className="w-3.5 h-3.5 text-amber-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              )}
 
-          {/* Row 2: Scrollable Mobile Action Buttons Bar */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 pt-0.5 border-t border-slate-800/80">
-            {onUpdateStatus && (
-              <div className="flex items-center gap-1 shrink-0 ml-1">
-                <select
-                  value={order.status}
-                  onChange={(e) => onUpdateStatus(order.id, e.target.value as OrderStatus)}
-                  aria-label="تحديث حالة أمر الشغل"
-                  className="text-xs bg-slate-800 text-amber-200 border border-slate-700 rounded-lg px-2 py-1.5 font-bold cursor-pointer hover:border-amber-500 transition-colors"
-                  title="حالة الطلب الرئيسية"
+              {onUpdateStage && (
+                <div className="relative group">
+                  <select
+                    value={order.current_stage || 'لم يبدأ'}
+                    onChange={(e) => onUpdateStage(order.id, e.target.value as ProductionStage)}
+                    className="w-full sm:w-auto appearance-none text-[11px] font-black bg-purple-900/40 text-purple-200 border border-purple-500/50 rounded-xl pl-8 pr-3 py-2.5 cursor-pointer hover:border-purple-400 transition-all focus:ring-2 focus:ring-purple-500/40"
+                  >
+                    <option value="لم يبدأ">لم يبدأ</option>
+                    <option value="نجارة عفش">نجارة عفش</option>
+                    <option value="نجارة انتريهات">نجارة انتريهات</option>
+                    <option value="خدمة وتجهيز">خدمة وتجهيز</option>
+                    <option value="كابينة أستر">كابينة أستر</option>
+                    <option value="كابينة دوكو">كابينة دوكو</option>
+                    <option value="تنجيد">تنجيد</option>
+                    <option value="تشطيب وتغليف">تشطيب وتغليف</option>
+                    <option value="جاهز للتسليم">جاهز للتسليم</option>
+                  </select>
+                  <Layers className="w-3.5 h-3.5 text-purple-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              )}
+            </div>
+
+            {/* Row 3: Action Buttons (Horizontal Scroll on Mobile) */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1">
+              {onEditOrder && (
+                <button
+                  onClick={() => {
+                    onEditOrder(order);
+                    onClose();
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-black bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all cursor-pointer shrink-0 whitespace-nowrap active:scale-95"
                 >
-                  <option value="قيد التشغيل">قيد التشغيل</option>
-                  <option value="تم التنفيذ">تم التنفيذ</option>
-                  <option value="تسليم">تسليم</option>
-                </select>
-              </div>
-            )}
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>تعديل المواصفات</span>
+                </button>
+              )}
 
-            {onUpdateStage && (
-              <div className="flex items-center gap-1 shrink-0 ml-1">
-                <select
-                  value={order.current_stage || 'لم يبدأ'}
-                  onChange={(e) => onUpdateStage(order.id, e.target.value as ProductionStage)}
-                  aria-label="تحديث مرحلة الورشة والإنتاج"
-                  className="text-xs bg-purple-900/90 text-purple-100 border border-purple-600 rounded-lg px-2 py-1.5 font-black cursor-pointer hover:border-purple-400 transition-colors shadow-2xs"
-                  title="تغيير مرحلة الورشة والإنتاج الحالية"
+              <button
+                onClick={() => handlePrint('portrait')}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20 transition-all cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>طباعة طولي</span>
+              </button>
+
+              <button
+                onClick={() => handlePrint('landscape')}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black bg-blue-700 hover:bg-blue-600 text-white shadow-lg shadow-blue-900/20 transition-all cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>طباعة بالعرض</span>
+              </button>
+
+              {onUpdateArchiveStatus && (
+                <button
+                  onClick={() => onUpdateArchiveStatus(order.id, !order.is_archived)}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-black transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                    order.is_archived
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
+                      : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700'
+                  }`}
                 >
-                  <option value="لم يبدأ">⏳ لم يبدأ</option>
-                  <option value="نجارة عفش">🪚 نجارة عفش</option>
-                  <option value="نجارة انتريهات">🪵 نجارة انتريهات</option>
-                  <option value="خدمة وتجهيز">⏱️ خدمة وتجهيز</option>
-                  <option value="كابينة أستر">🎨 كابينة أستر</option>
-                  <option value="كابينة دوكو">🖌️ كابينة دوكو</option>
-                  <option value="تنجيد">🛋️ تنجيد</option>
-                  <option value="تشطيب وتغليف">📦 تشطيب وتغليف</option>
-                  <option value="جاهز للتسليم">🚀 جاهز للتسليم</option>
-                </select>
-              </div>
-            )}
-
-            {onEditOrder && (
-              <button
-                onClick={() => {
-                  onEditOrder(order);
-                  onClose();
-                }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer shrink-0 whitespace-nowrap"
-                title="تعديل مواصفات أمر الشغل"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                <span>تعديل</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => handlePrint('portrait')}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-extrabold bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
-              title="طباعة أمر الشغل في ورقة واحدة طولي (Portrait)"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>طباعة طولي</span>
-            </button>
-
-            <button
-              onClick={() => handlePrint('landscape')}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-extrabold bg-blue-700 hover:bg-blue-600 text-white shadow-sm transition-all cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
-              title="طباعة أمر الشغل في ورقة واحدة بالعرض (Landscape) للأوامر الكبيرة"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>طباعة بالعرض</span>
-            </button>
-
-            {onUpdateArchiveStatus && (
-              <button
-                onClick={() => onUpdateArchiveStatus(order.id, !order.is_archived)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shrink-0 whitespace-nowrap ${
-                  order.is_archived
-                    ? 'bg-emerald-800 hover:bg-emerald-700 text-white'
-                    : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700'
-                }`}
-                title={order.is_archived ? 'استعادة من الأرشيف للقائمة الرئيسية' : 'أرشفة أمر الشغل'}
-              >
-                <Archive className="w-3.5 h-3.5" />
-                <span>{order.is_archived ? 'استعادة' : 'أرشفة'}</span>
-              </button>
-            )}
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>{order.is_archived ? 'استعادة' : 'أرشفة'}</span>
+                </button>
+              )}
+            </div>
           </div>
-
         </div>
 
         {/* SUB TOOLBAR: VIEW MODE SWITCHER (Screen Only) */}
         {imageAttachments.length > 0 && (
-          <div className="bg-slate-850 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-750 text-xs no-print shrink-0">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full sm:w-auto">
-              <span className="text-slate-400 font-bold hidden sm:inline shrink-0">طريقة العرض والطباعة:</span>
-              
+          <div className="bg-slate-50 dark:bg-slate-800/30 px-3 sm:px-6 py-2.5 flex items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 no-print shrink-0 overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setViewMode('original_image')}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer shrink-0 ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
                   viewMode === 'original_image'
-                    ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-500 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
                 }`}
               >
                 <ImageIcon className="w-3.5 h-3.5" />
-                <span>📸 الورقة الأصلية <span className="hidden xs:inline">(100% بالملي)</span></span>
+                <span>الورقة الأصلية</span>
               </button>
 
               <button
                 onClick={() => setViewMode('digital_card')}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
                   viewMode === 'digital_card'
-                    ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-500 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>📋 الكارت الرقمي</span>
+                <span>الكارت الرقمي</span>
               </button>
             </div>
 
             {viewMode === 'original_image' && imageAttachments.length > 1 && (
-              <div className="flex items-center gap-1 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-700 shrink-0">
-                <span className="text-slate-400 text-[10px] font-bold">ورقة:</span>
-                <button
-                  onClick={() => setSelectedImageIndex(null)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
-                    selectedImageIndex === null ? 'bg-amber-400 text-slate-950' : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  الكل
-                </button>
-                {imageAttachments.map((_, idx) => (
+              <div className="flex items-center gap-1.5 bg-slate-200/50 dark:bg-slate-900/50 p-1 rounded-lg border border-slate-300 dark:border-slate-700 shrink-0">
+                <span className="text-slate-500 text-[10px] font-black px-1">ورقة:</span>
+                <div className="flex gap-1">
                   <button
-                    key={idx}
-                    onClick={() => setSelectedImageIndex(idx)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
-                      selectedImageIndex === idx ? 'bg-amber-400 text-slate-950' : 'text-slate-300 hover:text-white'
+                    onClick={() => setSelectedImageIndex(null)}
+                    className={`min-w-[28px] h-6 flex items-center justify-center rounded-md text-[10px] font-black transition-all cursor-pointer ${
+                      selectedImageIndex === null ? 'bg-amber-500 text-white shadow-sm' : 'hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
                     }`}
                   >
-                    {idx + 1}
+                    الكل
                   </button>
-                ))}
+                  {imageAttachments.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImageIndex(idx)}
+                      className={`min-w-[28px] h-6 flex items-center justify-center rounded-md text-[10px] font-black transition-all cursor-pointer ${
+                        selectedImageIndex === idx ? 'bg-amber-500 text-white shadow-sm' : 'hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -368,11 +368,11 @@ export const OrderList: React.FC<OrderListProps> = ({
         {/* ROW 1: PRIMARY SEARCH CONTROLS (CUSTOMER, MONTH, DATE, GENERAL) */}
         <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800/80 space-y-4">
           
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 items-center">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-center">
             
             {/* 1. Dedicated Search by Customer Name */}
-            <div className="md:col-span-3 relative">
-              <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+            <div className="sm:col-span-6 lg:col-span-3 relative">
+              <label className="block text-[10px] sm:text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
                   <span>بحث باسم العميل:</span>
@@ -393,15 +393,15 @@ export const OrderList: React.FC<OrderListProps> = ({
                   placeholder="سلمى، طلعت، مايكل، عصام..."
                   value={customerNameSearch}
                   onChange={(e) => setCustomerNameSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500"
+                  className="w-full pl-8 pr-3 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500 shadow-2xs"
                 />
                 <User className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             {/* 2. Dedicated Filter by Month (بشهر معين) */}
-            <div className="md:col-span-3 relative">
-              <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+            <div className="sm:col-span-6 lg:col-span-3 relative">
+              <label className="block text-[10px] sm:text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <CalendarDays className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
                   <span>تصفية بشهر معين:</span>
@@ -415,7 +415,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                     }}
                     className="text-[10px] text-rose-500 hover:text-rose-700 font-bold cursor-pointer"
                   >
-                    مسح الشهر
+                    مسح
                   </button>
                 )}
               </label>
@@ -434,16 +434,16 @@ export const OrderList: React.FC<OrderListProps> = ({
                       setQuickDatePreset(m === '2026-11' ? 'november-2026' : m === '2026-12' ? 'december-2026' : m);
                     }
                   }}
-                  className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500 cursor-pointer"
+                  className="w-full px-3 py-2 text-xs font-black rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500 cursor-pointer shadow-2xs"
                 >
-                  <option value="all">جميع الشهور (عرض الكل - {orders.length} أمر)</option>
-                  <option value="2026-11">شهر نوفمبر 2026 ({monthCounts['2026-11'] || 0} أمر شغل)</option>
-                  <option value="2026-12">شهر ديسمبر 2026 ({monthCounts['2026-12'] || 0} أوامر شغل)</option>
+                  <option value="all">جميع الشهور ({orders.length} أمر)</option>
+                  <option value="2026-11">نوفمبر 2026 ({monthCounts['2026-11'] || 0})</option>
+                  <option value="2026-12">ديسمبر 2026 ({monthCounts['2026-12'] || 0})</option>
                   {Object.keys(monthCounts)
                     .filter((k) => k !== '2026-11' && k !== '2026-12')
                     .map((mk) => (
                       <option key={mk} value={mk}>
-                        شهر {mk} ({monthCounts[mk]} أمر)
+                        {mk} ({monthCounts[mk]})
                       </option>
                     ))}
                 </select>
@@ -451,8 +451,8 @@ export const OrderList: React.FC<OrderListProps> = ({
             </div>
 
             {/* 3. Specific Date Picker */}
-            <div className="md:col-span-3 relative">
-              <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+            <div className="sm:col-span-6 lg:col-span-3 relative">
+              <label className="block text-[10px] sm:text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
                   <span>تاريخ تسليم محدد:</span>
@@ -482,25 +482,25 @@ export const OrderList: React.FC<OrderListProps> = ({
                       setSelectedMonth(e.target.value.substring(0, 7));
                     }
                   }}
-                  className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500"
+                  className="w-full px-3 py-2 text-xs font-mono font-black rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500 shadow-2xs tabular-nums"
                 />
               </div>
             </div>
 
             {/* 4. General Search (Order # / Specs / Room Code) */}
-            <div className="md:col-span-3 relative">
-              <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+            <div className="sm:col-span-6 lg:col-span-3 relative">
+              <label className="block text-[10px] sm:text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
                 <Search className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
-                <span>رقم الأمر أو كود الغرفة:</span>
+                <span>رقم الأمر أو الموديل:</span>
               </label>
 
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="JO-2026، روما، فينيسيا، زان..."
+                  placeholder="JO-2026، روما، زان..."
                   value={generalSearch}
                   onChange={(e) => setGeneralSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500"
+                  className="w-full pl-8 pr-3 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500 shadow-2xs"
                 />
                 <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
@@ -546,7 +546,7 @@ export const OrderList: React.FC<OrderListProps> = ({
             </div>
 
             {/* Interactive Category Cards Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-2.5">
               
               {/* All Items Pill */}
               <button
@@ -826,17 +826,17 @@ export const OrderList: React.FC<OrderListProps> = ({
         </div>
 
         {/* ROW 2: STATUS TABS & ACTIONS */}
-        <div className="p-3 bg-slate-50/80 dark:bg-slate-850 px-3 sm:px-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-2 sm:p-3 bg-slate-50/80 dark:bg-slate-850 px-3 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           
           {/* Status Filters */}
-          <div className="flex items-center gap-1 p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl overflow-x-auto scrollbar-none max-w-full">
+          <div className="flex items-center gap-1 p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl overflow-x-auto scrollbar-none max-w-full snap-x">
             {['الكل', 'قيد التشغيل', 'تم التنفيذ', 'تسليم', 'الأرشيف'].map((filter) => {
               const isActive = activeFilter === filter;
               return (
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer shrink-0 min-h-[34px] ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer shrink-0 min-h-[32px] snap-start ${
                     isActive
                       ? 'bg-white dark:bg-slate-900 text-amber-950 dark:text-amber-200 shadow-2xs font-black'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -849,9 +849,9 @@ export const OrderList: React.FC<OrderListProps> = ({
           </div>
 
           {/* Results Summary & Action Buttons */}
-          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-3 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800">
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
-              عرض <strong className="text-amber-800 dark:text-amber-400 font-mono text-sm">{uniqueFilteredOrders.length}</strong> من أصل <span className="font-mono">{orders.length}</span> أمر
+          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-3 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400">
+              عرض <strong className="text-amber-800 dark:text-amber-400 font-mono text-sm tabular-nums">{uniqueFilteredOrders.length}</strong> من أصل <span className="font-mono tabular-nums">{orders.length}</span> أمر
             </span>
 
             <div className="flex items-center gap-2">
@@ -967,22 +967,31 @@ export const OrderList: React.FC<OrderListProps> = ({
           {uniqueFilteredOrders.map((ord) => {
             const ordCategory = getOrderCategory(ord);
             const catInfo = getCategoryBadge(ordCategory);
+            
+            // Status-driven accent gradient
+            const statusGradient =
+              ord.status === 'قيد التشغيل'
+                ? 'from-amber-600 via-amber-400 to-yellow-600'
+                : ord.status === 'تم التنفيذ'
+                ? 'from-emerald-600 via-teal-400 to-emerald-500'
+                : 'from-blue-600 via-indigo-500 to-indigo-700';
+
             return (
             <div
               key={ord.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1 relative"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-xl hover:shadow-amber-950/5 hover:border-amber-400/80 dark:hover:border-amber-600/70 card-motion flex flex-col justify-between overflow-hidden group relative"
             >
-              {/* Top Gradient Accent Strip */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-600 via-amber-400 to-amber-700 opacity-90" />
+              {/* Dynamic Top Gradient Accent Strip with Glow */}
+              <div className={`absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r ${statusGradient} opacity-90 transition-opacity duration-300 group-hover:opacity-100`} />
 
               <div>
                 {/* Order Top Banner */}
                 <div className="p-4 bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-black px-2.5 py-1 rounded-lg bg-amber-950 text-amber-200 shadow-2xs">
+                    <span className="font-mono text-xs font-black px-2.5 py-1 rounded-lg bg-amber-950 text-amber-200 shadow-2xs border border-amber-800/40 tracking-wider tabular-nums">
                       {ord.order_number}
                     </span>
-                    <span className="text-[11px] font-extrabold font-mono text-slate-500 dark:text-slate-400 bg-slate-200/70 dark:bg-slate-800 px-2 py-0.5 rounded">
+                    <span className="text-[11px] font-extrabold font-mono text-slate-700 dark:text-slate-300 bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300/60 dark:border-slate-700 tabular-nums">
                       {ord.room_model_code}
                     </span>
                     {catInfo && (
@@ -1002,7 +1011,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                     )}
                   </div>
 
-                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold border shadow-2xs ${getStatusStyle(ord.status)} shrink-0`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold border shadow-2xs ${getStatusStyle(ord.status)} shrink-0 transition-transform duration-200 group-hover:scale-105`}>
                     {ord.status}
                   </span>
                 </div>
@@ -1017,33 +1026,37 @@ export const OrderList: React.FC<OrderListProps> = ({
                   </div>
 
                   {/* Customer Info Card */}
-                  <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 p-3 rounded-xl bg-amber-50/50 dark:bg-slate-800/40 border border-amber-200/40 dark:border-slate-800">
+                  <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 p-3 rounded-xl bg-amber-50/60 dark:bg-slate-800/50 border border-amber-200/50 dark:border-slate-800 transition-colors group-hover:border-amber-300/70">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-amber-800/10 text-amber-900 dark:text-amber-300 flex items-center justify-center shrink-0">
-                          <User className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-amber-800/15 text-amber-900 dark:text-amber-300 flex items-center justify-center font-black text-xs shrink-0 shadow-inner">
+                          {ord.customer?.name ? ord.customer.name.slice(0, 1) : <User className="w-3.5 h-3.5" />}
                         </div>
-                        <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm font-serif">
+                        <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm tracking-tight">
                           {ord.customer?.name || 'عميل غير مسجل'}
                         </span>
                       </div>
-                      <span className="text-xs text-amber-900 dark:text-amber-400 font-bold font-mono bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-amber-200/60 dark:border-slate-700">
+                      <span className="text-xs text-amber-900 dark:text-amber-300 font-bold font-mono bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-amber-200/80 dark:border-slate-700 shadow-2xs tabular-nums">
                         {ord.customer?.phone || 'بدون هاتف'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Specs Snapshot */}
-                  <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 px-1">
-                    <div className="flex items-start gap-2">
-                      <Ruler className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                  {/* Specs Snapshot with Elegant Icon Grid */}
+                  <div className="grid grid-cols-1 gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50/70 dark:bg-slate-850/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 rounded bg-amber-100/70 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 shrink-0">
+                        <Ruler className="w-3.5 h-3.5" />
+                      </div>
                       <span className="truncate">
                         المقاسات: <strong className="font-mono text-slate-900 dark:text-slate-100 font-bold">{ord.job_details?.dimensions_cm || 'حسب الكارت المعتمد'}</strong>
                       </span>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <Scissors className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 rounded bg-amber-100/70 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 shrink-0">
+                        <Scissors className="w-3.5 h-3.5" />
+                      </div>
                       <span className="truncate">
                         التنجيد: <strong className="text-slate-900 dark:text-slate-100 font-bold">{ord.job_details?.fabric_source || ord.job_details?.color_code || 'كما بالمعرض'}</strong>
                       </span>
@@ -1053,35 +1066,37 @@ export const OrderList: React.FC<OrderListProps> = ({
                   {/* Delivery Date Highlight & Due Countdown */}
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300">
+                      <div className="p-1.5 rounded-lg bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 shadow-2xs">
                         <Calendar className="w-4 h-4" />
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 font-bold block leading-none">موعد التسليم:</span>
-                        <strong className="font-mono text-xs font-black text-amber-950 dark:text-amber-200">
+                        <strong className="font-mono text-xs font-black text-amber-950 dark:text-amber-200 tabular-nums">
                           {ord.delivery_date}
                         </strong>
                       </div>
                     </div>
 
-                    {getDeliveryBadge(ord.delivery_date)}
+                    <div className="tabular-nums">
+                      {getDeliveryBadge(ord.delivery_date)}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Card Footer Actions */}
-              <div className="p-3 bg-slate-50/90 dark:bg-slate-800/60 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2">
+              <div className="p-3 bg-slate-50/95 dark:bg-slate-800/80 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2">
                 <button
                   onClick={() => onSelectOrder(ord)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-amber-700 via-amber-800 to-amber-950 hover:from-amber-800 hover:to-slate-900 shadow-sm hover:shadow transition-all cursor-pointer active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-amber-700 via-amber-800 to-amber-950 hover:from-amber-800 hover:to-slate-900 shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-95 group/btn"
                 >
-                  <Eye className="w-4 h-4 text-amber-200" />
+                  <Eye className="w-4 h-4 text-amber-200 transition-transform duration-200 group-hover/btn:scale-110" />
                   <span>كارت الورشة المطابق</span>
                 </button>
 
                 <button
                   onClick={() => onEditOrder(ord)}
-                  className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                  className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer active:scale-95 shadow-2xs"
                   title="تعديل بيانات ومواصفات الأمر"
                 >
                   <Edit3 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
@@ -1093,7 +1108,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                     value={ord.status}
                     onChange={(e) => onUpdateStatus(ord.id, e.target.value as OrderStatus)}
                     aria-label="تغيير حالة الأمر"
-                    className="text-[11px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 font-black cursor-pointer text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500/50"
+                    className="text-[11px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 font-black cursor-pointer text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500/50 shadow-2xs hover:border-amber-400 transition-colors"
                     title="تغيير حالة الأمر"
                   >
                     <option value="قيد التشغيل">تشغيل</option>
@@ -1106,7 +1121,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                       value={ord.current_stage || 'لم يبدأ'}
                       onChange={(e) => onUpdateStage(ord.id, e.target.value as ProductionStage)}
                       aria-label="تغيير مرحلة الورشة والإنتاج"
-                      className="text-[11px] bg-purple-50 dark:bg-purple-950/80 border border-purple-300 dark:border-purple-800 rounded-xl px-2 py-2 font-black cursor-pointer text-purple-950 dark:text-purple-200 focus:ring-2 focus:ring-purple-500/50 shadow-2xs"
+                      className="text-[11px] bg-purple-50 dark:bg-purple-950/80 border border-purple-300 dark:border-purple-800 rounded-xl px-2 py-2 font-black cursor-pointer text-purple-950 dark:text-purple-200 focus:ring-2 focus:ring-purple-500/50 shadow-2xs hover:border-purple-400 transition-colors"
                       title="تغيير مرحلة الورشة والإنتاج الحالية"
                     >
                       <option value="لم يبدأ">⏳ لم يبدأ</option>
@@ -1124,7 +1139,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                   <button
                     onClick={() => setOrderToDelete(ord)}
                     aria-label="حذف أمر الشغل"
-                    className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer active:scale-90"
                     title="حذف الأمر"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1133,7 +1148,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                   {onUpdateArchiveStatus && (
                     <button
                       onClick={() => onUpdateArchiveStatus(ord.id, !ord.is_archived)}
-                      className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                      className={`p-2 rounded-xl transition-all cursor-pointer active:scale-90 ${
                         ord.is_archived
                           ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
                           : 'text-amber-800 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300'

@@ -278,8 +278,8 @@ export const CriticalOverdueReport: React.FC<CriticalOverdueReportProps> = ({
 
         {/* Section 1: Overdue Orders 🔴 */}
         <div className="space-y-3">
-          <div className="bg-rose-100 border-r-4 border-rose-600 text-rose-950 px-3.5 py-1.5 font-black text-sm flex items-center justify-between">
-            <span>🔴 الأوامر المتجاوزة لموعد التسليم (Overdue Orders)</span>
+          <div className="bg-rose-100 border-r-4 border-rose-600 text-rose-950 px-3.5 py-2 font-black text-sm flex items-center justify-between rounded-l-md">
+            <span>🔴 أوامر متأخرة بالفعل (Overdue Orders)</span>
             <span className="font-mono text-xs">({analyzedOrders.overdue.length} أوردر)</span>
           </div>
 
@@ -288,62 +288,64 @@ export const CriticalOverdueReport: React.FC<CriticalOverdueReportProps> = ({
               لا توجد أوامر متأخرة حالياً - ممتاز! 🎉
             </div>
           ) : (
-            <table className="w-full border-collapse border border-slate-900 text-xs">
-              <thead>
-                <tr className="bg-rose-200 text-rose-950 font-black">
-                  <th className="border border-slate-900 p-2 text-right">العميل والأوردر</th>
-                  <th className="border border-slate-900 p-2 text-right">الموديل والمواصفات</th>
-                  <th className="border border-slate-900 p-2 text-center">تاريخ التسليم</th>
-                  <th className="border border-slate-900 p-2 text-center">التأخير</th>
-                  <th className="border border-slate-900 p-2 text-right">المهندس وسبب التأخير</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analyzedOrders.overdue.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-rose-50/50">
-                    <td className="border border-slate-900 p-2 font-bold">
-                      <div className="text-slate-900 font-black">{ord.customer?.name || 'عميل'}</div>
-                      <div className="font-mono text-[10px] text-slate-600">#{ord.order_number}</div>
-                    </td>
-                    <td className="border border-slate-900 p-2 font-semibold">
-                      {ord.room_model_code}
-                      <span className="block text-[10px] text-slate-500 truncate max-w-[150px]">
-                        {ord.general_specs}
-                      </span>
-                    </td>
-                    <td className="border border-slate-900 p-2 text-center font-mono text-rose-700 font-bold">
-                      {ord.delivery_date}
-                    </td>
-                    <td className="border border-slate-900 p-2 text-center font-mono font-black text-rose-800 bg-rose-50">
-                      متأخر {Math.abs(ord.diffDays)} يوم
-                    </td>
-                    <td className="border border-slate-900 p-2 space-y-1">
-                      <div className="font-bold text-amber-900 text-[11px]">{ord.supervisor}</div>
-                      <select
-                        value={delayReasons[ord.id] || 'تأخير استلام الخامات والأقمشة من المورد'}
-                        onChange={(e) => handleReasonChange(ord.id, e.target.value)}
-                        className="w-full text-[10px] font-bold p-1 rounded border border-slate-300 bg-white cursor-pointer no-print"
-                      >
-                        {commonDelayReasons.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="hidden print:block text-[10px] text-slate-700 font-bold">
-                        {delayReasons[ord.id] || 'تأخير استلام الخامات والأقمشة من المورد'}
-                      </div>
-                    </td>
+            <div className="overflow-x-auto rounded-lg border border-slate-900">
+              <table className="w-full border-collapse border border-slate-900 text-xs min-w-[750px]">
+                <thead>
+                  <tr className="bg-rose-200 text-rose-950 font-black">
+                    <th className="border border-slate-900 p-2 text-right">العميل والأوردر</th>
+                    <th className="border border-slate-900 p-2 text-right">الموديل والمواصفات</th>
+                    <th className="border border-slate-900 p-2 text-center">تاريخ التسليم</th>
+                    <th className="border border-slate-900 p-2 text-center">التأخير</th>
+                    <th className="border border-slate-900 p-2 text-right">المهندس وسبب التأخير</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {analyzedOrders.overdue.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-rose-50/50 transition-colors">
+                      <td className="border border-slate-900 p-2 font-bold">
+                        <div className="text-slate-900 font-black">{ord.customer?.name || 'عميل'}</div>
+                        <div className="font-mono text-[10px] text-slate-600 tabular-nums">#{ord.order_number}</div>
+                      </td>
+                      <td className="border border-slate-900 p-2 font-semibold">
+                        {ord.room_model_code}
+                        <span className="block text-[10px] text-slate-500 truncate max-w-[150px]">
+                          {ord.general_specs}
+                        </span>
+                      </td>
+                      <td className="border border-slate-900 p-2 text-center font-mono text-rose-700 font-bold tabular-nums">
+                        {ord.delivery_date}
+                      </td>
+                      <td className="border border-slate-900 p-2 text-center font-mono font-black text-rose-800 bg-rose-50 tabular-nums">
+                        متأخر {Math.abs(ord.diffDays)} يوم
+                      </td>
+                      <td className="border border-slate-900 p-2 space-y-1">
+                        <div className="font-bold text-amber-900 text-[11px]">{ord.supervisor}</div>
+                        <select
+                          value={delayReasons[ord.id] || 'تأخير استلام الخامات والأقمشة من المورد'}
+                          onChange={(e) => handleReasonChange(ord.id, e.target.value)}
+                          className="w-full text-[10px] font-bold p-1 rounded border border-slate-300 bg-white cursor-pointer no-print focus:border-amber-500 outline-none"
+                        >
+                          {commonDelayReasons.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="hidden print:block text-[10px] text-slate-700 font-bold">
+                          {delayReasons[ord.id] || 'تأخير استلام الخامات والأقمشة من المورد'}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
         {/* Section 2: Critical Orders 🟠 */}
         <div className="space-y-3 pt-2">
-          <div className="bg-amber-100 border-r-4 border-amber-600 text-amber-950 px-3.5 py-1.5 font-black text-sm flex items-center justify-between">
+          <div className="bg-amber-100 border-r-4 border-amber-600 text-amber-950 px-3.5 py-2 font-black text-sm flex items-center justify-between rounded-l-md">
             <span>🟠 الأوامر الحرجة (التسليم خلال 3 أيام القادمة)</span>
             <span className="font-mono text-xs">({analyzedOrders.critical.length} أوردر)</span>
           </div>
@@ -353,39 +355,41 @@ export const CriticalOverdueReport: React.FC<CriticalOverdueReportProps> = ({
               لا توجد أوامر حرجة خلال الـ 3 أيام القادمة.
             </div>
           ) : (
-            <table className="w-full border-collapse border border-slate-900 text-xs">
-              <thead>
-                <tr className="bg-amber-200 text-amber-950 font-black">
-                  <th className="border border-slate-900 p-2 text-right">العميل والأوردر</th>
-                  <th className="border border-slate-900 p-2 text-right">الموديل والمواصفات</th>
-                  <th className="border border-slate-900 p-2 text-center">موعد التسليم</th>
-                  <th className="border border-slate-900 p-2 text-center">المتبقي</th>
-                  <th className="border border-slate-900 p-2 text-right">المهندس المشرف</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analyzedOrders.critical.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-amber-50/50">
-                    <td className="border border-slate-900 p-2 font-bold">
-                      <div className="text-slate-900 font-black">{ord.customer?.name || 'عميل'}</div>
-                      <div className="font-mono text-[10px] text-slate-600">#{ord.order_number}</div>
-                    </td>
-                    <td className="border border-slate-900 p-2 font-semibold">
-                      {ord.room_model_code}
-                    </td>
-                    <td className="border border-slate-900 p-2 text-center font-mono font-bold">
-                      {ord.delivery_date}
-                    </td>
-                    <td className="border border-slate-900 p-2 text-center font-mono font-black text-amber-800 bg-amber-50">
-                      {ord.diffDays === 0 ? 'مقرر التسليم اليوم!' : `متبقي ${ord.diffDays} يوم`}
-                    </td>
-                    <td className="border border-slate-900 p-2 font-bold text-slate-800">
-                      {ord.supervisor}
-                    </td>
+            <div className="overflow-x-auto rounded-lg border border-slate-900">
+              <table className="w-full border-collapse border border-slate-900 text-xs min-w-[700px]">
+                <thead>
+                  <tr className="bg-amber-200 text-amber-950 font-black">
+                    <th className="border border-slate-900 p-2 text-right">العميل والأوردر</th>
+                    <th className="border border-slate-900 p-2 text-right">الموديل والمواصفات</th>
+                    <th className="border border-slate-900 p-2 text-center">موعد التسليم</th>
+                    <th className="border border-slate-900 p-2 text-center">المتبقي</th>
+                    <th className="border border-slate-900 p-2 text-right">المهندس المشرف</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {analyzedOrders.critical.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-amber-50/50 transition-colors">
+                      <td className="border border-slate-900 p-2 font-bold">
+                        <div className="text-slate-900 font-black">{ord.customer?.name || 'عميل'}</div>
+                        <div className="font-mono text-[10px] text-slate-600 tabular-nums">#{ord.order_number}</div>
+                      </td>
+                      <td className="border border-slate-900 p-2 font-semibold">
+                        {ord.room_model_code}
+                      </td>
+                      <td className="border border-slate-900 p-2 text-center font-mono font-bold tabular-nums">
+                        {ord.delivery_date}
+                      </td>
+                      <td className="border border-slate-900 p-2 text-center font-mono font-black text-amber-800 bg-amber-50 tabular-nums">
+                        {ord.diffDays === 0 ? 'مقرر التسليم اليوم!' : `متبقي ${ord.diffDays} يوم`}
+                      </td>
+                      <td className="border border-slate-900 p-2 font-bold text-slate-800">
+                        {ord.supervisor}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 

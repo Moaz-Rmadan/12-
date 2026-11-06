@@ -103,26 +103,29 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
             <div
               key={stat.id}
               onClick={() => onFilterByStatus && onFilterByStatus(stat.id)}
-              className={`p-3 sm:p-4 rounded-2xl border transition-all cursor-pointer select-none ${
+              className={`p-3.5 sm:p-4.5 rounded-2xl border card-motion cursor-pointer select-none relative overflow-hidden group ${
                 isSelected
-                  ? 'bg-white dark:bg-slate-900 border-amber-600 shadow-md ring-2 ring-amber-500/20'
-                  : 'bg-white/90 dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800 hover:border-amber-300 dark:hover:border-slate-700 shadow-2xs'
+                  ? 'bg-white dark:bg-slate-900 border-amber-600 dark:border-amber-500 shadow-md ring-2 ring-amber-500/20'
+                  : 'bg-white/95 dark:bg-slate-900/90 border-slate-200/90 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-600/70 hover:shadow-lg hover:shadow-amber-900/5'
               }`}
             >
-              <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-                <span className="text-[10px] sm:text-xs font-black text-slate-600 dark:text-slate-400 truncate max-w-[100px] sm:max-w-none">
+              {/* Subtle Ambient Hover Glow on Top */}
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.color.split(' ')[0]} ${stat.color.split(' ')[1]} transition-opacity duration-300 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] sm:text-xs font-black text-slate-600 dark:text-slate-400 truncate max-w-[110px] sm:max-w-none group-hover:text-amber-900 dark:group-hover:text-amber-300 transition-colors">
                   {stat.title}
                 </span>
-                <div className={`p-1.5 sm:p-2 rounded-xl ${stat.color} shrink-0`}>
+                <div className={`p-2 rounded-xl ${stat.color} shrink-0 transition-transform duration-200 group-hover:scale-110 shadow-2xs`}>
                   <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.2]" />
                 </div>
               </div>
 
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tabular-nums">
+              <div className="flex items-baseline gap-1.5 my-1">
+                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tabular-nums tracking-tight">
                   {stat.value}
                 </span>
-                <span className="text-[10px] sm:text-xs text-slate-500 font-bold">أمر</span>
+                <span className="text-[11px] sm:text-xs text-slate-500 font-bold">أمر</span>
               </div>
 
               <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">
@@ -134,48 +137,53 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
       </div>
 
       {/* REVENUE & FINANCIAL KPI BANNER */}
-      <div className="bg-gradient-to-r from-amber-950 via-amber-900 to-slate-900 text-amber-50 p-4 rounded-2xl shadow-md border border-amber-800/40 space-y-3">
-        
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
-              <Coins className="w-5 h-5 stroke-[2.2]" />
+      <div className="card-motion bg-gradient-to-r from-amber-950 via-amber-900 to-slate-900 text-amber-50 p-4 sm:p-5 rounded-2xl shadow-md border border-amber-800/50 space-y-3 relative overflow-hidden">
+        {/* Subtle decorative gold sheen */}
+        <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-amber-500/10 blur-2xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 relative z-10">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 shadow-inner">
+              <Coins className="w-6 h-6 stroke-[2.2]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-xs font-extrabold text-amber-200">إجمالي القيمة التعاقدية للمصنع</h4>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <h4 className="text-xs font-black text-amber-200">إجمالي القيمة التعاقدية للمصنع</h4>
+                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/30">
                   تحصيل {collectionRate}%
                 </span>
               </div>
-              <p className="text-lg sm:text-xl font-black font-mono tabular-nums tracking-tight text-white mt-0.5">
+              <p className="text-xl sm:text-2xl font-black font-mono tabular-nums tracking-tight text-white mt-0.5">
                 {totalRevenue.toLocaleString('ar-EG')} ج.م
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-between w-full sm:w-auto gap-4 text-xs text-amber-200/90 font-mono tabular-nums pt-2 sm:pt-0 border-t sm:border-t-0 border-amber-800/50">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-3 xs:gap-5 text-xs text-amber-200/90 font-mono tabular-nums pt-2 sm:pt-0 border-t sm:border-t-0 border-amber-800/50">
             <div>
-              <span className="text-amber-400/80 block text-[10px] font-sans">المحَصَّل (المقدمات):</span>
-              <span className="font-black text-emerald-400 text-sm sm:text-base">{totalDeposits.toLocaleString('ar-EG')} ج.م</span>
+              <span className="text-amber-400/80 block text-[9px] xs:text-[10px] font-sans font-bold">المحَصَّل (المقدمات):</span>
+              <span className="font-black text-emerald-400 text-xs xs:text-sm sm:text-base">{totalDeposits.toLocaleString('ar-EG')} ج.م</span>
             </div>
-            <div className="w-px h-8 bg-amber-800/80" />
+            <div className="w-px h-8 bg-amber-800/80 shrink-0" />
             <div>
-              <span className="text-amber-400/80 block text-[10px] font-sans">المتبقي عند التسليم:</span>
-              <span className="font-black text-amber-300 text-sm sm:text-base">{remainingBalance.toLocaleString('ar-EG')} ج.م</span>
+              <span className="text-amber-400/80 block text-[9px] xs:text-[10px] font-sans font-bold">المتبقي عند التسليم:</span>
+              <span className="font-black text-amber-300 text-xs xs:text-sm sm:text-base">{remainingBalance.toLocaleString('ar-EG')} ج.م</span>
             </div>
           </div>
         </div>
 
         {/* FINANCIAL COLLECTION PROGRESS METER */}
-        <div className="pt-2 border-t border-amber-800/40">
-          <div className="flex items-center justify-between text-[11px] font-bold text-amber-200/80 mb-1">
-            <span>نسبة السيولة والمقبوضات الفعلية:</span>
-            <span className="font-mono text-emerald-300">{collectionRate}% تم تحصيله</span>
+        <div className="pt-2 border-t border-amber-800/50 relative z-10">
+          <div className="flex items-center justify-between text-[11px] font-bold text-amber-200/90 mb-1.5">
+            <span className="flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              <span>نسبة السيولة والمقبوضات الفعلية:</span>
+            </span>
+            <span className="font-mono text-emerald-300 font-extrabold">{collectionRate}% تم تحصيله</span>
           </div>
-          <div className="w-full h-2 rounded-full bg-amber-950/80 overflow-hidden p-0.5 border border-amber-800/60 flex">
+          <div className="w-full h-2.5 rounded-full bg-amber-950/90 overflow-hidden p-0.5 border border-amber-800/60 flex">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-700 ease-out shadow-xs"
               style={{ width: `${Math.min(collectionRate, 100)}%` }}
             />
           </div>
@@ -214,57 +222,57 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             
             {/* KPI CARD 1: WORKSHOP COMPLETION RATE */}
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 card-motion hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700">
               <div className="flex items-center justify-between">
-                <span className="font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span className="font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5 tracking-tight">
                   <TrendingUp className="w-4 h-4 text-emerald-600" />
                   <span>نسبة كفاءة الإنجاز والتسليم</span>
                 </span>
-                <span className="font-mono font-black text-emerald-700 dark:text-emerald-400 text-sm">
+                <span className="font-mono font-black text-emerald-700 dark:text-emerald-400 text-sm tabular-nums">
                   {completionRate}%
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                 الأوامر الجاهزة والمنفذة مقارنة بإجمالي أوامر الورشة.
               </p>
               <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
                 <div
-                  className="h-full bg-emerald-600 rounded-full transition-all"
+                  className="h-full bg-emerald-600 rounded-full transition-all duration-500"
                   style={{ width: `${completionRate}%` }}
                 />
               </div>
             </div>
 
             {/* KPI CARD 2: URGENCY & OVERDUE SCHEDULE */}
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 card-motion hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700">
               <div className="flex items-center justify-between">
-                <span className="font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span className="font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5 tracking-tight">
                   <AlertTriangle className={`w-4 h-4 ${urgentCount > 0 ? 'text-amber-600 animate-pulse' : 'text-slate-400'}`} />
                   <span>التنبيهات الحرجة (خلال 48 س)</span>
                 </span>
-                <span className={`font-mono font-black text-sm px-2 py-0.5 rounded-full ${
-                  urgentCount > 0 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-200 text-slate-700'
+                <span className={`font-mono font-black text-sm px-2.5 py-0.5 rounded-full tabular-nums ${
+                  urgentCount > 0 ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
                 }`}>
                   {urgentCount} أمر حرج
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                 أوامر شغل يستوجب تسليمها خلال الـ 48 ساعة القادمة أو متأخرة.
               </p>
             </div>
 
             {/* KPI CARD 3: AVERAGE CONTRACT VALUE */}
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 card-motion hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700">
               <div className="flex items-center justify-between">
-                <span className="font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span className="font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5 tracking-tight">
                   <Wallet className="w-4 h-4 text-blue-600" />
                   <span>متوسط قيمة العقد الواحد</span>
                 </span>
-                <span className="font-mono font-black text-blue-700 dark:text-blue-400 text-sm">
+                <span className="font-mono font-black text-blue-700 dark:text-blue-400 text-sm tabular-nums">
                   {totalOrders > 0 ? Math.round(totalRevenue / totalOrders).toLocaleString('ar-EG') : 0} ج.م
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                 معدل القيمة التعاقدية المتوسطة لكل أمر شغل بالمصنع.
               </p>
             </div>

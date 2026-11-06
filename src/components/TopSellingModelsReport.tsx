@@ -206,57 +206,62 @@ export const TopSellingModelsReport: React.FC<TopSellingModelsReportProps> = ({ 
 
         {/* Table */}
         <div className="space-y-4">
-          <table className="w-full border-collapse border border-slate-900 text-xs">
-            <thead>
-              <tr className="bg-amber-300 text-black font-black">
-                <th className="border border-slate-900 p-2 text-center w-10">المركز</th>
-                <th className="border border-slate-900 p-2 text-right">اسم الموديل / الطراز</th>
-                <th className="border border-slate-900 p-2 text-center">عدد الغرف</th>
-                <th className="border border-slate-900 p-2 text-center">نسبة الإقبال</th>
-                <th className="border border-slate-900 p-2 text-right">إجمالي المبيعات</th>
-                <th className="border border-slate-900 p-2 text-center">قيد التشغيل / منتهى</th>
-              </tr>
-            </thead>
-            <tbody>
-              {modelStatsData.map((item, idx) => (
-                <tr key={item.modelName} className="hover:bg-slate-50 font-bold">
-                  <td className="border border-slate-900 p-2 text-center font-mono bg-slate-100">
-                    {idx === 0 ? '🥇 1' : idx === 1 ? '🥈 2' : idx === 2 ? '🥉 3' : `#${idx + 1}`}
+          <div className="overflow-x-auto rounded-lg border border-slate-900">
+            <table className="w-full border-collapse border border-slate-900 text-xs min-w-[700px]">
+              <thead>
+                <tr className="bg-amber-300 text-black font-black">
+                  <th className="border border-slate-900 p-2 text-center w-10">المركز</th>
+                  <th className="border border-slate-900 p-2 text-right">اسم الموديل / الطراز</th>
+                  <th className="border border-slate-900 p-2 text-center">عدد الغرف</th>
+                  <th className="border border-slate-900 p-2 text-center">نسبة الإقبال</th>
+                  <th className="border border-slate-900 p-2 text-right">إجمالي المبيعات</th>
+                  <th className="border border-slate-900 p-2 text-center">قيد التشغيل / منتهى</th>
+                </tr>
+              </thead>
+              <tbody>
+                {modelStatsData.map((item, idx) => (
+                  <tr key={item.modelName} className="hover:bg-slate-50 font-bold transition-colors">
+                    <td className="border border-slate-900 p-2 text-center font-mono bg-slate-100">
+                      {idx === 0 ? '🥇 1' : idx === 1 ? '🥈 2' : idx === 2 ? '🥉 3' : `#${idx + 1}`}
+                    </td>
+                    <td className="border border-slate-900 p-2 text-right text-slate-900">
+                      {item.modelName}
+                    </td>
+                    <td className="border border-slate-900 p-2 text-center font-mono tabular-nums">
+                      {item.totalCount} غرفة
+                    </td>
+                    <td className="border border-slate-900 p-2 text-center font-mono text-emerald-800 tabular-nums">
+                      {item.percentage}%
+                    </td>
+                    <td className="border border-slate-900 p-2 text-right font-mono tabular-nums">
+                      {item.totalRevenue.toLocaleString('ar-EG')} ج.م
+                    </td>
+                    <td className="border border-slate-900 p-2 text-center font-mono text-[11px] tabular-nums">
+                      <span className="text-amber-700">{item.inProgressCount} قيد الورشة</span> /{' '}
+                      <span className="text-emerald-700">{item.completedCount + item.deliveredCount} منجز</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-slate-900 text-white font-black">
+                <tr>
+                  <td colSpan={2} className="border border-slate-900 p-3 text-left">
+                    الإجمالي العام للموديلات:
                   </td>
-                  <td className="border border-slate-900 p-2 text-right text-slate-900">
-                    {item.modelName}
+                  <td className="border border-slate-900 p-3 text-center font-mono tabular-nums">
+                    {summary.totalCount} غرفة
                   </td>
-                  <td className="border border-slate-900 p-2 text-center font-mono">
-                    {item.totalCount} غرفة
-                  </td>
-                  <td className="border border-slate-900 p-2 text-center font-mono text-emerald-800">
-                    {item.percentage}%
-                  </td>
-                  <td className="border border-slate-900 p-2 text-right font-mono">
-                    {item.totalRevenue.toLocaleString('ar-EG')} ج.م
-                  </td>
-                  <td className="border border-slate-900 p-2 text-center font-mono text-[11px]">
-                    <span className="text-amber-700">{item.inProgressCount} قيد الورشة</span> /{' '}
-                    <span className="text-emerald-700">{item.completedCount + item.deliveredCount} منجز</span>
+                  <td className="border border-slate-900 p-3 text-center font-mono">100%</td>
+                  <td colSpan={2} className="border border-slate-900 p-3 text-right font-mono text-amber-300 tabular-nums">
+                    {summary.totalRevenue.toLocaleString('ar-EG')} ج.م
                   </td>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot className="bg-slate-900 text-white font-black">
-              <tr>
-                <td colSpan={2} className="border border-slate-900 p-3 text-left">
-                  الإجمالي العام للموديلات:
-                </td>
-                <td className="border border-slate-900 p-3 text-center font-mono">
-                  {summary.totalCount} غرفة
-                </td>
-                <td className="border border-slate-900 p-3 text-center font-mono">100%</td>
-                <td colSpan={2} className="border border-slate-900 p-3 text-right font-mono text-amber-300">
-                  {summary.totalRevenue.toLocaleString('ar-EG')} ج.م
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </tfoot>
+            </table>
+          </div>
+          <p className="no-print text-[10px] text-slate-400 font-bold text-center sm:hidden">
+             💡 اسحب الجدول لليمين لمشاهدة كافة التفاصيل المالية والنسب
+          </p>
         </div>
 
         {/* Recommendations / Insights for Management */}
