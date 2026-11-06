@@ -1,5 +1,16 @@
 export type OrderStatus = 'قيد التشغيل' | 'تم التنفيذ' | 'تسليم';
 
+export type ProductionStage =
+  | 'لم يبدأ'
+  | 'نجارة عفش'
+  | 'نجارة انتريهات'
+  | 'خدمة وتجهيز'
+  | 'كابينة أستر'
+  | 'كابينة دوكو'
+  | 'تنجيد'
+  | 'تشطيب وتغليف'
+  | 'جاهز للتسليم';
+
 export type AttachmentType = 'drawing' | 'fabric_sample' | '3d_render' | 'other';
 
 export interface Customer {
@@ -20,6 +31,8 @@ export interface JobOrder {
   delivery_date: string; // YYYY-MM-DD
   general_specs: string; // المواصفات العامة
   status: OrderStatus;
+  current_stage?: ProductionStage; // مرحلة الإنتاج الحالية في الورشة
+  stage_updated_at?: string; // تاريخ وساعة الانضمام للمرحلة الحالية
   total_price: number;
   deposit_paid: number;
   is_archived?: boolean; // أرشفة أمر الشغل
@@ -69,6 +82,8 @@ export interface CreateJobOrderPayload {
     delivery_date: string;
     general_specs: string;
     status: OrderStatus;
+    current_stage?: ProductionStage;
+    stage_updated_at?: string;
     total_price: number;
     deposit_paid: number;
   };

@@ -129,6 +129,30 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
                   break-inside: avoid !important;
                 }
 
+                #printable-report {
+                  background: #ffffff !important;
+                  color: #000000 !important;
+                  padding: 10mm !important;
+                  width: 100% !important;
+                  box-sizing: border-box !important;
+                }
+                #printable-report table {
+                  width: 100% !important;
+                  border-collapse: collapse !important;
+                }
+                #printable-report th {
+                  background-color: #fef08a !important;
+                  color: #000000 !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                  font-weight: 900 !important;
+                }
+                #printable-report td, #printable-report th {
+                  border: 1px solid #94a3b8 !important;
+                  padding: 6px 8px !important;
+                  font-size: 11px !important;
+                }
+
                 /* 1. Spacious Density (1-4 items): Large font, tall rows, fills the entire page */
                 #printable-truck-manifest.density-spacious {
                   padding: 6mm 7mm !important;
@@ -254,6 +278,70 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
                   font-size: 8px !important;
                 }
 
+                /* Dedicated single-page fit for Customer Delivery Receipt with Adaptive Full-Height Auto-Scale */
+                #printable-delivery-receipt {
+                  border: 2px solid #000 !important;
+                  box-sizing: border-box !important;
+                  page-break-after: avoid !important;
+                  page-break-before: avoid !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                  justify-content: space-between !important;
+                  min-height: ${orientation === 'landscape' ? '195mm' : '272mm'} !important;
+                  height: 100% !important;
+                }
+                #printable-delivery-receipt.density-spacious {
+                  padding: 7mm 8mm !important;
+                  font-size: 13.5px !important;
+                  line-height: 1.4 !important;
+                }
+                #printable-delivery-receipt.density-spacious .receipt-brand-title { font-size: 24px !important; }
+                #printable-delivery-receipt.density-spacious .receipt-product-title { font-size: 15px !important; }
+                #printable-delivery-receipt.density-spacious .receipt-specs-grid { font-size: 13px !important; }
+                #printable-delivery-receipt.density-spacious .receipt-notes-lines { min-height: 28px !important; }
+
+                #printable-delivery-receipt.density-comfortable {
+                  padding: 5mm 6mm !important;
+                  font-size: 12.5px !important;
+                  line-height: 1.35 !important;
+                }
+                #printable-delivery-receipt.density-comfortable .receipt-brand-title { font-size: 21px !important; }
+                #printable-delivery-receipt.density-comfortable .receipt-product-title { font-size: 13.5px !important; }
+                #printable-delivery-receipt.density-comfortable .receipt-specs-grid { font-size: 12px !important; }
+                #printable-delivery-receipt.density-comfortable .receipt-notes-lines { min-height: 22px !important; }
+
+                #printable-delivery-receipt.density-balanced {
+                  padding: 4mm 5mm !important;
+                  font-size: 11.5px !important;
+                  line-height: 1.25 !important;
+                }
+                #printable-delivery-receipt.density-balanced .receipt-brand-title { font-size: 19px !important; }
+                #printable-delivery-receipt.density-balanced .receipt-product-title { font-size: 12.5px !important; }
+                #printable-delivery-receipt.density-balanced .receipt-specs-grid { font-size: 11px !important; }
+                #printable-delivery-receipt.density-balanced .receipt-notes-lines { min-height: 16px !important; }
+
+                #printable-delivery-receipt.density-compact {
+                  padding: 3mm 4mm !important;
+                  font-size: 10px !important;
+                  line-height: 1.2 !important;
+                }
+                #printable-delivery-receipt.density-compact .receipt-brand-title { font-size: 16px !important; }
+                #printable-delivery-receipt.density-compact .receipt-product-title { font-size: 11px !important; }
+                #printable-delivery-receipt.density-compact .receipt-specs-grid { font-size: 10px !important; }
+                #printable-delivery-receipt.density-compact .receipt-notes-lines { min-height: 12px !important; }
+
+                #printable-delivery-receipt.density-micro {
+                  padding: 2mm 3mm !important;
+                  font-size: 9px !important;
+                  line-height: 1.15 !important;
+                }
+                #printable-delivery-receipt.density-micro .receipt-brand-title { font-size: 14px !important; }
+                #printable-delivery-receipt.density-micro .receipt-product-title { font-size: 9.5px !important; }
+                #printable-delivery-receipt.density-micro .receipt-specs-grid { font-size: 8.5px !important; }
+                #printable-delivery-receipt.density-micro .receipt-notes-lines { min-height: 8px !important; }
+
                 .text-blue-900, .text-blue-950 { color: #002266 !important; }
                 .text-emerald-800, .text-emerald-950 { color: #064e3b !important; }
                 .text-red-600 { color: #cc0000 !important; }
@@ -335,12 +423,15 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
               .text-red-600 { color: #cc0000 !important; }
               .text-amber-800 { color: #884400 !important; }
               .no-print { display: none !important; }
-              #printable-workshop-card, #printable-delivery-receipt, #printable-job-order-sheet {
+              #printable-workshop-card, #printable-delivery-receipt, #printable-job-order-sheet, #printable-report {
                 page-break-after: avoid !important;
                 page-break-before: avoid !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
               }
+              #printable-report table { width: 100% !important; border-collapse: collapse !important; }
+              #printable-report th { background-color: #fef08a !important; color: #000 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              #printable-report td, #printable-report th { border: 1px solid #94a3b8 !important; padding: 6px 8px !important; font-size: 11px !important; }
               #printable-truck-manifest {
                 border: 2px solid #000 !important;
                 box-sizing: border-box !important;
@@ -411,7 +502,48 @@ export function printElementById(elementId: string, orientation: 'portrait' | 'l
               #printable-truck-manifest.density-micro th { font-size: 8.5px !important; padding: 1.5px 2px !important; }
               #printable-truck-manifest.density-micro td { font-size: 8px !important; padding: 1.5px 2px !important; line-height: 1.1 !important; }
               #printable-truck-manifest.density-micro .manifest-brand-title { font-size: 13px !important; }
-              #printable-truck-manifest.density-micro .manifest-footer { padding-top: 1.5px !important; font-size: 8px !important; }
+              #printable-delivery-receipt {
+                border: 2px solid #000 !important;
+                box-sizing: border-box !important;
+                page-break-after: avoid !important;
+                page-break-before: avoid !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                min-height: ${orientation === 'landscape' ? '195mm' : '272mm'} !important;
+                height: 100% !important;
+              }
+              #printable-delivery-receipt.density-spacious { padding: 7mm 8mm !important; font-size: 13.5px !important; line-height: 1.4 !important; }
+              #printable-delivery-receipt.density-spacious .receipt-brand-title { font-size: 24px !important; }
+              #printable-delivery-receipt.density-spacious .receipt-product-title { font-size: 15px !important; }
+              #printable-delivery-receipt.density-spacious .receipt-specs-grid { font-size: 13px !important; }
+              #printable-delivery-receipt.density-spacious .receipt-notes-lines { min-height: 28px !important; }
+
+              #printable-delivery-receipt.density-comfortable { padding: 5mm 6mm !important; font-size: 12.5px !important; line-height: 1.35 !important; }
+              #printable-delivery-receipt.density-comfortable .receipt-brand-title { font-size: 21px !important; }
+              #printable-delivery-receipt.density-comfortable .receipt-product-title { font-size: 13.5px !important; }
+              #printable-delivery-receipt.density-comfortable .receipt-specs-grid { font-size: 12px !important; }
+              #printable-delivery-receipt.density-comfortable .receipt-notes-lines { min-height: 22px !important; }
+
+              #printable-delivery-receipt.density-balanced { padding: 4mm 5mm !important; font-size: 11.5px !important; line-height: 1.25 !important; }
+              #printable-delivery-receipt.density-balanced .receipt-brand-title { font-size: 19px !important; }
+              #printable-delivery-receipt.density-balanced .receipt-product-title { font-size: 12.5px !important; }
+              #printable-delivery-receipt.density-balanced .receipt-specs-grid { font-size: 11px !important; }
+              #printable-delivery-receipt.density-balanced .receipt-notes-lines { min-height: 16px !important; }
+
+              #printable-delivery-receipt.density-compact { padding: 3mm 4mm !important; font-size: 10px !important; line-height: 1.2 !important; }
+              #printable-delivery-receipt.density-compact .receipt-brand-title { font-size: 16px !important; }
+              #printable-delivery-receipt.density-compact .receipt-product-title { font-size: 11px !important; }
+              #printable-delivery-receipt.density-compact .receipt-specs-grid { font-size: 10px !important; }
+              #printable-delivery-receipt.density-compact .receipt-notes-lines { min-height: 12px !important; }
+
+              #printable-delivery-receipt.density-micro { padding: 2mm 3mm !important; font-size: 9px !important; line-height: 1.15 !important; }
+              #printable-delivery-receipt.density-micro .receipt-brand-title { font-size: 14px !important; }
+              #printable-delivery-receipt.density-micro .receipt-product-title { font-size: 9.5px !important; }
+              #printable-delivery-receipt.density-micro .receipt-specs-grid { font-size: 8.5px !important; }
+              #printable-delivery-receipt.density-micro .receipt-notes-lines { min-height: 8px !important; }
 
               img { max-height: 180px; object-fit: contain; }
               img.full-sheet-img { max-height: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; }

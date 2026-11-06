@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreateJobOrderPayload, OrderStatus, AttachmentType, JobOrderPopulated } from '../types';
+import { CreateJobOrderPayload, OrderStatus, ProductionStage, AttachmentType, JobOrderPopulated } from '../types';
 import { X, Save, Hammer, Ruler, Paintbrush, Scissors, Plus, Trash2, Upload, Edit3, Sparkles } from 'lucide-react';
 import { compressImage } from '../utils/imageCompressor';
 
@@ -30,6 +30,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
   );
   const [generalSpecs, setGeneralSpecs] = useState('');
   const [status, setStatus] = useState<OrderStatus>('قيد التشغيل');
+  const [currentStage, setCurrentStage] = useState<ProductionStage>('لم يبدأ');
   const [totalPrice, setTotalPrice] = useState<number>(150000);
   const [depositPaid, setDepositPaid] = useState<number>(80000);
 
@@ -57,6 +58,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
       setDeliveryDate(orderToEdit.delivery_date);
       setGeneralSpecs(orderToEdit.general_specs);
       setStatus(orderToEdit.status);
+      setCurrentStage(orderToEdit.current_stage || 'لم يبدأ');
       setTotalPrice(orderToEdit.total_price);
       setDepositPaid(orderToEdit.deposit_paid);
 
@@ -170,6 +172,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
         delivery_date: deliveryDate,
         general_specs: generalSpecs,
         status,
+        current_stage: currentStage,
         total_price: Number(totalPrice),
         deposit_paid: Number(depositPaid),
       },
@@ -317,7 +320,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  حالة الطلب הראשية
+                  حالة الطلب الرئيسية
                 </label>
                 <select
                   value={status}
@@ -327,6 +330,27 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                   <option value="قيد التشغيل">قيد التشغيل</option>
                   <option value="تم التنفيذ">تم التنفيذ</option>
                   <option value="تسليم">تسليم</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  مرحلة الإنتاج الحالية (الورشة)
+                </label>
+                <select
+                  value={currentStage}
+                  onChange={(e) => setCurrentStage(e.target.value as ProductionStage)}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-purple-300 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/40 text-purple-950 dark:text-purple-200 font-bold cursor-pointer"
+                >
+                  <option value="لم يبدأ">⏳ لم يبدأ</option>
+                  <option value="نجارة عفش">🪚 نجارة عفش</option>
+                  <option value="نجارة انتريهات">🪵 نجارة انتريهات</option>
+                  <option value="خدمة وتجهيز">⏱️ خدمة وتجهيز</option>
+                  <option value="كابينة أستر">🎨 كابينة أستر</option>
+                  <option value="كابينة دوكو">🖌️ كابينة دوكو</option>
+                  <option value="تنجيد">🛋️ تنجيد</option>
+                  <option value="تشطيب وتغليف">📦 تشطيب وتغليف</option>
+                  <option value="جاهز للتسليم">🚀 جاهز للتسليم</option>
                 </select>
               </div>
 

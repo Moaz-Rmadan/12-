@@ -9,6 +9,10 @@ import {
   Sparkles,
   FileCheck,
   Truck,
+  FileText,
+  Award,
+  ShieldAlert,
+  Activity,
 } from 'lucide-react';
 import { JobOrderPopulated } from '../types';
 import { NotificationsDropdown } from './NotificationsDropdown';
@@ -38,6 +42,10 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'customers', label: 'العملاء', icon: Users },
     { id: 'receipt', label: 'إقرار استلام عميل', icon: FileCheck },
     { id: 'truck-manifest', label: 'حمولة العربية', icon: Truck },
+    { id: 'top-models', label: 'أكثر الموديلات مبيعاً', icon: Award },
+    { id: 'critical-report', label: 'الأوامر الحرجة والمتأخرة', icon: ShieldAlert },
+    { id: 'bottleneck-report', label: 'تقرير مراحل الإنتاج', icon: Activity },
+    { id: 'delivery-report', label: 'تقرير التسليمات', icon: FileText },
   ];
 
   return (

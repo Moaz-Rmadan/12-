@@ -8,15 +8,21 @@ import { CustomersManager } from './components/CustomersManager';
 import { TemplateStudio } from './components/TemplateStudio';
 import { CustomerDeliveryReceiptView } from './components/CustomerDeliveryReceiptView';
 import { TruckManifestStudio } from './components/TruckManifestStudio';
+import { MonthlyDeliveredReport } from './components/MonthlyDeliveredReport';
+import { TopSellingModelsReport } from './components/TopSellingModelsReport';
+import { CriticalOverdueReport } from './components/CriticalOverdueReport';
+import { BottleneckReport } from './components/BottleneckReport';
 
 import {
   subscribeToJobOrders,
   subscribeToCustomers,
   subscribeToTruckManifests,
   saveTruckManifestToFirestore,
+  deleteTruckManifestFromFirestore,
   saveJobOrderToFirestore,
   updateJobOrderInFirestore,
   updateOrderStatusInFirestore,
+  updateOrderStageInFirestore,
   updateOrderArchiveStatusInFirestore,
   deleteOrderFromFirestore,
   deleteCustomerFromFirestore,
@@ -30,6 +36,7 @@ import {
   JobOrderPopulated,
   Customer,
   OrderStatus,
+  ProductionStage,
   CreateJobOrderPayload,
   TruckManifest,
 } from './types';
@@ -149,6 +156,24 @@ export default function App() {
 
     if (selectedOrderForCard && selectedOrderForCard.id === id) {
       setSelectedOrderForCard((prev) => (prev ? { ...prev, status: newStatus } : null));
+    }
+  };
+
+  // Handle Production Stage Update (Firebase Firestore)
+  const handleUpdateOrderStage = async (id: string, newStage: ProductionStage) => {
+    const nowIso = new Date().toISOString();
+    try {
+      await updateOrderStageInFirestore(id, newStage);
+    } catch (e) {
+      console.error('Firebase stage update error', e);
+    }
+
+    setOrders((prev) =>
+      prev.map((ord) => (ord.id === id ? { ...ord, current_stage: newStage, stage_updated_at: nowIso } : ord))
+    );
+
+    if (selectedOrderForCard && selectedOrderForCard.id === id) {
+      setSelectedOrderForCard((prev) => (prev ? { ...prev, current_stage: newStage, stage_updated_at: nowIso } : null));
     }
   };
 
@@ -290,6 +315,7 @@ export default function App() {
                 setIsNewOrderModalOpen(true);
               }}
               onUpdateStatus={handleUpdateStatus}
+              onUpdateStage={handleUpdateOrderStage}
               onUpdateArchiveStatus={handleUpdateArchiveStatus}
               onDeleteOrder={handleDeleteOrder}
               onAddBatchOrders={handleAddBatchOrders}
@@ -339,7 +365,31 @@ export default function App() {
                 setTruckManifests((prev) => [saved, ...(prev || []).filter((m) => m && m.id && m.id !== saved.id)]);
               }
             }}
+            onDeleteManifestFromDb={async (manifestId) => {
+              await deleteTruckManifestFromFirestore(manifestId);
+              setTruckManifests((prev) => (prev || []).filter((m) => m.id !== manifestId));
+            }}
           />
+        )}
+
+        {/* TAB 5: TOP SELLING MODELS REPORT */}
+        {activeTab === 'top-models' && (
+          <TopSellingModelsReport orders={orders} />
+        )}
+
+        {/* TAB 6: CRITICAL & OVERDUE REPORT */}
+        {activeTab === 'critical-report' && (
+          <CriticalOverdueReport orders={orders} />
+        )}
+
+        {/* TAB 7: BOTTLENECK & PRODUCTION STAGES REPORT */}
+        {activeTab === 'bottleneck-report' && (
+          <BottleneckReport orders={orders} onUpdateOrderStage={handleUpdateOrderStage} />
+        )}
+
+        {/* TAB 8: MONTHLY DELIVERY REPORT */}
+        {activeTab === 'delivery-report' && (
+          <MonthlyDeliveredReport orders={orders} />
         )}
 
       </main>
@@ -365,6 +415,7 @@ export default function App() {
           order={selectedOrderForCard}
           onClose={() => setSelectedOrderForCard(null)}
           onUpdateStatus={handleUpdateStatus}
+          onUpdateStage={handleUpdateOrderStage}
           onUpdateArchiveStatus={handleUpdateArchiveStatus}
           onEditOrder={(ord) => {
             setOrderToEdit(ord);

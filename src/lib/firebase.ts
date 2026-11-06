@@ -186,6 +186,7 @@ export async function saveJobOrderToFirestore(payload: CreateJobOrderPayload): P
     delivery_date: payload.job_order.delivery_date,
     general_specs: payload.job_order.general_specs,
     status: payload.job_order.status,
+    current_stage: payload.job_order.current_stage || 'لم يبدأ',
     total_price: payload.job_order.total_price,
     deposit_paid: payload.job_order.deposit_paid,
     created_at: new Date().toISOString(),
@@ -234,6 +235,22 @@ export async function updateOrderStatusInFirestore(orderId: string, newStatus: O
       updated_at: new Date().toISOString(),
     });
     console.log('[Firebase] Order status updated:', orderId, newStatus);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
+  }
+}
+
+// Update Order Production Stage in Firestore
+export async function updateOrderStageInFirestore(orderId: string, newStage: string) {
+  try {
+    const orderDocRef = doc(db, 'job_orders', orderId);
+    const nowIso = new Date().toISOString();
+    await updateDoc(orderDocRef, {
+      current_stage: newStage,
+      stage_updated_at: nowIso,
+      updated_at: nowIso,
+    });
+    console.log('[Firebase] Order stage updated:', orderId, newStage, nowIso);
   } catch (err) {
     handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
   }
@@ -319,6 +336,7 @@ export async function updateJobOrderInFirestore(
     delivery_date: payload.job_order.delivery_date,
     general_specs: payload.job_order.general_specs,
     status: payload.job_order.status,
+    current_stage: payload.job_order.current_stage || 'لم يبدأ',
     total_price: payload.job_order.total_price,
     deposit_paid: payload.job_order.deposit_paid,
     updated_at: nowIso,
@@ -584,6 +602,16 @@ export function subscribeToTruckManifests(callback: (manifests: TruckManifest[])
       handleFirestoreError(err, OperationType.LIST, 'truck_manifests');
     }
   );
+}
+
+export async function deleteTruckManifestFromFirestore(manifestId: string): Promise<void> {
+  try {
+    const docRef = doc(db, 'truck_manifests', manifestId);
+    await deleteDoc(docRef);
+    console.log('[Firebase] Deleted truck manifest from Firestore:', manifestId);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, `truck_manifests/${manifestId}`);
+  }
 }
 
 

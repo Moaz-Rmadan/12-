@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { JobOrderPopulated, OrderStatus } from '../types';
+import { JobOrderPopulated, OrderStatus, ProductionStage } from '../types';
 import { printElementById } from '../utils/printHelper';
 import {
   X,
@@ -20,12 +20,14 @@ import {
   ZoomOut,
   RotateCcw,
   Maximize2,
+  Activity,
 } from 'lucide-react';
 
 interface WorkshopCardModalProps {
   order: JobOrderPopulated | null;
   onClose: () => void;
   onUpdateStatus?: (id: string, newStatus: OrderStatus) => void;
+  onUpdateStage?: (id: string, newStage: ProductionStage) => void;
   onEditOrder?: (order: JobOrderPopulated) => void;
   onUpdateArchiveStatus?: (id: string, isArchived: boolean) => void;
 }
@@ -34,6 +36,7 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
   order,
   onClose,
   onUpdateStatus,
+  onUpdateStage,
   onEditOrder,
   onUpdateArchiveStatus,
 }) => {
@@ -168,10 +171,33 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
                   onChange={(e) => onUpdateStatus(order.id, e.target.value as OrderStatus)}
                   aria-label="تحديث حالة أمر الشغل"
                   className="text-xs bg-slate-800 text-amber-200 border border-slate-700 rounded-lg px-2 py-1.5 font-bold cursor-pointer hover:border-amber-500 transition-colors"
+                  title="حالة الطلب الرئيسية"
                 >
                   <option value="قيد التشغيل">قيد التشغيل</option>
                   <option value="تم التنفيذ">تم التنفيذ</option>
                   <option value="تسليم">تسليم</option>
+                </select>
+              </div>
+            )}
+
+            {onUpdateStage && (
+              <div className="flex items-center gap-1 shrink-0 ml-1">
+                <select
+                  value={order.current_stage || 'لم يبدأ'}
+                  onChange={(e) => onUpdateStage(order.id, e.target.value as ProductionStage)}
+                  aria-label="تحديث مرحلة الورشة والإنتاج"
+                  className="text-xs bg-purple-900/90 text-purple-100 border border-purple-600 rounded-lg px-2 py-1.5 font-black cursor-pointer hover:border-purple-400 transition-colors shadow-2xs"
+                  title="تغيير مرحلة الورشة والإنتاج الحالية"
+                >
+                  <option value="لم يبدأ">⏳ لم يبدأ</option>
+                  <option value="نجارة عفش">🪚 نجارة عفش</option>
+                  <option value="نجارة انتريهات">🪵 نجارة انتريهات</option>
+                  <option value="خدمة وتجهيز">⏱️ خدمة وتجهيز</option>
+                  <option value="كابينة أستر">🎨 كابينة أستر</option>
+                  <option value="كابينة دوكو">🖌️ كابينة دوكو</option>
+                  <option value="تنجيد">🛋️ تنجيد</option>
+                  <option value="تشطيب وتغليف">📦 تشطيب وتغليف</option>
+                  <option value="جاهز للتسليم">🚀 جاهز للتسليم</option>
                 </select>
               </div>
             )}
@@ -411,6 +437,16 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
                           {order.room_model_code}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Row 1.5: مرحلة الإنتاج والورشة الحالية */}
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <span className="text-purple-950 dark:text-purple-300 font-black shrink-0 text-xs sm:text-sm">
+                        مرحلة الورشة والإنتاج الحالية :
+                      </span>
+                      <span className="inline-flex items-center gap-1 font-black text-xs sm:text-sm bg-purple-100 text-purple-950 dark:bg-purple-950 dark:text-purple-200 border border-purple-300 dark:border-purple-800 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                        📍 {order.current_stage || 'لم يبدأ'}
+                      </span>
                     </div>
 
                     {/* Row 2: تاريخ التعاقد & تاريخ الاستلام */}

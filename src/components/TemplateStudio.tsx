@@ -278,6 +278,28 @@ export const presetTemplates: TemplateJobOrder[] = [
     modelImages: ['/assets/aistudio/mazen_page_10.jpg', '/assets/aistudio/mazen_page_11.jpg'],
     approverName: 'مروان هلال',
   },
+  {
+    id: 'preset-rania-bed',
+    customerName: 'ارانيا عادل محمد',
+    roomCode: 'نوم شبابي مكة مخصوص',
+    contractDate: '3 / 11 / 2026',
+    deliveryDate: '5 / 12 / 2026',
+    specs: 'عدد واحد نوم شبابي مكة مخصوص مكونة من 2 سرير + واحد كمود + الدولاب + التسريحة + الملل',
+    detailsList: [
+      '1- الدولاب: عرض 2م، ارتفاع 240سم.',
+      '2- القشرة: لزق القشرة على الدلفة بالطول.',
+      '3- التقسيم الداخلي: كما بالصورة.',
+      '4- تنجيد السرير: مثل الصورة.',
+      '5- تسريحة: عرض 80 سم.',
+      '6- تنجيد أدراج: إلغاء (تكون خشب).',
+    ],
+    paintDetails: 'كما بالمعرض ماعدا الجزء الأبيض الدوكو الموجود في برنيطة الدولاب هيكون قشرة بني',
+    upholsterySource: 'كما بالمعرض (بيج)',
+    upholsteryBreakdown: [],
+    fabricTagImages: [],
+    modelImages: ['/assets/aistudio/rania_2_page_01.jpg', '/assets/aistudio/rania_2_page_02.jpg', '/assets/aistudio/rania_2_page_03.jpg'],
+    approverName: 'محمد عبد الله',
+  },
 ];
 
 export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase }) => {

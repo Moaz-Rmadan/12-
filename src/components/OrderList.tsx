@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { JobOrderPopulated, OrderStatus, CreateJobOrderPayload, Customer } from '../types';
+import { JobOrderPopulated, OrderStatus, ProductionStage, CreateJobOrderPayload, Customer } from '../types';
 import {
   Search,
   Filter,
@@ -28,6 +28,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Archive,
+  Activity,
 } from 'lucide-react';
 import { BatchOrderImportModal } from './BatchOrderImportModal';
 import {
@@ -44,6 +45,7 @@ interface OrderListProps {
   onSelectOrder: (order: JobOrderPopulated) => void;
   onEditOrder: (order: JobOrderPopulated) => void;
   onUpdateStatus: (id: string, newStatus: OrderStatus) => void;
+  onUpdateStage?: (id: string, newStage: ProductionStage) => void;
   onUpdateArchiveStatus?: (id: string, isArchived: boolean) => void;
   onDeleteOrder: (id: string) => void;
   onAddBatchOrders?: (ordersList: CreateJobOrderPayload[]) => Promise<number>;
@@ -57,6 +59,7 @@ export const OrderList: React.FC<OrderListProps> = ({
   onSelectOrder,
   onEditOrder,
   onUpdateStatus,
+  onUpdateStage,
   onUpdateArchiveStatus,
   onDeleteOrder,
   onAddBatchOrders,
@@ -77,6 +80,9 @@ export const OrderList: React.FC<OrderListProps> = ({
 
   // Dedicated Furniture Category Filter (غرفة نوم كبيرة، انتريه، غرفة شبابي، ركنة، ليزي بوي، جزامة، سفرة)
   const [selectedCategory, setSelectedCategory] = useState<FurnitureCategory>('all');
+
+  // Dedicated Production Stage Filter ('all' | ProductionStage)
+  const [selectedStage, setSelectedStage] = useState<string>('all');
 
   // Dedicated Month Filter ('all', '2026-11', '2026-12', etc.)
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
@@ -204,6 +210,7 @@ export const OrderList: React.FC<OrderListProps> = ({
     setDeliveryDateFilter('');
     setQuickDatePreset('all');
     setSelectedCategory('all');
+    setSelectedStage('all');
     setSelectedMonth('all');
     setActiveFilter('الكل');
     setSortBy('delivery_asc');
@@ -216,6 +223,7 @@ export const OrderList: React.FC<OrderListProps> = ({
     activeFilter !== 'الكل' ||
     quickDatePreset !== 'all' ||
     selectedCategory !== 'all' ||
+    selectedStage !== 'all' ||
     selectedMonth !== 'all';
 
   // Filter & Sort Pipeline
@@ -229,6 +237,14 @@ export const OrderList: React.FC<OrderListProps> = ({
           if (ord.is_archived) return false; // Hide archived orders from active lists
           // 1. Status Filter
           if (activeFilter !== 'الكل' && ord.status !== activeFilter) {
+            return false;
+          }
+        }
+
+        // 2. Production Stage Filter
+        if (selectedStage !== 'all') {
+          const ordStage = ord.current_stage || 'لم يبدأ';
+          if (ordStage !== selectedStage) {
             return false;
           }
         }
@@ -764,6 +780,49 @@ export const OrderList: React.FC<OrderListProps> = ({
 
           </div>
 
+          {/* PRODUCTION STAGE FILTERS BAR */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-2 pb-1 px-1 border-t border-slate-200/60 dark:border-slate-800">
+            <span className="text-[11px] font-black text-purple-900 dark:text-purple-300 shrink-0 flex items-center gap-1 ml-1">
+              <Activity className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+              <span>مرحلة الورشة:</span>
+            </span>
+
+            <button
+              onClick={() => setSelectedStage('all')}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors shrink-0 ${
+                selectedStage === 'all'
+                  ? 'bg-purple-950 text-purple-200 font-black shadow-2xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              كل المراحل
+            </button>
+
+            {[
+              { id: 'لم يبدأ', label: '⏳ لم يبدأ' },
+              { id: 'نجارة عفش', label: '🪚 نجارة عفش' },
+              { id: 'نجارة انتريهات', label: '🪵 نجارة انتريهات' },
+              { id: 'خدمة وتجهيز', label: '⏱️ خدمة وتجهيز' },
+              { id: 'كابينة أستر', label: '🎨 كابينة أستر' },
+              { id: 'كابينة دوكو', label: '🖌️ كابينة دوكو' },
+              { id: 'تنجيد', label: '🛋️ تنجيد' },
+              { id: 'تشطيب وتغليف', label: '📦 تشطيب وتغليف' },
+              { id: 'جاهز للتسليم', label: '🚀 جاهز للتسليم' },
+            ].map((stg) => (
+              <button
+                key={stg.id}
+                onClick={() => setSelectedStage(stg.id)}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors shrink-0 whitespace-nowrap ${
+                  selectedStage === stg.id
+                    ? 'bg-purple-800 text-purple-100 shadow-2xs font-black'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                {stg.label}
+              </button>
+            ))}
+          </div>
+
         </div>
 
         {/* ROW 2: STATUS TABS & ACTIONS */}
@@ -932,6 +991,10 @@ export const OrderList: React.FC<OrderListProps> = ({
                         <span>{catInfo.shortName}</span>
                       </span>
                     )}
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1 shadow-2xs">
+                      <span>📍</span>
+                      <span>{ord.current_stage || 'لم يبدأ'}</span>
+                    </span>
                     {ord.updated_at && ord.created_at && ord.updated_at !== ord.created_at && (
                       <span className="text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-400/40">
                         معدّل
@@ -1025,18 +1088,38 @@ export const OrderList: React.FC<OrderListProps> = ({
                   <span>تعديل</span>
                 </button>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap">
                   <select
                     value={ord.status}
                     onChange={(e) => onUpdateStatus(ord.id, e.target.value as OrderStatus)}
                     aria-label="تغيير حالة الأمر"
-                    className="text-[11px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-black cursor-pointer text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500/50"
+                    className="text-[11px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 font-black cursor-pointer text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500/50"
                     title="تغيير حالة الأمر"
                   >
                     <option value="قيد التشغيل">تشغيل</option>
                     <option value="تم التنفيذ">تنفيذ</option>
                     <option value="تسليم">تسليم</option>
                   </select>
+
+                  {onUpdateStage && (
+                    <select
+                      value={ord.current_stage || 'لم يبدأ'}
+                      onChange={(e) => onUpdateStage(ord.id, e.target.value as ProductionStage)}
+                      aria-label="تغيير مرحلة الورشة والإنتاج"
+                      className="text-[11px] bg-purple-50 dark:bg-purple-950/80 border border-purple-300 dark:border-purple-800 rounded-xl px-2 py-2 font-black cursor-pointer text-purple-950 dark:text-purple-200 focus:ring-2 focus:ring-purple-500/50 shadow-2xs"
+                      title="تغيير مرحلة الورشة والإنتاج الحالية"
+                    >
+                      <option value="لم يبدأ">⏳ لم يبدأ</option>
+                      <option value="نجارة عفش">🪚 نجارة عفش</option>
+                      <option value="نجارة انتريهات">🪵 نجارة انتريهات</option>
+                      <option value="خدمة وتجهيز">⏱️ خدمة وتجهيز</option>
+                      <option value="كابينة أستر">🎨 كابينة أستر</option>
+                      <option value="كابينة دوكو">🖌️ كابينة دوكو</option>
+                      <option value="تنجيد">🛋️ تنجيد</option>
+                      <option value="تشطيب وتغليف">📦 تشطيب وتغليف</option>
+                      <option value="جاهز للتسليم">🚀 جاهز للتسليم</option>
+                    </select>
+                  )}
 
                   <button
                     onClick={() => setOrderToDelete(ord)}

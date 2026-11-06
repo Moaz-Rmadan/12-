@@ -13,6 +13,10 @@ import {
   MapPin,
   Layers,
   X,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Maximize2,
 } from 'lucide-react';
 
 interface CustomerDeliveryReceiptViewProps {
@@ -93,9 +97,128 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
     return customerOrders.filter((o) => selectedOrderIds.includes(o.id));
   }, [customerOrders, selectedOrderIds]);
 
+  // Total text characters count in selected products
+  const totalReceiptTextChars = useMemo(() => {
+    return activeReceiptOrders.reduce((acc, ord) => {
+      return (
+        acc +
+        (ord.general_specs?.length || 0) +
+        (ord.room_model_code?.length || 0) +
+        (ord.job_details?.paint_details?.length || 0) +
+        (ord.job_details?.fabric_source?.length || 0) +
+        (ord.job_details?.dimensions_cm?.length || 0)
+      );
+    }, 0);
+  }, [activeReceiptOrders]);
+
+  // Density override state: 'auto' | 'spacious' | 'comfortable' | 'balanced' | 'compact' | 'micro'
+  const [densityOverride, setDensityOverride] = useState<
+    'auto' | 'spacious' | 'comfortable' | 'balanced' | 'compact' | 'micro'
+  >('auto');
+
+  // Manual Font Scaling (80% to 135%, default: 100%)
+  const [manualFontScale, setManualFontScale] = useState<number>(100);
+
+  // Full-Page Stretch Toggle (fills A4 page height gracefully and balances vertical spacing)
+  const [fillPageHeight, setFillPageHeight] = useState<boolean>(true);
+
+  // Automatic density detection for receipt single-page guarantee:
+  // - 1-2 short items -> 'spacious' (Enlarges fonts, spacing and fills the A4 page)
+  // - 3-4 items -> 'comfortable'
+  // - 5-6 items -> 'balanced'
+  // - 7-9 items -> 'compact'
+  // - 10+ items or very long text -> 'micro'
+  const autoDetectedDensity = useMemo<'spacious' | 'comfortable' | 'balanced' | 'compact' | 'micro'>(() => {
+    const count = activeReceiptOrders.length;
+    if (count <= 2 && totalReceiptTextChars < 280) return 'spacious';
+    if (count <= 4 && totalReceiptTextChars < 550) return 'comfortable';
+    if (count <= 6 && totalReceiptTextChars < 900) return 'balanced';
+    if (count <= 8 && totalReceiptTextChars < 1300) return 'compact';
+    return 'micro';
+  }, [activeReceiptOrders.length, totalReceiptTextChars]);
+
+  const activeDensity = densityOverride === 'auto' ? autoDetectedDensity : densityOverride;
+
+  // Screen and print layout density mapping
+  const receiptDensity = useMemo(() => {
+    switch (activeDensity) {
+      case 'spacious':
+        return {
+          containerPadding: 'p-6 sm:p-8',
+          fontSize: 'text-sm sm:text-base',
+          brandTitleText: 'text-2xl sm:text-3xl font-black',
+          badgeText: 'text-sm sm:text-base px-4 py-1.5',
+          spacingY: 'space-y-4 sm:space-y-5',
+          itemPadding: 'pb-3 space-y-1',
+          productTitleText: 'text-sm sm:text-base font-black',
+          specsText: 'text-xs sm:text-sm',
+          notesHeight: 'space-y-3',
+          notesLine: 'pb-2',
+          footerMargin: 'pt-4 mt-4',
+        };
+      case 'comfortable':
+        return {
+          containerPadding: 'p-5 sm:p-6',
+          fontSize: 'text-xs sm:text-sm',
+          brandTitleText: 'text-xl sm:text-2xl font-black',
+          badgeText: 'text-xs sm:text-sm px-3.5 py-1',
+          spacingY: 'space-y-3 sm:space-y-4',
+          itemPadding: 'pb-2.5 space-y-0.5',
+          productTitleText: 'text-xs sm:text-sm font-black',
+          specsText: 'text-[11px] sm:text-xs',
+          notesHeight: 'space-y-2',
+          notesLine: 'pb-1',
+          footerMargin: 'pt-3 mt-3',
+        };
+      case 'balanced':
+        return {
+          containerPadding: 'p-4 sm:p-5',
+          fontSize: 'text-[11px] sm:text-xs',
+          brandTitleText: 'text-lg sm:text-xl font-black',
+          badgeText: 'text-xs px-3 py-1',
+          spacingY: 'space-y-2.5 sm:space-y-3',
+          itemPadding: 'pb-2 space-y-0.5',
+          productTitleText: 'text-xs font-black',
+          specsText: 'text-[10.5px] sm:text-[11px]',
+          notesHeight: 'space-y-1.5',
+          notesLine: 'pb-0.5',
+          footerMargin: 'pt-2.5 mt-2.5',
+        };
+      case 'compact':
+        return {
+          containerPadding: 'p-3 sm:p-4',
+          fontSize: 'text-[10px] sm:text-[10.5px]',
+          brandTitleText: 'text-base sm:text-lg font-black',
+          badgeText: 'text-[11px] px-2.5 py-0.5',
+          spacingY: 'space-y-2',
+          itemPadding: 'pb-1.5 space-y-0.5',
+          productTitleText: 'text-[10.5px] sm:text-[11px] font-black',
+          specsText: 'text-[9.5px] sm:text-[10px]',
+          notesHeight: 'space-y-1',
+          notesLine: 'pb-0.5',
+          footerMargin: 'pt-2 mt-2',
+        };
+      case 'micro':
+      default:
+        return {
+          containerPadding: 'p-2 sm:p-3',
+          fontSize: 'text-[9px] sm:text-[9.5px]',
+          brandTitleText: 'text-sm sm:text-base font-black',
+          badgeText: 'text-[10px] px-2 py-0.5',
+          spacingY: 'space-y-1.5',
+          itemPadding: 'pb-1 space-y-0',
+          productTitleText: 'text-[9.5px] sm:text-[10px] font-black',
+          specsText: 'text-[8.5px] sm:text-[9px]',
+          notesHeight: 'space-y-0.5',
+          notesLine: 'pb-0.5',
+          footerMargin: 'pt-1.5 mt-1.5',
+        };
+    }
+  }, [activeDensity]);
+
   // Print Handler
-  const handlePrintReceipt = () => {
-    printElementById('printable-delivery-receipt', 'portrait');
+  const handlePrintReceipt = (orientation: 'portrait' | 'landscape' = 'portrait') => {
+    printElementById('printable-delivery-receipt', orientation);
   };
 
   return (
@@ -132,7 +255,8 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
           )}
 
           <button
-            onClick={handlePrintReceipt}
+            type="button"
+            onClick={() => handlePrintReceipt('portrait')}
             disabled={!selectedCustomer}
             className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black text-amber-950 bg-amber-400 hover:bg-amber-300 shadow-md transition-all cursor-pointer disabled:opacity-50 active:scale-95 whitespace-nowrap"
           >
@@ -285,24 +409,243 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
 
       </div>
 
-      {/* PRINTABLE OFFICIAL SHEET - GUARANTEED SINGLE A4 PAGE FIT */}
-      <div className="flex justify-center p-2 sm:p-4 bg-slate-100 dark:bg-slate-950 overflow-x-auto">
-        
-        <div
-          id="printable-delivery-receipt"
-          className="bg-white text-black p-4 sm:p-6 rounded-none border-2 sm:border-4 border-slate-900 shadow-2xl max-w-[210mm] w-full font-serif text-xs sm:text-sm leading-snug relative flex flex-col justify-between print-card my-auto"
-          style={{
-            color: '#000000',
-            backgroundColor: '#ffffff',
-            boxSizing: 'border-box',
-            pageBreakInside: 'avoid',
-            pageBreakAfter: 'avoid',
-            breakInside: 'avoid',
-          }}
-        >
+      {/* PRINTABLE OFFICIAL SHEET - GUARANTEED SINGLE A4 PAGE FIT WITH ADAPTIVE SCALING */}
+      <div className="space-y-3">
+        {/* Helper info bar & adaptive density switcher above preview */}
+        <div className="no-print bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-emerald-300 dark:border-emerald-800/60 rounded-2xl p-3.5 shadow-sm space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shrink-0 shadow-xs" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-emerald-950 dark:text-emerald-200 text-sm">
+                    الملاءمة التلقائية لصفحة الطباعة (ملء صفحة A4 بذكاء):
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
+                    {activeDensity === 'spacious' && '🔍 ملء مكبر (منتجات قليلة - خط كبير وواضح يملأ الصفحة)'}
+                    {activeDensity === 'comfortable' && '📄 مريح متوازن (خط متوسط متناسق)'}
+                    {activeDensity === 'balanced' && '⚖️ قياسي معتمد'}
+                    {activeDensity === 'compact' && '📐 مضغوط ذكي (منتجات كثيرة في صفحة واحدة)'}
+                    {activeDensity === 'micro' && '⚡ كثافة قصوى (أوردرات ومنتجات متعددة)'}
+                  </span>
+                </div>
+                <p className="font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
+                  {activeDensity === 'spacious'
+                    ? 'نظراً لقلة المنتجات في هذا الإقرار، تم تكبير الخطوط والمسافات آلياً لتشغل ورقة A4 كاملة دون فراغات بيضاء بالأسفل.'
+                    : activeDensity === 'compact' || activeDensity === 'micro'
+                    ? 'نظراً لكثرة بنود المنتجات ومواصفاتها، تم تصغير الخطوط والهوامش بنسب دقيقة لتتسع بالكامل في صفحة واحدة دون ترحيل.'
+                    : 'حجم الخطوط والهوامش متوازن ومضبوط تماماً لملء ورقة A4 واحدة.'}{' '}
+                  <span className="text-emerald-800 dark:text-emerald-400 font-mono font-bold">
+                    ({activeReceiptOrders.length} منتجات محددة | {totalReceiptTextChars} حرف)
+                  </span>
+                </p>
+              </div>
+            </div>
 
-          {/* DOCUMENT CONTENT */}
-          <div className="space-y-3 sm:space-y-4">
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => handlePrintReceipt('portrait')}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-amber-950 bg-amber-400 hover:bg-amber-300 shadow-md transition-all cursor-pointer"
+                title="طباعة إقرار الاستلام المتأقلم في صفحة A4 واحدة"
+              >
+                <Printer className="w-4 h-4" />
+                <span>طباعة الإقرار (A4)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePrintReceipt('landscape')}
+                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                title="طباعة بنمط أفقي عريض"
+              >
+                <span>أفقي</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Density Mode Selector Pills & Manual Font Sizing Bar */}
+          <div className="space-y-2.5 pt-2 border-t border-emerald-200/60 dark:border-slate-700/60 text-xs">
+            {/* Row 1: Density Presets */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 shrink-0">
+                أنماط الكثافة الجاهزة:
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setDensityOverride('auto')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  densityOverride === 'auto'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-emerald-50'
+                }`}
+              >
+                🤖 تأقلم تلقائي ذكي {densityOverride === 'auto' && `(${activeDensity})`}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDensityOverride('spacious')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  densityOverride === 'spacious'
+                    ? 'bg-emerald-700 text-white font-black shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-emerald-50'
+                }`}
+              >
+                🔍 تكبير وملء الصفحة (منتج 1 أو 2)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDensityOverride('comfortable')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  densityOverride === 'comfortable'
+                    ? 'bg-emerald-700 text-white font-black shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-emerald-50'
+                }`}
+              >
+                📄 خط مريح متسع
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDensityOverride('balanced')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  densityOverride === 'balanced'
+                    ? 'bg-emerald-700 text-white font-black shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-emerald-50'
+                }`}
+              >
+                ⚖️ عادي قياسي
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDensityOverride('compact')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  densityOverride === 'compact'
+                    ? 'bg-emerald-700 text-white font-black shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-emerald-50'
+                }`}
+              >
+                📐 مضغوط (منتجات متعددة)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDensityOverride('micro')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  densityOverride === 'micro'
+                    ? 'bg-emerald-700 text-white font-black shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-emerald-50'
+                }`}
+              >
+                ⚡ أقصى كثافة
+              </button>
+            </div>
+
+            {/* Row 2: Manual Font Zoom Stepper & Slider + Page Stretch Toggle */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-emerald-200/50 dark:border-slate-700/50">
+              {/* Stepper & Slider */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-black text-slate-700 dark:text-slate-300">
+                  التحكم اليدوي الدقيق بحجم الخط:
+                </span>
+
+                <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-1 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setManualFontScale((s) => Math.max(80, s - 5))}
+                    disabled={manualFontScale <= 80}
+                    className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 cursor-pointer"
+                    title="تصغير حجم الخط (-5%)"
+                  >
+                    <ZoomOut className="w-3.5 h-3.5" />
+                  </button>
+
+                  <span className="font-mono font-black text-xs px-2 text-emerald-800 dark:text-emerald-300 min-w-[50px] text-center">
+                    {manualFontScale}%
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setManualFontScale((s) => Math.min(135, s + 5))}
+                    disabled={manualFontScale >= 135}
+                    className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 cursor-pointer"
+                    title="تكبير حجم الخط (+5%)"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </button>
+
+                  {manualFontScale !== 100 && (
+                    <button
+                      type="button"
+                      onClick={() => setManualFontScale(100)}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-200 cursor-pointer transition-colors"
+                      title="إعادة ضبط حجم الخط إلى 100%"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>100%</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Slider */}
+                <input
+                  type="range"
+                  min="80"
+                  max="135"
+                  step="5"
+                  value={manualFontScale}
+                  onChange={(e) => setManualFontScale(Number(e.target.value))}
+                  className="w-24 sm:w-32 accent-emerald-600 cursor-pointer"
+                  title={`حجم الخط الحالي: ${manualFontScale}%`}
+                />
+              </div>
+
+              {/* Page Fit Mode Toggle */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFillPageHeight((f) => !f)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    fillPageHeight
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                  }`}
+                  title="تمديد الإقرار لملء صفحة A4 بالكامل رأسياً دون فراغات بيضاء بالأسفل"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>{fillPageHeight ? '✓ ملء صفحة A4 بالكامل مفعل' : 'تعبئة حسب المحتوى فقط'}</span>
+                </button>
+
+                <div className="hidden lg:flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-2.5 py-1 rounded-lg border border-rose-200 dark:border-rose-800/60">
+                  <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0" />
+                  <span>المنتجات باللون الأحمر المعتمد</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-center p-2 sm:p-4 bg-slate-100 dark:bg-slate-950 overflow-x-auto">
+          <div
+            id="printable-delivery-receipt"
+            className={`bg-white text-black density-${activeDensity} ${receiptDensity.containerPadding} rounded-none border-2 sm:border-4 border-slate-900 shadow-2xl max-w-[210mm] w-full font-serif ${receiptDensity.fontSize} leading-snug relative flex flex-col justify-between print-card my-auto`}
+            style={{
+              color: '#000000',
+              backgroundColor: '#ffffff',
+              boxSizing: 'border-box',
+              pageBreakInside: 'avoid',
+              pageBreakAfter: 'avoid',
+              breakInside: 'avoid',
+              minHeight: fillPageHeight ? (activeDensity === 'spacious' ? '274mm' : '272mm') : 'auto',
+              fontSize: manualFontScale !== 100 ? `${manualFontScale}%` : undefined,
+            }}
+          >
+            {/* DOCUMENT CONTENT */}
+            <div className={`receipt-content-wrapper flex-1 flex flex-col ${receiptDensity.spacingY}`}>
             
             {/* 1. BRAND HEADER WITH LOGO */}
             <div className="relative border-b-2 border-slate-950 pb-2.5">
@@ -314,7 +657,7 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
                     A
                   </div>
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-black text-emerald-800 tracking-wider font-serif">
+                    <h1 className={`receipt-brand-title font-black text-emerald-800 tracking-wider font-serif ${receiptDensity.brandTitleText}`}>
                       النجار فيرنتشر
                     </h1>
                     <span className="text-[9px] sm:text-[10px] text-slate-600 block -mt-0.5 uppercase tracking-widest font-mono font-bold">
@@ -325,7 +668,7 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
 
                 {/* Main Receipt Title Badge */}
                 <div className="text-left shrink-0">
-                  <div className="bg-emerald-800 text-white font-black px-3.5 py-1 rounded-md text-sm sm:text-base tracking-wider border border-emerald-700 shadow-2xs text-center">
+                  <div className={`receipt-badge-title bg-emerald-800 text-white font-black rounded-md tracking-wider border border-emerald-700 shadow-2xs text-center ${receiptDensity.badgeText}`}>
                     تـقـريـر اسـتـلام الـمـنـتـج
                   </div>
                 </div>
@@ -365,22 +708,31 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
               <div className="space-y-2 pt-0.5">
                 {activeReceiptOrders.length === 0 ? (
                   <div className="text-slate-500 font-bold text-xs py-1 italic text-center">
-                    (لم يتم تحديد أجهزة للتقرير - يمكنك تفعيل الأوامر من الأعلى)
+                    (لم يتم تحديد منتجات للتقرير - يمكنك تفعيل الأوامر من الأعلى)
                   </div>
                 ) : (
                   activeReceiptOrders.map((ord, idx) => (
-                    <div key={ord.id} className="border-b border-slate-300 pb-2 last:border-0 last:pb-0 space-y-0.5">
-                      
+                    <div
+                      key={ord.id}
+                      className={`border-b border-slate-300 ${receiptDensity.itemPadding} last:border-0 last:pb-0`}
+                    >
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className="font-black text-xs sm:text-sm text-blue-950">
-                          {idx + 1}. {ord.general_specs || ord.room_model_code}
-                        </span>
-                        <span className="font-mono text-[10px] font-bold text-slate-600">
+                        <div
+                          className={`receipt-product-title font-black text-red-600 print:text-red-600 ${receiptDensity.productTitleText}`}
+                          style={{ color: '#dc2626' }}
+                        >
+                          <span>{idx + 1}. </span>
+                          {ord.room_model_code && !ord.general_specs?.includes(ord.room_model_code) && (
+                            <span className="font-black ml-1">[{ord.room_model_code}] </span>
+                          )}
+                          <span>{ord.general_specs || ord.room_model_code}</span>
+                        </div>
+                        <span className="font-mono text-[10px] font-bold text-slate-600 shrink-0">
                           #{ord.order_number}
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-1 text-[11px] sm:text-xs text-slate-800 pr-2 font-semibold">
+                      <div className={`receipt-specs-grid grid grid-cols-3 gap-1 text-slate-800 pr-2 font-semibold ${receiptDensity.specsText}`}>
                         <div>
                           <strong>الدهان:</strong> {ord.job_details?.paint_details || 'مرفق بأمر التشغيل'}
                         </div>
@@ -425,9 +777,15 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
               {/* Notes */}
               <div>
                 <span className="text-slate-800 font-bold block mb-0.5 text-[11px]">ملاحظات أخرى:</span>
-                <div className="space-y-1.5 text-slate-400 font-mono text-[10px] overflow-hidden">
-                  <p className="border-b border-dotted border-slate-400 pb-0.5 w-full">&nbsp;</p>
-                  <p className="border-b border-dotted border-slate-400 pb-0.5 w-full">&nbsp;</p>
+                <div className={`receipt-notes-lines ${receiptDensity.notesHeight} text-slate-400 font-mono text-[10px] overflow-hidden`}>
+                  <p className={`border-b border-dotted border-slate-400 ${receiptDensity.notesLine} w-full`}>&nbsp;</p>
+                  <p className={`border-b border-dotted border-slate-400 ${receiptDensity.notesLine} w-full`}>&nbsp;</p>
+                  {(activeDensity === 'spacious' || activeReceiptOrders.length <= 2) && (
+                    <>
+                      <p className={`border-b border-dotted border-slate-400 ${receiptDensity.notesLine} w-full`}>&nbsp;</p>
+                      <p className={`border-b border-dotted border-slate-400 ${receiptDensity.notesLine} w-full`}>&nbsp;</p>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -473,7 +831,7 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
           </div>
 
           {/* 6. SIGNATURES BLOCK */}
-          <div className="pt-3 border-t border-slate-300 mt-2 space-y-2 font-serif shrink-0">
+          <div className={`border-t border-slate-300 ${receiptDensity.footerMargin} space-y-2 font-serif shrink-0`}>
             
             <div className="flex items-center justify-between gap-2 text-xs font-bold">
               <div className="space-y-1 flex-1">
@@ -501,6 +859,8 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
         </div>
 
       </div>
+
+    </div>
 
     </div>
   );
