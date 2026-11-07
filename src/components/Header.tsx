@@ -13,6 +13,7 @@ import {
   Award,
   ShieldAlert,
   Activity,
+  LayoutDashboard,
 } from 'lucide-react';
 import { JobOrderPopulated } from '../types';
 import { NotificationsDropdown } from './NotificationsDropdown';
@@ -38,6 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectOrder,
 }) => {
   const navItems = [
+    { id: 'executive-dashboard', label: 'الداشبورد والاستعلام الشامل', icon: LayoutDashboard },
     { id: 'template-studio', label: 'مولد أمر الشغل', icon: Sparkles },
     { id: 'orders', label: 'أوامر الشغل', icon: ClipboardList },
     { id: 'customers', label: 'العملاء', icon: Users },

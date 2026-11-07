@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   Archive,
   Activity,
+  ChevronRight,
 } from 'lucide-react';
 import { BatchOrderImportModal } from './BatchOrderImportModal';
 import {
@@ -51,6 +52,7 @@ interface OrderListProps {
   onAddBatchOrders?: (ordersList: CreateJobOrderPayload[]) => Promise<number>;
   activeFilter: string;
   setActiveFilter: (status: string) => void;
+  onNavigateToDashboard?: () => void;
 }
 
 export const OrderList: React.FC<OrderListProps> = ({
@@ -65,6 +67,7 @@ export const OrderList: React.FC<OrderListProps> = ({
   onAddBatchOrders,
   activeFilter,
   setActiveFilter,
+  onNavigateToDashboard,
 }) => {
   // General text query (Order number, Specs, Model code)
   const [generalSearch, setGeneralSearch] = useState('');
@@ -508,98 +511,35 @@ export const OrderList: React.FC<OrderListProps> = ({
 
           </div>
 
-          {/* ADVANCED FURNITURE CLASSIFICATION & LIVE COUNTERS (غرفة نوم كبيرة، انتريه، شبابي، ركنة، جزامة، ليزي بوي، سفرة) */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-md bg-amber-500/10 text-amber-800 dark:text-amber-300">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    <span>
-                      {selectedMonth !== 'all'
-                        ? `حصر وتصنيف شهر ${selectedMonth === '2026-11' ? 'نوفمبر 2026' : selectedMonth === '2026-12' ? 'ديسمبر 2026' : selectedMonth}`
-                        : deliveryDateFilter
-                        ? `حصر وتصنيف تاريخ ${deliveryDateFilter}`
-                        : 'حصر وتصنيف غرف وعفش الورشة'}
-                    </span>
-                    <span className="text-[10px] bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-full font-bold">
-                      {selectedMonth !== 'all' || deliveryDateFilter ? 'مفلتر حسب الشهر' : 'بحث ذكي مباشر'}
-                    </span>
-                  </h4>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-400">
-                    اضغط على أي نوع لمعرفة عدد الأوامر وتصفيتها فوراً (كام غرفة نوم كبيرة، انتريه، ركنة، شبابي، ليزي بوي، جزامة، سفرة):
-                  </p>
-                </div>
+          {/* MASTER ROOM & FURNITURE CLASSIFICATION TRANSFERRED TO EXECUTIVE DASHBOARD */}
+          <div className="pt-2.5 pb-1 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2 rounded-xl border border-amber-200/60 dark:border-amber-900/40">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-amber-600/10 text-amber-800 dark:text-amber-300">
+                <Layers className="w-4 h-4 stroke-[2.2]" />
               </div>
-
-              {selectedCategory !== 'all' && (
-                <button
-                  onClick={() => setSelectedCategory('all')}
-                  className="text-[11px] font-bold text-amber-800 hover:text-amber-950 dark:text-amber-300 flex items-center gap-1 cursor-pointer bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-800"
-                >
-                  <X className="w-3 h-3" />
-                  <span>إلغاء تصنيف {FURNITURE_CATEGORIES.find((c) => c.id === selectedCategory)?.shortName}</span>
-                </button>
-              )}
+              <div>
+                <h4 className="text-xs font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span>حصر وتصنيف غرف وعفش الورشة</span>
+                  <span className="text-[10px] bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-full font-bold">
+                    مركز الاستعلام والداشبورد
+                  </span>
+                </h4>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  تم نقل شاشات الحصر الكمي والمالي وتوزيع مسار مراحل الغرف إلى الداشبورد للاستعلام الشامل.
+                </p>
+              </div>
             </div>
 
-            {/* Interactive Category Cards Grid */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-2.5">
-              
-              {/* All Items Pill */}
+            {onNavigateToDashboard && (
               <button
-                onClick={() => setSelectedCategory('all')}
-                className={`p-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 relative ${
-                  selectedCategory === 'all'
-                    ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs'
-                    : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
-                }`}
+                type="button"
+                onClick={onNavigateToDashboard}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-700 via-amber-800 to-amber-950 text-white text-xs font-bold transition-all hover:shadow-xs active:scale-95 cursor-pointer shrink-0"
               >
-                <div className="flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="text-[11px] font-extrabold whitespace-nowrap">الكل</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-sm font-black font-mono">{baseOrdersForCounts.length}</span>
-                  <span className="text-[9px] opacity-70">أمر</span>
-                </div>
+                <span>عرض حصر الغرف في الداشبورد</span>
+                <ChevronRight className="w-3.5 h-3.5 rotate-180" />
               </button>
-
-              {/* The 7 Furniture Categories */}
-              {FURNITURE_CATEGORIES.map((cat) => {
-                const isSelected = selectedCategory === cat.id;
-                const count = categoryCounts[cat.id] || 0;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(isSelected ? 'all' : cat.id)}
-                    className={`p-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 relative ${
-                      isSelected
-                        ? cat.activeClass
-                        : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    {isSelected && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-slate-900 flex items-center justify-center shadow-xs">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
-                      </span>
-                    )}
-                    <div className="flex items-center gap-1">
-                      {renderCategoryIcon(cat.iconType, `w-3.5 h-3.5 ${isSelected ? 'text-white' : cat.dotColor.replace('bg-', 'text-')}`)}
-                      <span className="text-[11px] font-bold whitespace-nowrap">{cat.shortName}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className={`text-sm font-black font-mono ${isSelected ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                        {count}
-                      </span>
-                      <span className="text-[9px] opacity-70">أمر</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            )}
           </div>
 
           {/* QUICK CUSTOMER NAME SELECTOR CHIPS */}

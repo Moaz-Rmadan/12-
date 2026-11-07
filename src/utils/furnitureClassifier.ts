@@ -112,6 +112,7 @@ export function getOrderCategory(order: JobOrderPopulated): FurnitureCategory {
   if (
     text.includes('ركنة') ||
     text.includes('ركنه') ||
+    text.includes('جاكوار') ||
     text.includes('جاجور') ||
     text.includes('اوميجا') ||
     (text.includes('فينيسيا') && text.includes('بفات'))
@@ -138,6 +139,8 @@ export function getOrderCategory(order: JobOrderPopulated): FurnitureCategory {
   if (
     text.includes('سفرة') ||
     text.includes('سفره') ||
+    text.includes('شجره') ||
+    text.includes('شجرة') ||
     text.includes('جلاكسي') ||
     text.includes('جالاكسي') ||
     text.includes('كراسي سفرة') ||
@@ -154,7 +157,7 @@ export function getOrderCategory(order: JobOrderPopulated): FurnitureCategory {
     text.includes('فاصوليا') ||
     text.includes('مارفيل') ||
     text.includes('طقم انتريه') ||
-    (text.includes('كنبه') && !text.includes('ركن'))
+    ((text.includes('كنبه') || text.includes('كنبة')) && !text.includes('ركن'))
   ) {
     return 'living_room';
   }
@@ -165,7 +168,10 @@ export function getOrderCategory(order: JobOrderPopulated): FurnitureCategory {
     text.includes('روما') ||
     text.includes('ميلانو') ||
     text.includes('فينيسيا') ||
+    text.includes('فينسا') ||
     text.includes('دولاب') ||
+    text.includes('دريسنج') ||
+    text.includes('كمود') ||
     text.includes('سرير') ||
     text.includes('فرج')
   ) {

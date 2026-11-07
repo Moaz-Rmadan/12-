@@ -13,6 +13,7 @@ import { TopSellingModelsReport } from './components/TopSellingModelsReport';
 import { CriticalOverdueReport } from './components/CriticalOverdueReport';
 import { BottleneckReport } from './components/BottleneckReport';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { ExecutiveDashboard } from './components/ExecutiveDashboard';
 
 import {
   subscribeToJobOrders,
@@ -52,7 +53,7 @@ export default function App() {
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
-  const [activeTab, setActiveTab] = useState<string>('template-studio');
+  const [activeTab, setActiveTab] = useState<string>('executive-dashboard');
   const [activeFilter, setActiveFilter] = useState<string>('الكل');
 
   const [orders, setOrders] = useState<JobOrderPopulated[]>(() => getPopulatedOrders());
@@ -293,6 +294,30 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
+        {/* TAB -1: MASTER EXECUTIVE DASHBOARD & GLOBAL OMNI-SEARCH */}
+        {activeTab === 'executive-dashboard' && (
+          <ExecutiveDashboard
+            orders={orders}
+            customers={customers}
+            truckManifests={truckManifests}
+            onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
+            onEditOrder={(ord) => {
+              setOrderToEdit(ord);
+              setIsNewOrderModalOpen(true);
+            }}
+            onOpenNewOrderModal={() => {
+              setOrderToEdit(null);
+              setIsNewOrderModalOpen(true);
+            }}
+            onNavigateTab={(tab, contextId) => {
+              if (tab === 'receipt' && contextId) {
+                setSelectedCustomerForReceiptId(contextId);
+              }
+              setActiveTab(tab);
+            }}
+          />
+        )}
+
         {/* TAB 0: TEMPLATE STUDIO */}
         {activeTab === 'template-studio' && (
           <TemplateStudio onSaveToDatabase={(payload) => handleSaveOrder(payload)} />
@@ -322,6 +347,7 @@ export default function App() {
               onAddBatchOrders={handleAddBatchOrders}
               activeFilter={activeFilter}
               setActiveFilter={setActiveFilter}
+              onNavigateToDashboard={() => setActiveTab('executive-dashboard')}
             />
           </div>
         )}
