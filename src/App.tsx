@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Sidebar } from './components/navigation/Sidebar';
+import { TopBar } from './components/navigation/TopBar';
+import { MobileNavigationDrawer } from './components/navigation/MobileNavigationDrawer';
 import { DashboardStats } from './components/DashboardStats';
 import { OrderList } from './components/OrderList';
 import { WorkshopCardModal } from './components/WorkshopCardModal';
@@ -56,6 +58,17 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('executive-dashboard');
   const [activeFilter, setActiveFilter] = useState<string>('الكل');
 
+  // Sidebar Collapsible & Mobile Drawer state (persisted locally)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('al_najjar_sidebar_collapsed');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
+
   const [orders, setOrders] = useState<JobOrderPopulated[]>(() => getPopulatedOrders());
   const [customers, setCustomers] = useState<Customer[]>(() => initialCustomers);
   const [truckManifests, setTruckManifests] = useState<TruckManifest[]>(() => initialTruckManifests);
@@ -64,6 +77,40 @@ export default function App() {
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState<boolean>(false);
   const [orderToEdit, setOrderToEdit] = useState<JobOrderPopulated | null>(null);
   const [selectedCustomerForReceiptId, setSelectedCustomerForReceiptId] = useState<string>('');
+
+  // Save sidebar preference
+  const handleToggleSidebar = (collapsed: boolean) => {
+    setIsSidebarCollapsed(collapsed);
+    try {
+      localStorage.setItem('al_najjar_sidebar_collapsed', String(collapsed));
+    } catch {
+      // ignore
+    }
+  };
+
+
+  // Compute urgent orders count for Sidebar & TopBar notifications sync
+  const urgentOrdersCount = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    return orders.filter((ord) => {
+      if (ord.is_archived) return false;
+      if (ord.status === 'تسليم') return false;
+      if (!ord.delivery_date) return false;
+
+      const parts = ord.delivery_date.split('-');
+      if (parts.length !== 3) return false;
+
+      const targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      targetDate.setHours(0, 0, 0, 0);
+
+      const diffTime = targetDate.getTime() - now.getTime();
+      const diffHours = diffTime / (1000 * 60 * 60);
+
+      return diffHours <= 48;
+    }).length;
+  }, [orders]);
 
   // Sync Dark mode with <html> tag
   useEffect(() => {
@@ -275,24 +322,37 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fdfbf7] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-200">
+    <div className="min-h-screen bg-[#F1F5F9] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-row transition-colors duration-200">
       
-      {/* Header */}
-      <Header
+      {/* 1. Desktop Right-Side Collapsible Sidebar (First child in RTL flex-row renders on the RIGHT) */}
+      <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenNewOrderModal={() => {
-          setOrderToEdit(null);
-          setIsNewOrderModalOpen(true);
-        }}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-        orders={orders}
-        onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={handleToggleSidebar}
+        urgentOrdersCount={urgentOrdersCount}
+        totalOrdersCount={orders.length}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 2. Main Workspace Viewport */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        
+        {/* Compact Top Bar */}
+        <TopBar
+          activeTab={activeTab}
+          onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
+          onOpenNewOrderModal={() => {
+            setOrderToEdit(null);
+            setIsNewOrderModalOpen(true);
+          }}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          orders={orders}
+          onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
+        />
+
+        {/* Main Content Area */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         
         {/* TAB -1: MASTER EXECUTIVE DASHBOARD & GLOBAL OMNI-SEARCH */}
         {activeTab === 'executive-dashboard' && (
@@ -421,20 +481,31 @@ export default function App() {
 
       </main>
 
-      {/* Footer */}
-      <footer className="no-print bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 mt-12 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-2 font-serif font-bold text-amber-950 dark:text-amber-200">
-            <span>مصنع النجار فيرنتشر للأثاث والديكور</span>
-            <span>·</span>
-            <span>ديفلوبر معاذ رمضان</span>
-          </div>
+        {/* Footer */}
+        <footer className="no-print bg-white/70 dark:bg-slate-900/70 border-t border-slate-200 dark:border-slate-800 py-6 mt-12 transition-colors">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-2 font-serif font-bold text-amber-950 dark:text-amber-200">
+              <span>مصنع النجار فيرنتشر للأثاث والديكور</span>
+              <span>·</span>
+              <span>ديفلوبر معاذ رمضان</span>
+            </div>
 
-          <div className="flex items-center gap-4 text-[11px]">
-            <span>© {new Date().getFullYear()} El-Naggar Furniture</span>
+            <div className="flex items-center gap-4 text-[11px]">
+              <span>© {new Date().getFullYear()} El-Naggar Furniture</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+
+      </div>
+
+      {/* 3. Responsive Mobile Slide-over Navigation Drawer */}
+      <MobileNavigationDrawer
+        isOpen={isMobileDrawerOpen}
+        onClose={() => setIsMobileDrawerOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        urgentOrdersCount={urgentOrdersCount}
+      />
 
       {/* MODALS */}
       {selectedOrderForCard && (

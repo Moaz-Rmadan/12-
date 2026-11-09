@@ -3,9 +3,23 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  :root {
+    --color-navy-primary: #233B5D;
+    --color-navy-dark: #16253B;
+    --color-navy-surface: #1E3352;
+    --color-blue-accent: #4B83B8;
+    --color-blue-hover: #3A6E9F;
+    --color-blue-subtle: #EBF3FA;
+    --color-bg-corporate: #F1F5F9;
+    --color-surface-white: #FFFFFF;
+    --color-slate-secondary: #64748B;
+    --color-slate-border: #E2E8F0;
+  }
+
   body {
     font-family: 'Tajawal', sans-serif;
     -webkit-font-smoothing: antialiased;
+    background-color: var(--color-bg-corporate);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -245,5 +259,40 @@
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: rgba(180, 83, 9, 0.4);
+}
+
+/* Mobile Drawer Animations */
+@keyframes drawer-slide-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawer-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: drawer-fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-left {
+  animation: drawer-slide-right 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-left {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 

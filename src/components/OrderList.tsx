@@ -512,15 +512,15 @@ export const OrderList: React.FC<OrderListProps> = ({
           </div>
 
           {/* MASTER ROOM & FURNITURE CLASSIFICATION TRANSFERRED TO EXECUTIVE DASHBOARD */}
-          <div className="pt-2.5 pb-1 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2 rounded-xl border border-amber-200/60 dark:border-amber-900/40">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-amber-600/10 text-amber-800 dark:text-amber-300">
+          <div className="pt-2.5 pb-1 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-[#EBF3FA]/60 dark:bg-slate-800/40 px-3.5 py-2.5 rounded-xl border border-[#4B83B8]/30">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-[#233B5D]/10 text-[#233B5D] dark:text-[#4B83B8]">
                 <Layers className="w-4 h-4 stroke-[2.2]" />
               </div>
               <div>
                 <h4 className="text-xs font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <span>حصر وتصنيف غرف وعفش الورشة</span>
-                  <span className="text-[10px] bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[10px] bg-[#233B5D] text-white px-2 py-0.5 rounded-full font-bold">
                     مركز الاستعلام والداشبورد
                   </span>
                 </h4>
@@ -534,7 +534,7 @@ export const OrderList: React.FC<OrderListProps> = ({
               <button
                 type="button"
                 onClick={onNavigateToDashboard}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-700 via-amber-800 to-amber-950 text-white text-xs font-bold transition-all hover:shadow-xs active:scale-95 cursor-pointer shrink-0"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#233B5D] hover:bg-[#1E3352] text-white text-xs font-bold transition-all hover:shadow-xs active:scale-95 cursor-pointer shrink-0"
               >
                 <span>عرض حصر الغرف في الداشبورد</span>
                 <ChevronRight className="w-3.5 h-3.5 rotate-180" />
@@ -554,8 +554,8 @@ export const OrderList: React.FC<OrderListProps> = ({
                     onClick={() => setCustomerNameSearch(isSelected ? '' : cName)}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       isSelected
-                        ? 'bg-amber-800 text-amber-100 shadow-xs'
-                        : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                        ? 'bg-[#233B5D] text-white shadow-xs'
+                        : 'bg-slate-100 hover:bg-[#EBF3FA] hover:text-[#233B5D] dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     <span>{cName}</span>

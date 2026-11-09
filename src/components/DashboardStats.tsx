@@ -63,7 +63,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
       value: totalOrders,
       subtext: `${totalOrders} أمر شغل مسجل`,
       icon: ClipboardList,
-      color: 'from-amber-600 to-amber-800 text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300',
+      color: 'from-[#233B5D] to-[#1E3352] text-[#233B5D] bg-[#EBF3FA] dark:bg-slate-800 dark:text-[#4B83B8]',
     },
     {
       id: 'قيد التشغيل',
@@ -71,7 +71,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
       value: inProgress,
       subtext: 'مرحلة النجار والدهان والتنجيد',
       icon: Clock,
-      color: 'from-amber-500 to-yellow-600 text-amber-700 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400',
+      color: 'from-[#4B83B8] to-[#3A6E9F] text-[#4B83B8] bg-[#EBF3FA] dark:bg-slate-800 dark:text-[#4B83B8]',
     },
     {
       id: 'تم التنفيذ',
@@ -105,15 +105,15 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
               onClick={() => onFilterByStatus && onFilterByStatus(stat.id)}
               className={`p-3.5 sm:p-4.5 rounded-2xl border card-motion cursor-pointer select-none relative overflow-hidden group ${
                 isSelected
-                  ? 'bg-white dark:bg-slate-900 border-amber-600 dark:border-amber-500 shadow-md ring-2 ring-amber-500/20'
-                  : 'bg-white/95 dark:bg-slate-900/90 border-slate-200/90 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-600/70 hover:shadow-lg hover:shadow-amber-900/5'
+                  ? 'bg-white dark:bg-slate-900 border-[#4B83B8] dark:border-[#4B83B8] shadow-md ring-2 ring-[#4B83B8]/20'
+                  : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-[#4B83B8]/60 hover:shadow-lg'
               }`}
             >
               {/* Subtle Ambient Hover Glow on Top */}
               <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.color.split(' ')[0]} ${stat.color.split(' ')[1]} transition-opacity duration-300 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
 
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] sm:text-xs font-black text-slate-600 dark:text-slate-400 truncate max-w-[110px] sm:max-w-none group-hover:text-amber-900 dark:group-hover:text-amber-300 transition-colors">
+                <span className="text-[11px] sm:text-xs font-black text-slate-600 dark:text-slate-400 truncate max-w-[110px] sm:max-w-none group-hover:text-[#233B5D] dark:group-hover:text-slate-200 transition-colors">
                   {stat.title}
                 </span>
                 <div className={`p-2 rounded-xl ${stat.color} shrink-0 transition-transform duration-200 group-hover:scale-110 shadow-2xs`}>
@@ -122,7 +122,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
               </div>
 
               <div className="flex items-baseline gap-1.5 my-1">
-                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tabular-nums tracking-tight">
+                <span className="text-2xl sm:text-3xl font-black text-[#233B5D] dark:text-slate-100 font-mono tabular-nums tracking-tight">
                   {stat.value}
                 </span>
                 <span className="text-[11px] sm:text-xs text-slate-500 font-bold">أمر</span>
@@ -137,18 +137,18 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
       </div>
 
       {/* REVENUE & FINANCIAL KPI BANNER */}
-      <div className="card-motion bg-gradient-to-r from-amber-950 via-amber-900 to-slate-900 text-amber-50 p-4 sm:p-5 rounded-2xl shadow-md border border-amber-800/50 space-y-3 relative overflow-hidden">
-        {/* Subtle decorative gold sheen */}
-        <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-amber-500/10 blur-2xl pointer-events-none" />
+      <div className="card-motion bg-gradient-to-r from-[#16253B] via-[#233B5D] to-[#1E3A61] text-white p-4 sm:p-5 rounded-2xl shadow-md border border-[#233B5D]/80 space-y-3 relative overflow-hidden">
+        {/* Subtle decorative blue sheen */}
+        <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-[#4B83B8]/20 blur-2xl pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 relative z-10">
           <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 shadow-inner">
+            <div className="p-3 rounded-2xl bg-[#4B83B8]/20 text-[#4B83B8] border border-[#4B83B8]/40 shrink-0 shadow-inner">
               <Coins className="w-6 h-6 stroke-[2.2]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-xs font-black text-amber-200">إجمالي القيمة التعاقدية للمصنع</h4>
+                <h4 className="text-xs font-black text-slate-200">إجمالي القيمة التعاقدية للمصنع</h4>
                 <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/30">
                   تحصيل {collectionRate}%
                 </span>
@@ -159,29 +159,29 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between w-full sm:w-auto gap-3 xs:gap-5 text-xs text-amber-200/90 font-mono tabular-nums pt-2 sm:pt-0 border-t sm:border-t-0 border-amber-800/50">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-3 xs:gap-5 text-xs text-slate-200 font-mono tabular-nums pt-2 sm:pt-0 border-t sm:border-t-0 border-[#233B5D]">
             <div>
-              <span className="text-amber-400/80 block text-[9px] xs:text-[10px] font-sans font-bold">المحَصَّل (المقدمات):</span>
+              <span className="text-slate-300 block text-[9px] xs:text-[10px] font-sans font-bold">المحَصَّل (المقدمات):</span>
               <span className="font-black text-emerald-400 text-xs xs:text-sm sm:text-base">{totalDeposits.toLocaleString('ar-EG')} ج.م</span>
             </div>
-            <div className="w-px h-8 bg-amber-800/80 shrink-0" />
+            <div className="w-px h-8 bg-[#233B5D] shrink-0" />
             <div>
-              <span className="text-amber-400/80 block text-[9px] xs:text-[10px] font-sans font-bold">المتبقي عند التسليم:</span>
-              <span className="font-black text-amber-300 text-xs xs:text-sm sm:text-base">{remainingBalance.toLocaleString('ar-EG')} ج.م</span>
+              <span className="text-slate-300 block text-[9px] xs:text-[10px] font-sans font-bold">المتبقي عند التسليم:</span>
+              <span className="font-black text-[#4B83B8] text-xs xs:text-sm sm:text-base">{remainingBalance.toLocaleString('ar-EG')} ج.م</span>
             </div>
           </div>
         </div>
 
         {/* FINANCIAL COLLECTION PROGRESS METER */}
-        <div className="pt-2 border-t border-amber-800/50 relative z-10">
-          <div className="flex items-center justify-between text-[11px] font-bold text-amber-200/90 mb-1.5">
+        <div className="pt-2 border-t border-[#233B5D] relative z-10">
+          <div className="flex items-center justify-between text-[11px] font-bold text-slate-200 mb-1.5">
             <span className="flex items-center gap-1.5">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
               <span>نسبة السيولة والمقبوضات الفعلية:</span>
             </span>
-            <span className="font-mono text-emerald-300 font-extrabold">{collectionRate}% تم تحصيله</span>
+            <span className="font-mono text-emerald-400 font-extrabold">{collectionRate}% تم تحصيله</span>
           </div>
-          <div className="w-full h-2.5 rounded-full bg-amber-950/90 overflow-hidden p-0.5 border border-amber-800/60 flex">
+          <div className="w-full h-2.5 rounded-full bg-[#121E30] overflow-hidden p-0.5 border border-[#233B5D] flex">
             <div
               className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-700 ease-out shadow-xs"
               style={{ width: `${Math.min(collectionRate, 100)}%` }}
@@ -195,9 +195,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
       <div className="flex justify-center">
         <button
           onClick={() => setShowDetailedKpis(!showDetailedKpis)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shadow-2xs hover:bg-amber-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold bg-white dark:bg-slate-900 text-[#233B5D] dark:text-[#4B83B8] border border-slate-200 dark:border-slate-800 shadow-2xs hover:bg-[#EBF3FA] dark:hover:bg-slate-800 transition-all cursor-pointer"
         >
-          <BarChart3 className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+          <BarChart3 className="w-4 h-4 text-[#4B83B8]" />
           <span>{showDetailedKpis ? 'إخفاء مؤشرات الأداء المتقدمة' : 'عرض لوحة مؤشرات الأداء المتقدمة (Executive KPIs)'}</span>
           {showDetailedKpis ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
@@ -205,12 +205,12 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
 
       {/* DETAILED EXECUTIVE KPI INSIGHTS PANEL */}
       {showDetailedKpis && (
-        <div className="p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-2xl border border-amber-200 dark:border-slate-800 shadow-xs space-y-5 animate-fadeIn">
+        <div className="p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-5 animate-fadeIn">
           
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <div className="flex items-center gap-2">
-              <PieChart className="w-5 h-5 text-amber-700 dark:text-amber-400" />
-              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">
+              <PieChart className="w-5 h-5 text-[#233B5D] dark:text-[#4B83B8]" />
+              <h3 className="text-sm font-black text-[#233B5D] dark:text-slate-100">
                 لوحة التحليلات ومؤشرات الأداء الإستراتيجية (Executive Analytics Dashboard)
               </h3>
             </div>

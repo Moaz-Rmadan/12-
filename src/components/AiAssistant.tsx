@@ -49,6 +49,15 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        const errorText = data.message || data.error || 'عذراً، تعذر الاتصال بمساعد الورشة الذكي.';
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', text: `⚠️ ${errorText}` },
+        ]);
+        return;
+      }
+
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', text: data.reply || 'تم استلام الاستفسارات وتدقيق البيانات.' },
@@ -58,7 +67,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
         ...prev,
         {
           role: 'assistant',
-          text: 'عذراً، تعذر الاتصال بالمساعد الذكي في الوقت الحالي. تأكد من إعداد المفتاح المخصص.',
+          text: 'عذراً، تعذر الاتصال بالمساعد الذكي في الوقت الحالي. يرجى التحقق من اتصال الشبكة وإعداد المفتاح المخصص.',
         },
       ]);
     } finally {
