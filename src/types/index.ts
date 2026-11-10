@@ -1,4 +1,4 @@
-export type OrderStatus = 'قيد التشغيل' | 'تم التنفيذ' | 'تسليم';
+export type OrderStatus = 'Draft' | 'قيد التشغيل' | 'تم التنفيذ' | 'تسليم';
 
 export type ProductionStage =
   | 'لم يبدأ'

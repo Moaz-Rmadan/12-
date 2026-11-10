@@ -7,6 +7,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { NAV_GROUPS, NavGroupConfig, NavItemConfig, getNavGroupForTab } from './navConfig';
+import { useAuth } from '../../contexts/AuthContext';
+import { canAccessTab } from '../../lib/permissions';
 
 interface SidebarProps {
   activeTab: string;
@@ -33,6 +35,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Popover state for collapsed mode
   const [activePopoverGroupId, setActivePopoverGroupId] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  const { userProfile } = useAuth();
+  const visibleGroups = React.useMemo(() => {
+    return NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canAccessTab(userProfile, item.id)),
+    })).filter((group) => group.items.length > 0);
+  }, [userProfile]);
 
   // Automatically expand the parent group of the active tab whenever activeTab changes
   useEffect(() => {
@@ -131,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* 2. Navigation Accordion Groups */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-2.5 scrollbar-thin">
-        {NAV_GROUPS.map((group: NavGroupConfig) => {
+        {visibleGroups.map((group: NavGroupConfig) => {
           const GroupIcon = group.icon;
           const isGroupOpen = openGroupId === group.id;
           const hasActiveChild = group.items.some((item) => item.id === activeTab);

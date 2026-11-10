@@ -18,10 +18,12 @@ import {
   Eye,
   ZoomIn,
   ZoomOut,
-  RotateCcw,
   Maximize2,
   Activity,
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { canApproveDraft, canCancelOrder, isValidStatusTransition } from '../lib/permissions';
+import { Check, ShieldCheck } from 'lucide-react';
 
 interface WorkshopCardModalProps {
   order: JobOrderPopulated | null;
@@ -41,6 +43,7 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
   onUpdateArchiveStatus,
 }) => {
   if (!order) return null;
+  const { userProfile } = useAuth();
 
   const handlePrint = (orientation: 'portrait' | 'landscape' = 'portrait') => {
     printElementById('printable-workshop-card', orientation);
@@ -166,19 +169,44 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
 
             {/* Row 2: Status & Stage Selectors (Touch Ergonomic) */}
             <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
-              {onUpdateStatus && (
-                <div className="relative group">
-                  <select
-                    value={order.status}
-                    onChange={(e) => onUpdateStatus(order.id, e.target.value as OrderStatus)}
-                    className="w-full sm:w-auto appearance-none text-[11px] font-black bg-slate-800 text-amber-400 border border-slate-700 rounded-xl pl-8 pr-3 py-2.5 cursor-pointer hover:border-amber-500 transition-all focus:ring-2 focus:ring-amber-500/40"
+              {order.status === 'Draft' ? (
+                canApproveDraft(userProfile) ? (
+                  <button
+                    onClick={() => onUpdateStatus && onUpdateStatus(order.id, 'قيد التشغيل')}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer transition-all"
                   >
-                    <option value="قيد التشغيل">قيد التشغيل</option>
-                    <option value="تم التنفيذ">تم التنفيذ</option>
-                    <option value="تسليم">تسليم</option>
-                  </select>
-                  <Activity className="w-3.5 h-3.5 text-amber-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>اعتماد أمر الشغل وتحويله للتشغيل</span>
+                  </button>
+                ) : (
+                  <div className="px-3 py-2 rounded-xl bg-amber-500/20 text-amber-300 text-[11px] font-bold border border-amber-500/40">
+                    ⏳ مسودة (بانتظار اعتماد مدير النظام أو مدير التشغيل المفوض)
+                  </div>
+                )
+              ) : (
+                onUpdateStatus && (
+                  <div className="relative group">
+                    <select
+                      value={order.status}
+                      onChange={(e) => {
+                        const targetStatus = e.target.value as OrderStatus;
+                        const transition = isValidStatusTransition(order.status, targetStatus, userProfile);
+                        if (!transition.allowed) {
+                          alert(transition.error);
+                          return;
+                        }
+                        onUpdateStatus(order.id, targetStatus);
+                      }}
+                      className="w-full sm:w-auto appearance-none text-[11px] font-black bg-slate-800 text-amber-400 border border-slate-700 rounded-xl pl-8 pr-3 py-2.5 cursor-pointer hover:border-amber-500 transition-all focus:ring-2 focus:ring-amber-500/40"
+                    >
+                      <option value="Draft">📝 مسودة</option>
+                      <option value="قيد التشغيل">🔨 قيد التشغيل</option>
+                      <option value="تم التنفيذ">✅ تم التنفيذ</option>
+                      <option value="تسليم">🚚 تسليم</option>
+                    </select>
+                    <Activity className="w-3.5 h-3.5 text-amber-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                )
               )}
 
               {onUpdateStage && (

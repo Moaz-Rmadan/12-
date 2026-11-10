@@ -11,7 +11,10 @@ import {
   BarChart2,
   CheckCircle,
   Clock,
+  ShieldCheck,
 } from 'lucide-react';
+
+import { useAuth } from '../contexts/AuthContext';
 
 interface TopSellingModelsReportProps {
   orders: JobOrderPopulated[];
@@ -29,6 +32,7 @@ interface ModelStats {
 }
 
 export const TopSellingModelsReport: React.FC<TopSellingModelsReportProps> = ({ orders }) => {
+  const { hasPerm } = useAuth();
   const modelStatsData = useMemo(() => {
     const statsMap: Record<string, { count: number; revenue: number; inProgress: number; completed: number; delivered: number }> = {};
 
@@ -159,17 +163,29 @@ export const TopSellingModelsReport: React.FC<TopSellingModelsReportProps> = ({ 
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 flex items-center justify-center shrink-0 font-black text-lg">
-            💰
+        {hasPerm('finance:read') ? (
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 flex items-center justify-center shrink-0 font-black text-lg">
+              💰
+            </div>
+            <div>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block">إجمالي عوائد الموديلات</span>
+              <span className="text-xl font-black text-slate-900 dark:text-slate-100 font-mono">
+                {summary.totalRevenue.toLocaleString('ar-EG')} ج.م
+              </span>
+            </div>
           </div>
-          <div>
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block">إجمالي عوائد الموديلات</span>
-            <span className="text-xl font-black text-slate-900 dark:text-slate-100 font-mono">
-              {summary.totalRevenue.toLocaleString('ar-EG')} ج.م
-            </span>
+        ) : (
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4 opacity-60">
+             <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center shrink-0">
+               <ShieldCheck className="w-6 h-6" />
+             </div>
+             <div>
+               <span className="text-xs font-bold text-slate-400 block">عوائد الموديلات</span>
+               <span className="text-sm font-bold text-slate-400">بيانات محجوبة</span>
+             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* PRINTABLE OFFICIAL REPORT SHEET */}
@@ -214,7 +230,9 @@ export const TopSellingModelsReport: React.FC<TopSellingModelsReportProps> = ({ 
                   <th className="border border-slate-900 p-2 text-right">اسم الموديل / الطراز</th>
                   <th className="border border-slate-900 p-2 text-center">عدد الغرف</th>
                   <th className="border border-slate-900 p-2 text-center">نسبة الإقبال</th>
-                  <th className="border border-slate-900 p-2 text-right">إجمالي المبيعات</th>
+                  {hasPerm('finance:read') && (
+                    <th className="border border-slate-900 p-2 text-right">إجمالي المبيعات</th>
+                  )}
                   <th className="border border-slate-900 p-2 text-center">قيد التشغيل / منتهى</th>
                 </tr>
               </thead>
@@ -233,9 +251,11 @@ export const TopSellingModelsReport: React.FC<TopSellingModelsReportProps> = ({ 
                     <td className="border border-slate-900 p-2 text-center font-mono text-emerald-800 tabular-nums">
                       {item.percentage}%
                     </td>
-                    <td className="border border-slate-900 p-2 text-right font-mono tabular-nums">
-                      {item.totalRevenue.toLocaleString('ar-EG')} ج.م
-                    </td>
+                    {hasPerm('finance:read') && (
+                      <td className="border border-slate-900 p-2 text-right font-mono tabular-nums">
+                        {item.totalRevenue.toLocaleString('ar-EG')} ج.م
+                      </td>
+                    )}
                     <td className="border border-slate-900 p-2 text-center font-mono text-[11px] tabular-nums">
                       <span className="text-amber-700">{item.inProgressCount} قيد الورشة</span> /{' '}
                       <span className="text-emerald-700">{item.completedCount + item.deliveredCount} منجز</span>
@@ -252,9 +272,14 @@ export const TopSellingModelsReport: React.FC<TopSellingModelsReportProps> = ({ 
                     {summary.totalCount} غرفة
                   </td>
                   <td className="border border-slate-900 p-3 text-center font-mono">100%</td>
-                  <td colSpan={2} className="border border-slate-900 p-3 text-right font-mono text-amber-300 tabular-nums">
-                    {summary.totalRevenue.toLocaleString('ar-EG')} ج.م
-                  </td>
+                  {hasPerm('finance:read') && (
+                    <td colSpan={2} className="border border-slate-900 p-3 text-right font-mono text-amber-300 tabular-nums">
+                      {summary.totalRevenue.toLocaleString('ar-EG')} ج.م
+                    </td>
+                  )}
+                  {!hasPerm('finance:read') && (
+                    <td className="border border-slate-900 p-3 text-center opacity-40">***</td>
+                  )}
                 </tr>
               </tfoot>
             </table>

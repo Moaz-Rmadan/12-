@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Search,
   SlidersHorizontal,
@@ -102,10 +103,10 @@ interface ExecutiveDashboardProps {
   onNavigateTab: (tab: string, contextId?: string) => void;
 }
 
-type EntityTypeFilter = 'all' | 'orders' | 'customers' | 'trucks';
-type FinancialFilter = 'all' | 'paid' | 'pending' | 'low_deposit';
 type SlaFilter = 'all' | 'critical' | 'week' | 'month' | 'delivered';
 type SortOption = 'delivery_asc' | 'date_desc' | 'price_desc' | 'customer_name';
+type EntityTypeFilter = 'all' | 'orders' | 'customers' | 'trucks';
+type FinancialFilter = 'all' | 'paid' | 'pending' | 'low_deposit';
 
 export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   orders,
@@ -116,6 +117,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   onOpenNewOrderModal,
   onNavigateTab,
 }) => {
+  const { hasPerm } = useAuth();
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [entityFilter, setEntityFilter] = useState<EntityTypeFilter>('all');
@@ -145,7 +147,9 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
     { label: 'كابينة دوكو', query: 'دوكو', apply: () => { setSearchQuery('دوكو'); setEntityFilter('orders'); } },
     { label: 'تنجيد شطا', query: 'شطا', apply: () => { setSearchQuery('شطا'); setEntityFilter('orders'); } },
     { label: 'خشب زان أحمر', query: 'زان أحمر', apply: () => { setSearchQuery('زان أحمر'); setEntityFilter('orders'); } },
-    { label: 'متبقي مبالغ تحصيل', query: '', apply: () => { setFinancialFilter('pending'); setEntityFilter('orders'); setSearchQuery(''); } },
+    ...(hasPerm('finance:read') ? [
+      { label: 'متبقي مبالغ تحصيل', query: '', apply: () => { setFinancialFilter('pending'); setEntityFilter('orders'); setSearchQuery(''); } }
+    ] : []),
     { label: 'حمولة عروض المعرض', query: 'المعرض', apply: () => { setSearchQuery('المعرض'); setEntityFilter('trucks'); } },
     { label: 'مرتجع وصيانة', query: 'مرتجع', apply: () => { setSearchQuery('مرتجع'); setEntityFilter('trucks'); } },
   ];
@@ -622,21 +626,21 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
       {/* =========================================================================
           SECTION 1: DASHBOARD HEADER & QUICK COMMAND BAR
          ========================================================================= */}
-      <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-amber-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl border border-amber-800/40 relative overflow-hidden">
-        {/* Subtle decorative glow */}
-        <div className="absolute -left-20 -top-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-amber-600/10 blur-3xl pointer-events-none" />
+      <div className="bg-gradient-to-r from-[#16253B] via-[#233B5D] to-[#1E3352] rounded-3xl p-5 sm:p-8 text-white shadow-xl border border-[#4B83B8]/30 relative overflow-hidden">
+        {/* Subtle decorative blue and brass glow */}
+        <div className="absolute -left-20 -top-20 w-80 h-80 rounded-full bg-[#4B83B8]/15 blur-3xl pointer-events-none" />
+        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-bold tracking-wide">
-              <Sparkles className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4B83B8]/20 border border-[#4B83B8]/40 text-blue-200 text-xs font-bold tracking-wide">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>مركز الاستعلام الشامل والرقابة التنفيذية · El-Naggar Command Center</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-amber-50 font-serif">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white font-serif">
               لوحة التحكم والاستعلام الشامل
             </h1>
-            <p className="text-sm sm:text-base text-amber-200/80 max-w-2xl font-normal leading-relaxed">
+            <p className="text-sm sm:text-base text-slate-300 max-w-2xl font-normal leading-relaxed">
               ابحث واستعلم فورياً في كامل سجلات أوامر الشغل، العملاء، خطوط إنتاج الورشة، وشحنات حمولة العربية من مكان واحد وبأعلى دقة رقمية.
             </p>
           </div>
@@ -664,34 +668,41 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
         {/* =========================================================================
             SECTION 2: EXECUTIVE PULSE & FINANCIAL RADAR
            ========================================================================= */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-amber-800/40">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-[#4B83B8]/30">
           
-          {/* Metric 1: Financial Volume */}
-          <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-amber-500/20">
-            <div className="flex items-center justify-between text-amber-300 text-xs font-bold mb-1">
-              <span className="flex items-center gap-1.5">
-                <Wallet className="w-3.5 h-3.5" />
-                حجم التعاقدات الكلي
-              </span>
-              <span className="font-mono text-[11px] bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-200">
-                {radarMetrics.collectionRate}% مسدد
-              </span>
+          {/* Metric 1: Financial Volume (Protected) */}
+          {hasPerm('finance:read') ? (
+            <div className="bg-[#16253B]/70 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-[#4B83B8]/30 shadow-inner">
+              <div className="flex items-center justify-between text-blue-200 text-xs font-bold mb-1">
+                <span className="flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5 text-amber-300" />
+                  حجم التعاقدات الكلي
+                </span>
+                <span className="font-mono text-[11px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-300 border border-emerald-400/30">
+                  {radarMetrics.collectionRate}% مسدد
+                </span>
+              </div>
+              <div className="text-lg sm:text-2xl font-black font-mono text-white tracking-tight">
+                {radarMetrics.totalRevenue.toLocaleString('en-US')}{' '}
+                <span className="text-xs sm:text-sm font-sans font-bold text-amber-300">ج.م</span>
+              </div>
+              <div className="text-[11px] text-slate-300 mt-1 flex items-center justify-between font-mono">
+                <span>عربون: {radarMetrics.totalDeposits.toLocaleString('en-US')}</span>
+                <span className="text-rose-300">متبقي: {radarMetrics.pendingBalance.toLocaleString('en-US')}</span>
+              </div>
             </div>
-            <div className="text-lg sm:text-2xl font-black font-mono text-white tracking-tight">
-              {radarMetrics.totalRevenue.toLocaleString('en-US')}{' '}
-              <span className="text-xs sm:text-sm font-sans font-bold text-amber-400">ج.م</span>
+          ) : (
+            <div className="bg-[#16253B]/70 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-slate-700/50 flex flex-col justify-center items-center text-center opacity-60">
+              <ShieldCheck className="w-5 h-5 text-slate-400 mb-1" />
+              <span className="text-[10px] font-bold text-slate-400">البيانات المالية محجوبة</span>
             </div>
-            <div className="text-[11px] text-amber-200/70 mt-1 flex items-center justify-between font-mono">
-              <span>عربون: {radarMetrics.totalDeposits.toLocaleString('en-US')}</span>
-              <span className="text-rose-300">متبقي: {radarMetrics.pendingBalance.toLocaleString('en-US')}</span>
-            </div>
-          </div>
+          )}
 
           {/* Metric 2: Workshop Active Orders */}
-          <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-amber-500/20">
-            <div className="flex items-center justify-between text-amber-300 text-xs font-bold mb-1">
+          <div className="bg-[#16253B]/70 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-[#4B83B8]/30 shadow-inner">
+            <div className="flex items-center justify-between text-blue-200 text-xs font-bold mb-1">
               <span className="flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5" />
+                <Layers className="w-3.5 h-3.5 text-[#4B83B8]" />
                 أوامر الشغل الإجمالية
               </span>
               <span className="text-[11px] text-emerald-300 font-bold">
@@ -700,9 +711,9 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             </div>
             <div className="text-lg sm:text-2xl font-black font-mono text-white tracking-tight">
               {radarMetrics.totalOrders}{' '}
-              <span className="text-xs sm:text-sm font-sans font-bold text-amber-200">أمر</span>
+              <span className="text-xs sm:text-sm font-sans font-bold text-blue-200">أمر</span>
             </div>
-            <div className="text-[11px] text-amber-200/70 mt-1 flex items-center gap-2">
+            <div className="text-[11px] text-slate-300 mt-1 flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span>{radarMetrics.inProgress} قيد التشغيل بالورشة</span>
             </div>
@@ -714,14 +725,14 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               setSlaFilter('critical');
               setEntityFilter('orders');
             }}
-            className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-amber-500/20 cursor-pointer hover:border-rose-400/50 transition-all"
+            className="bg-[#16253B]/70 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-[#4B83B8]/30 shadow-inner cursor-pointer hover:border-rose-400/50 transition-all"
           >
             <div className="flex items-center justify-between text-rose-300 text-xs font-bold mb-1">
               <span className="flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5" />
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
                 حرج أو متأخر (SLA)
               </span>
-              <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-bold">
+              <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-bold border border-rose-400/30">
                 خلال 72 ساعة
               </span>
             </div>
@@ -729,7 +740,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               {radarMetrics.criticalCount}{' '}
               <span className="text-xs sm:text-sm font-sans font-bold text-rose-200">أمر يحتاج تدخلاً</span>
             </div>
-            <div className="text-[11px] text-amber-200/70 mt-1 flex items-center gap-1">
+            <div className="text-[11px] text-slate-300 mt-1 flex items-center gap-1">
               <span className="text-amber-300 underline text-[10px]">اضغط للتصفية الفورية</span>
             </div>
           </div>
@@ -739,14 +750,14 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             onClick={() => {
               setEntityFilter('trucks');
             }}
-            className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-amber-500/20 cursor-pointer hover:border-blue-400/50 transition-all"
+            className="bg-[#16253B]/70 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-[#4B83B8]/30 shadow-inner cursor-pointer hover:border-blue-400/50 transition-all"
           >
-            <div className="flex items-center justify-between text-blue-300 text-xs font-bold mb-1">
+            <div className="flex items-center justify-between text-blue-200 text-xs font-bold mb-1">
               <span className="flex items-center gap-1.5">
-                <Truck className="w-3.5 h-3.5" />
+                <Truck className="w-3.5 h-3.5 text-[#4B83B8]" />
                 أسطول الشحن والحمولات
               </span>
-              <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-bold">
+              <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-bold border border-blue-400/30">
                 {radarMetrics.totalTrips} رحلات
               </span>
             </div>
@@ -754,17 +765,17 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               {radarMetrics.totalCargoItems}{' '}
               <span className="text-xs sm:text-sm font-sans font-bold text-blue-200">قطعة مشحونة</span>
             </div>
-            <div className="text-[11px] text-amber-200/70 mt-1 flex items-center justify-between font-mono">
+            <div className="text-[11px] text-slate-300 mt-1 flex items-center justify-between font-mono">
               <span>مرتجع/صيانة: {radarMetrics.returnItems}</span>
-              <span className="text-blue-300 underline text-[10px]">عرض البيان</span>
+              <span className="text-amber-300 underline text-[10px]">عرض البيان</span>
             </div>
           </div>
 
         </div>
 
         {/* WORKSHOP STAGE BOTTLENECK RADAR BAR */}
-        <div className="mt-5 pt-4 border-t border-amber-800/30">
-          <div className="flex items-center justify-between text-xs text-amber-200 mb-2 font-bold">
+        <div className="mt-5 pt-4 border-t border-[#4B83B8]/30">
+          <div className="flex items-center justify-between text-xs text-blue-200 mb-2 font-bold">
             <span className="flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-amber-400" />
               توزيع خطوط الإنتاج والورش (انقر على أي مرحلة للتصفية اللحظية):
@@ -772,7 +783,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             {stageFilter !== 'all' && (
               <button
                 onClick={() => setStageFilter('all')}
-                className="text-[11px] text-amber-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                className="text-[11px] text-amber-300 hover:text-white flex items-center gap-1 cursor-pointer"
               >
                 <X className="w-3 h-3" />
                 إلغاء فلتر المرحلة ({stageFilter})
@@ -793,8 +804,8 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                   }}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-white scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-amber-100 border border-white/10'
+                      ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-white scale-105 font-black'
+                      : 'bg-white/10 hover:bg-white/20 text-blue-100 border border-white/10'
                   }`}
                 >
                   <span>{st}</span>
@@ -804,7 +815,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                         ? 'bg-slate-950 text-amber-300'
                         : count > 0
                         ? 'bg-amber-500/30 text-amber-200'
-                        : 'bg-white/10 text-slate-400'
+                        : 'bg-white/10 text-slate-300'
                     }`}
                   >
                     {count}
@@ -877,9 +888,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 {orders.length}
                 <span className="text-[10px] font-sans font-bold opacity-75 mr-1">أمر</span>
               </div>
-              <div className="text-[10px] opacity-75 font-mono mt-0.5 truncate">
-                {categoryStats.categoryValues.all.toLocaleString('en-US')} ج.م
-              </div>
+              {hasPerm('finance:read') && (
+                <div className="text-[10px] opacity-75 font-mono mt-0.5 truncate">
+                  {categoryStats.categoryValues.all.toLocaleString('en-US')} ج.م
+                </div>
+              )}
             </div>
           </button>
 
@@ -927,9 +940,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                     </span>
                   </div>
 
-                  <div className="text-[10px] opacity-75 font-mono mt-0.5 truncate">
-                    {value.toLocaleString('en-US')} ج.م
-                  </div>
+                  {hasPerm('finance:read') && (
+                    <div className="text-[10px] opacity-75 font-mono mt-0.5 truncate">
+                      {value.toLocaleString('en-US')} ج.م
+                    </div>
+                  )}
                 </div>
               </button>
             );
@@ -948,9 +963,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                   {categoryStats.counts[selectedCategory]} أوامر مسجلة
                 </span>
               </div>
-              <div className="font-mono text-xs text-amber-900 dark:text-amber-300 font-bold">
-                إجمالي قيمة العقود: {categoryStats.categoryValues[selectedCategory]?.toLocaleString('en-US')} ج.م
-              </div>
+              {hasPerm('finance:read') && (
+                <div className="font-mono text-xs text-amber-900 dark:text-amber-300 font-bold">
+                  إجمالي قيمة العقود: {categoryStats.categoryValues[selectedCategory]?.toLocaleString('en-US')} ج.م
+                </div>
+              )}
             </div>
 
             {/* Stages distribution for this category */}
@@ -1929,23 +1946,25 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                         </div>
                       </div>
 
-                      {/* Financial Progress Pill */}
-                      <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-2.5 border border-slate-150 dark:border-slate-800 text-xs font-mono space-y-1 mb-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500 font-sans font-bold">القيمة:</span>
-                          <span className="font-black text-slate-900 dark:text-white">
-                            {order.total_price.toLocaleString('en-US')} ج.م
-                          </span>
+                      {/* Financial Progress Pill (Protected) */}
+                      {hasPerm('finance:read') && (
+                        <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-2.5 border border-slate-150 dark:border-slate-800 text-xs font-mono space-y-1 mb-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 font-sans font-bold">القيمة:</span>
+                            <span className="font-black text-slate-900 dark:text-white">
+                              {order.total_price.toLocaleString('en-US')} ج.م
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-emerald-700 dark:text-emerald-400 font-sans">
+                              عربون: {order.deposit_paid.toLocaleString('en-US')}
+                            </span>
+                            <span className={isPaid ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
+                              {isPaid ? 'خالص السداد' : `متبقي: ${remaining.toLocaleString('en-US')} ج.م`}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-emerald-700 dark:text-emerald-400 font-sans">
-                            عربون: {order.deposit_paid.toLocaleString('en-US')}
-                          </span>
-                          <span className={isPaid ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
-                            {isPaid ? 'خالص السداد' : `متبقي: ${remaining.toLocaleString('en-US')} ج.م`}
-                          </span>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* Card Actions Footer */}
@@ -1993,8 +2012,12 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                       <th className="p-3">المرحلة</th>
                       <th className="p-3">تاريخ التعاقد</th>
                       <th className="p-3">تاريخ التسليم</th>
-                      <th className="p-3">المبلغ الإجمالي</th>
-                      <th className="p-3">المتبقي</th>
+                      {hasPerm('finance:read') && (
+                        <>
+                          <th className="p-3">المبلغ الإجمالي</th>
+                          <th className="p-3">المتبقي</th>
+                        </>
+                      )}
                       <th className="p-3">الحالة</th>
                       <th className="p-3 text-center">إجراءات</th>
                     </tr>
@@ -2061,12 +2084,16 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                               </div>
                             )}
                           </td>
-                          <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
-                            {order.total_price.toLocaleString('en-US')} ج.م
-                          </td>
-                          <td className={`p-3 font-mono font-bold ${remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                            {remaining > 0 ? `${remaining.toLocaleString('en-US')} ج.م` : 'خالص'}
-                          </td>
+                          {hasPerm('finance:read') && (
+                            <>
+                              <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
+                                {order.total_price.toLocaleString('en-US')} ج.م
+                              </td>
+                              <td className={`p-3 font-mono font-bold ${remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {remaining > 0 ? `${remaining.toLocaleString('en-US')} ج.م` : 'خالص'}
+                              </td>
+                            </>
+                          )}
                           <td className="p-3">
                             <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                               {order.status}

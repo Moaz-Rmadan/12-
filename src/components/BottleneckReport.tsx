@@ -22,7 +22,10 @@ import {
   DollarSign,
   Calendar,
   X,
+  ShieldCheck,
 } from 'lucide-react';
+
+import { useAuth } from '../contexts/AuthContext';
 
 interface BottleneckReportProps {
   orders: JobOrderPopulated[];
@@ -30,6 +33,7 @@ interface BottleneckReportProps {
 }
 
 export const BottleneckReport: React.FC<BottleneckReportProps> = ({ orders, onUpdateOrderStage }) => {
+  const { hasPerm } = useAuth();
   // Filter States
   const [selectedStageTab, setSelectedStageTab] = useState<string>('all'); // 'all' or specific ProductionStage
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -246,35 +250,39 @@ export const BottleneckReport: React.FC<BottleneckReportProps> = ({ orders, onUp
     <div className="space-y-6">
       
       {/* 1. HEADER & ACTION CONTROLS */}
-      <div className="no-print bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="flex items-start sm:items-center gap-3 w-full lg:w-auto">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30 shadow-inner">
-            <Activity className="w-6 h-6 sm:w-7 sm:h-7" />
+      <div className="no-print bg-gradient-to-r from-[#16253B] via-[#233B5D] to-[#1E3352] rounded-3xl p-5 sm:p-8 text-white shadow-xl border border-[#4B83B8]/30 relative overflow-hidden flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+        {/* Subtle ambient glow */}
+        <div className="absolute -left-20 -top-20 w-80 h-80 rounded-full bg-[#4B83B8]/15 blur-3xl pointer-events-none" />
+        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex items-start sm:items-center gap-4 w-full lg:w-auto">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#4B83B8]/20 text-amber-300 flex items-center justify-center shrink-0 border border-[#4B83B8]/40 shadow-inner">
+            <Activity className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 text-[9px] xs:text-[10px] font-mono font-black uppercase tracking-[0.15em]">
-              <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+            <div className="flex items-center gap-2 text-blue-200 text-xs font-mono font-bold tracking-wide">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
               <span className="truncate">Factory Intelligence System • Workshop Flow</span>
             </div>
-            <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 font-serif leading-tight">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white font-serif tracking-tight mt-1">
               تقرير مراحل الإنتاج وحركة الورش
             </h2>
-            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed max-w-md">
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed max-w-xl">
               تتبع لحظي لمسار الغرف داخل أقسام المصنع مع أدوات تحليل الزجاجات (Bottlenecks) والإشراف الفني.
             </p>
           </div>
         </div>
 
         {/* PRINT & GLOBAL ACTIONS */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+        <div className="relative z-10 flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
           {selectedStageTab !== 'all' && (
             <button
               type="button"
               onClick={() => printElementById('printable-isolated-stage-report', 'portrait')}
-              className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-800 hover:bg-amber-900 text-white font-black rounded-xl transition-all shadow-md active:scale-95 text-[10px] sm:text-xs border-b-4 border-amber-950"
+              className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl transition-all shadow-md active:scale-95 text-xs cursor-pointer"
               title={`طباعة كشف تشغيل ورشة (${selectedStageTab}) فقط`}
             >
-              <Printer className="w-4 h-4 text-amber-300" />
+              <Printer className="w-4 h-4" />
               <span>طباعة كشف ({selectedStageTab})</span>
             </button>
           )}
@@ -282,10 +290,10 @@ export const BottleneckReport: React.FC<BottleneckReportProps> = ({ orders, onUp
           <button
             type="button"
             onClick={() => printElementById('printable-bottleneck-report', 'portrait')}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-xl transition-all shadow-md active:scale-95 text-[10px] sm:text-xs border-b-4 border-purple-800"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-xl transition-all shadow-md active:scale-95 text-xs cursor-pointer"
             title="طباعة التقرير الشامل لجميع ورش المصنع"
           >
-            <Printer className="w-4 h-4" />
+            <Printer className="w-4 h-4 text-amber-300" />
             <span>طباعة التقرير الشامل (A4)</span>
           </button>
         </div>
@@ -392,12 +400,19 @@ export const BottleneckReport: React.FC<BottleneckReportProps> = ({ orders, onUp
               </strong>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-center card-motion group">
-              <span className="text-[10px] text-purple-300 font-bold block mb-1 opacity-70 group-hover:opacity-100 transition-opacity">إجمالي القيمة</span>
-              <strong className="text-sm sm:text-base font-black font-mono text-emerald-400 tabular-nums leading-none block mt-1">
-                {currentIsolatedStageValue.toLocaleString()} <span className="text-[10px] font-sans">ج.م</span>
-              </strong>
-            </div>
+            {hasPerm('finance:read') ? (
+              <div className="bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-center card-motion group">
+                <span className="text-[10px] text-purple-300 font-bold block mb-1 opacity-70 group-hover:opacity-100 transition-opacity">إجمالي القيمة</span>
+                <strong className="text-sm sm:text-base font-black font-mono text-emerald-400 tabular-nums leading-none block mt-1">
+                  {currentIsolatedStageValue.toLocaleString()} <span className="text-[10px] font-sans">ج.م</span>
+                </strong>
+              </div>
+            ) : (
+              <div className="bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-center card-motion group opacity-60">
+                <ShieldCheck className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+                <span className="text-[10px] text-slate-400 font-bold block leading-none">القيمة محجوبة</span>
+              </div>
+            )}
 
             <div className="bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-center card-motion group">
               <span className="text-[10px] text-purple-300 font-bold block mb-1 opacity-70 group-hover:opacity-100 transition-opacity">متوسط البقاء</span>

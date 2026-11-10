@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { CreateJobOrderPayload, OrderStatus, ProductionStage, AttachmentType, JobOrderPopulated } from '../types';
-import { X, Save, Hammer, Ruler, Paintbrush, Scissors, Plus, Trash2, Upload, Edit3, Sparkles } from 'lucide-react';
+import { X, Save, Hammer, Ruler, Paintbrush, Scissors, Plus, Trash2, Upload, Edit3, Sparkles, AlertCircle, ShieldAlert } from 'lucide-react';
 import { compressImage } from '../utils/imageCompressor';
+import { useAuth } from '../contexts/AuthContext';
+import { validateSalesCreatePayload, validateSalesUpdatePayload } from '../lib/permissions';
+import { generateNextOrderNumber } from '../lib/orderNumberService';
 
 interface OrderFormModalProps {
   isOpen: boolean;
@@ -17,6 +20,9 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
   orderToEdit,
 }) => {
   const isEditMode = Boolean(orderToEdit);
+  const { userProfile, hasPerm } = useAuth();
+  const isSales = userProfile?.role === 'sales';
+  const isDraftForbiddenEdit = isEditMode && isSales && orderToEdit?.status !== 'Draft';
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -29,10 +35,10 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
     new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [generalSpecs, setGeneralSpecs] = useState('');
-  const [status, setStatus] = useState<OrderStatus>('قيد التشغيل');
+  const [status, setStatus] = useState<OrderStatus>('Draft');
   const [currentStage, setCurrentStage] = useState<ProductionStage>('لم يبدأ');
-  const [totalPrice, setTotalPrice] = useState<number>(150000);
-  const [depositPaid, setDepositPaid] = useState<number>(80000);
+  const [totalPrice, setTotalPrice] = useState<number>(0);
+  const [depositPaid, setDepositPaid] = useState<number>(0);
 
   const [dimensionsCm, setDimensionsCm] = useState('الدولاب: 280 × 220 × 65 سم | السرير: 180 × 200 سم');
   const [woodType, setWoodType] = useState('خشب زان أحمر روماني + أبلكاش سه');
@@ -82,21 +88,21 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
         setAttachmentsList([]);
       }
     } else {
-      // New Order defaults
-      const defaultOrderNum = `JO-2026-${Math.floor(100 + Math.random() * 900)}`;
+      // New Order defaults: force Draft status
+      setStatus('Draft');
       setCustomerName('');
       setCustomerPhone('');
       setCustomerAddress('');
-      setOrderNumber(defaultOrderNum);
+      generateNextOrderNumber().then((num) => setOrderNumber(num));
       setRoomModelCode('RM-BED-LUX-01');
       setContractDate(new Date().toISOString().split('T')[0]);
       setDeliveryDate(
         new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       );
       setGeneralSpecs('');
-      setStatus('قيد التشغيل');
-      setTotalPrice(150000);
-      setDepositPaid(80000);
+      setCurrentStage('لم يبدأ');
+      setTotalPrice(isSales ? 0 : 150000);
+      setDepositPaid(isSales ? 0 : 80000);
       setDimensionsCm('الدولاب: 280 × 220 × 65 سم | السرير: 180 × 200 سم');
       setWoodType('خشب زان أحمر روماني + أبلكاش سه');
       setPaintDetails('دهان بولي يوريثان مط عالي الثبات على قشرة أرو');
@@ -104,20 +110,9 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
       setColorCode('VELVET-NVY-904');
       setBatchNumber(`BATCH-2026-${Math.floor(100 + Math.random() * 900)}`);
       setInstallationNotes('تركيب دور 2، التأكد من استواء الأرضيات');
-      setAttachmentsList([
-        {
-          file_type: 'drawing',
-          file_url: '/src/assets/images/bedroom_cad_drawing_1793738336612.jpg',
-          title: 'الرسم الهيكلي والتنفيذي (CAD)',
-        },
-        {
-          file_type: 'fabric_sample',
-          file_url: '/src/assets/images/fabric_sample_swatch_1793738336334.jpg',
-          title: 'كرت عينة القماش واللون',
-        },
-      ]);
+      setAttachmentsList([]);
     }
-  }, [orderToEdit, isOpen]);
+  }, [orderToEdit, isOpen, isSales]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: AttachmentType) => {
     const files = e.target.files;
@@ -154,9 +149,41 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isDraftForbiddenEdit) {
+      alert('المبيعات يمكنها تعديل أوامر الشغل في حالة مسودة (Draft) فقط.');
+      return;
+    }
+
     if (!customerName || !orderNumber || !generalSpecs) {
       alert('الرجاء إدخال اسم العميل، رقم الأمر والمواصفات العامة');
       return;
+    }
+
+    if (isSales && !isEditMode) {
+      const salesCheck = validateSalesCreatePayload({
+        order_number: orderNumber,
+        customer_id: orderToEdit?.customer_id || 'new_cust',
+        room_model_code: roomModelCode,
+        contract_date: contractDate,
+        delivery_date: deliveryDate,
+        general_specs: generalSpecs,
+      });
+      if (!salesCheck.valid) {
+        alert('مخالفة لصلاحيات المبيعات: ' + salesCheck.error);
+        return;
+      }
+    }
+
+    if (isSales && isEditMode && orderToEdit) {
+      const salesUpdateCheck = validateSalesUpdatePayload(orderToEdit, {
+        room_model_code: roomModelCode,
+        general_specs: generalSpecs,
+        delivery_date: deliveryDate,
+      });
+      if (!salesUpdateCheck.valid) {
+        alert('مخالفة لصلاحيات المبيعات: ' + salesUpdateCheck.error);
+        return;
+      }
     }
 
     const payload: CreateJobOrderPayload = {
@@ -171,10 +198,10 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
         contract_date: contractDate,
         delivery_date: deliveryDate,
         general_specs: generalSpecs,
-        status,
-        current_stage: currentStage,
-        total_price: Number(totalPrice),
-        deposit_paid: Number(depositPaid),
+        status: isSales ? 'Draft' : status,
+        current_stage: isSales ? (orderToEdit?.current_stage || 'لم يبدأ') : currentStage,
+        total_price: isSales ? (orderToEdit?.total_price || 0) : Number(totalPrice),
+        deposit_paid: isSales ? (orderToEdit?.deposit_paid || 0) : Number(depositPaid),
       },
       job_details: {
         dimensions_cm: dimensionsCm,
@@ -320,12 +347,16 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">حالة الطلب</label>
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">
+                    حالة الطلب {isSales && <span className="text-amber-600 font-bold">(مسودة إجبارية للمبيعات)</span>}
+                  </label>
                   <select
                     value={status}
+                    disabled={isSales}
                     onChange={(e) => setStatus(e.target.value as OrderStatus)}
-                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 cursor-pointer focus:ring-2 focus:ring-amber-500 outline-none appearance-none"
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 cursor-pointer focus:ring-2 focus:ring-amber-500 outline-none appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
                   >
+                    <option value="Draft">📝 مسودة (Draft)</option>
                     <option value="قيد التشغيل">🔨 قيد التشغيل</option>
                     <option value="تم التنفيذ">✅ تم التنفيذ</option>
                     <option value="تسليم">🚚 تسليم</option>
@@ -333,11 +364,14 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">مرحلة الورشة</label>
+                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">
+                    مرحلة الورشة {isSales && <span className="text-amber-600 font-bold">(تحدد بالورشة)</span>}
+                  </label>
                   <select
                     value={currentStage}
+                    disabled={isSales}
                     onChange={(e) => setCurrentStage(e.target.value as ProductionStage)}
-                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-950/20 text-purple-950 dark:text-purple-200 cursor-pointer focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-950/20 text-purple-950 dark:text-purple-200 cursor-pointer focus:ring-2 focus:ring-purple-500 outline-none appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <option value="لم يبدأ">لم يبدأ</option>
                     <option value="نجارة عفش">نجارة عفش</option>
@@ -355,9 +389,10 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                   <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">تاريخ التعاقد</label>
                   <input
                     type="date"
+                    disabled={isSales && isEditMode}
                     value={contractDate}
                     onChange={(e) => setContractDate(e.target.value)}
-                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none"
+                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -371,25 +406,35 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">إجمالي المبلغ (ج.م)</label>
-                  <input
-                    type="number"
-                    value={totalPrice}
-                    onChange={(e) => setTotalPrice(Number(e.target.value))}
-                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none tabular-nums"
-                  />
-                </div>
-                
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">العربون المدفوع (ج.م)</label>
-                  <input
-                    type="number"
-                    value={depositPaid}
-                    onChange={(e) => setDepositPaid(Number(e.target.value))}
-                    className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none tabular-nums"
-                  />
-                </div>
+                {hasPerm('finance:read') && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">
+                        إجمالي المبلغ (ج.م) {isSales && <span className="text-amber-600 font-bold">(إدارة الحسابات)</span>}
+                      </label>
+                      <input
+                        type="number"
+                        disabled={!hasPerm('finance:update')}
+                        value={totalPrice}
+                        onChange={(e) => setTotalPrice(Number(e.target.value))}
+                        className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none tabular-nums disabled:opacity-60 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase px-1">
+                        العربون المدفوع (ج.م) {isSales && <span className="text-amber-600 font-bold">(إدارة الحسابات)</span>}
+                      </label>
+                      <input
+                        type="number"
+                        disabled={!hasPerm('finance:update')}
+                        value={depositPaid}
+                        onChange={(e) => setDepositPaid(Number(e.target.value))}
+                        className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-amber-500 outline-none tabular-nums disabled:opacity-60 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="space-y-1.5">

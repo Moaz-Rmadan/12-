@@ -439,24 +439,24 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
     <div className="space-y-6 sm:space-y-10">
       
       {/* Top Banner - Interactive & Compact */}
-      <div className="no-print bg-gradient-to-br from-amber-950 via-slate-900 to-amber-900 text-white p-5 sm:p-8 rounded-3xl border border-amber-800/40 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative overflow-hidden">
+      <div className="no-print bg-gradient-to-r from-[#16253B] via-[#233B5D] to-[#1E3352] text-white p-5 sm:p-8 rounded-3xl border border-[#4B83B8]/30 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative overflow-hidden">
         {/* Background Glow */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px] -mr-32 -mt-32 rounded-full" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#4B83B8]/15 blur-[100px] -mr-32 -mt-32 rounded-full" />
         
         <div className="relative z-10 min-w-0">
-          <div className="flex items-center gap-2 text-amber-400 text-[10px] sm:text-xs font-mono font-black uppercase tracking-[0.2em] mb-2">
-            <Sparkles className="w-4 h-4 animate-pulse" />
+          <div className="flex items-center gap-2 text-blue-200 text-xs font-mono font-bold tracking-wide mb-2">
+            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
             <span className="truncate">Production Intelligence • Template Studio</span>
           </div>
-          <h2 className="text-xl sm:text-3xl font-black font-serif text-white leading-tight">
+          <h2 className="text-xl sm:text-3xl font-black font-serif text-white tracking-tight leading-tight">
             مصمم قوالب أوامر الشغل
           </h2>
-          <p className="text-[11px] sm:text-sm text-amber-200/60 mt-2 max-w-2xl leading-relaxed font-bold">
+          <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed font-normal">
             قم بإنشاء وتخصيص أوامر الشغل القياسية لمصنع النجار، عدل البيانات لحظياً واطبع النسخة المعتمدة بدقة عالية.
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-wrap items-center gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-amber-800/30 shrink-0">
+        <div className="relative z-10 flex flex-wrap items-center gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-[#4B83B8]/30 shrink-0">
           <button
             onClick={handleSaveToDb}
             className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-black text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-xl shadow-amber-900/40 transition-all cursor-pointer whitespace-nowrap active:scale-95 group"
@@ -467,9 +467,9 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
 
           <button
             onClick={handlePrint}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-xs sm:text-sm font-black text-white bg-amber-700 hover:bg-amber-600 shadow-xl shadow-amber-950/40 transition-all cursor-pointer whitespace-nowrap active:scale-95 border-b-4 border-amber-900"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-xs sm:text-sm font-black text-white bg-white/10 hover:bg-white/20 border border-white/20 shadow-xl transition-all cursor-pointer whitespace-nowrap active:scale-95"
           >
-            <Printer className="w-5 h-5" />
+            <Printer className="w-5 h-5 text-amber-300" />
             <span>طباعة (A4)</span>
           </button>
         </div>

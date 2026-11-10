@@ -11,6 +11,7 @@ import {
   FileText,
   Hammer,
   BarChart3,
+  ShieldCheck,
   LucideIcon,
 } from 'lucide-react';
 
@@ -132,6 +133,21 @@ export const NAV_GROUPS: NavGroupConfig[] = [
         shortLabel: 'التسليمات',
         icon: FileText,
         description: 'سجل التسليمات والأرشفة الشهرية',
+      },
+    ],
+  },
+  {
+    id: 'administration',
+    title: 'الإدارة والحوكمة',
+    icon: ShieldCheck,
+    description: 'إدارة المستخدمين والصلاحيات وسجلات التدقيق',
+    items: [
+      {
+        id: 'user-management',
+        label: 'إدارة المستخدمين والصلاحيات',
+        shortLabel: 'المستخدمين',
+        icon: Users,
+        description: 'إدارة أدوار النظام الأربعة والتفويضات وسجل التدقيق',
       },
     ],
   },

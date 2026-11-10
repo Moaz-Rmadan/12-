@@ -545,20 +545,25 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* TOP HEADER & ACTION BANNER */}
-      <div className="no-print bg-gradient-to-r from-amber-950 via-slate-900 to-amber-900 text-amber-50 p-4 sm:p-6 rounded-2xl border border-amber-800/40 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center shrink-0">
-            <Truck className="w-5 h-5 sm:w-6 sm:h-6" />
+      {/* TOP HEADER & ACTION BANNER */}
+      <div className="no-print bg-gradient-to-r from-[#16253B] via-[#233B5D] to-[#1E3352] text-white p-5 sm:p-8 rounded-3xl border border-[#4B83B8]/30 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+        {/* Subtle ambient glow */}
+        <div className="absolute -left-20 -top-20 w-80 h-80 rounded-full bg-[#4B83B8]/15 blur-3xl pointer-events-none" />
+        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex items-center gap-4 w-full md:w-auto">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#4B83B8]/20 text-amber-300 flex items-center justify-center shrink-0 border border-[#4B83B8]/40 shadow-inner">
+            <Truck className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-amber-400 text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider truncate">
-              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <div className="flex items-center gap-2 text-blue-200 text-xs font-mono font-bold tracking-wide">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
               <span className="truncate">Professional Cargo Manifest Studio &amp; Loading Sheet</span>
             </div>
-            <h2 className="text-base sm:text-xl font-black font-serif text-white truncate">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white font-serif tracking-tight mt-1">
               بيـان وسـجل حمـولـة السـيارة (حمولة العربية)
             </h2>
-            <p className="hidden sm:block text-xs text-amber-200/80 mt-0.5 max-w-xl">
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
               إدارة احترافية لحمولة عربيات نقل الأثاث، تدعم الإضافة السريعة للأوردرات، التعديل المباشر، والمرتجعات، مع طباعة A4 دقيقة بملء الصفحة تلقائياً!
             </p>
           </div>

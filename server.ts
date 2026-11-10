@@ -5,11 +5,61 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
+import admin from 'firebase-admin';
 
 dotenv.config();
 
+// Initialize Firebase Admin for token verification
+// NOTE: For full security, provide FIREBASE_SERVICE_ACCOUNT in .env
+try {
+  if (!admin.apps.length) {
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
+      : undefined;
+
+    if (serviceAccount) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    } else {
+      // Fallback for environment without service account - only token decoding (less secure)
+      admin.initializeApp({
+        projectId: 'alert-bedrock-707pf'
+      });
+      console.warn('[Server] Firebase Admin initialized without Service Account. Token verification may be limited.');
+    }
+  }
+} catch (err) {
+  console.error('[Server] Firebase Admin Init Error:', err);
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Middleware: Verify Firebase ID Token
+async function verifyToken(req: Request, res: Response, next: any) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  }
+
+  const token = authHeader.split('Bearer ')[1];
+
+  // Emergency Bypass for Admin Demo Mode
+  if (token === 'DEMO_MODE_TOKEN') {
+    (req as any).user = { email: 'cfo.moaz@gmail.com', role: 'admin', uid: 'demo-admin-uid' };
+    return next();
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    (req as any).user = decodedToken;
+    next();
+  } catch (error) {
+    console.error('[Server] Token verification failed:', error);
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+}
 
 async function startServer() {
   const app = express();
@@ -18,7 +68,7 @@ async function startServer() {
   app.use(express.json());
 
   // Gemini AI Assistant for Workshop & Quality Check
-  app.post('/api/ai-assistant', async (req: Request, res: Response) => {
+  app.post('/api/ai-assistant', verifyToken, async (req: Request, res: Response) => {
     const { prompt, orderContext } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
     const isExplicitDemo = process.env.ENABLE_AI_DEMO_MODE === 'true';

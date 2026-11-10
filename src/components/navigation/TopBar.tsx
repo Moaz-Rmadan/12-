@@ -5,16 +5,21 @@ import {
   Moon,
   Plus,
   ChevronLeft,
+  User,
+  LogOut,
 } from 'lucide-react';
 import { JobOrderPopulated } from '../../types';
 import { NotificationsDropdown } from '../NotificationsDropdown';
 import { PWAInstallButton } from '../PWAInstallButton';
 import { getNavItemById, getNavGroupForTab } from './navConfig';
+import { useAuth } from '../../contexts/AuthContext';
+import { ROLE_DISPLAY_NAMES } from '../../lib/permissions';
 
 interface TopBarProps {
   activeTab: string;
   onOpenMobileMenu: () => void;
   onOpenNewOrderModal: () => void;
+  onOpenProfileModal: () => void;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
   orders: JobOrderPopulated[];
@@ -25,13 +30,18 @@ export const TopBar: React.FC<TopBarProps> = ({
   activeTab,
   onOpenMobileMenu,
   onOpenNewOrderModal,
+  onOpenProfileModal,
   darkMode,
   setDarkMode,
   orders,
   onSelectOrder,
 }) => {
+  const { userProfile, hasPerm, logout } = useAuth();
   const currentItem = getNavItemById(activeTab);
   const currentGroup = getNavGroupForTab(activeTab);
+
+  const canCreateOrder = hasPerm('order:create');
+  const roleName = userProfile?.role ? ROLE_DISPLAY_NAMES[userProfile.role]?.ar : 'غير محدد';
 
   return (
     <header className="no-print sticky top-0 z-20 h-16 sm:h-20 bg-white/95 dark:bg-[#16253B]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-xs">
@@ -65,8 +75,30 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
         </div>
 
-        {/* Zone 2: Utilities, Notifications & Primary Action */}
+        {/* Zone 2: Utilities, Notifications, User Badge & Primary Action */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          
+          {/* User Profile Pill */}
+          {userProfile && (
+            <button
+              onClick={onOpenProfileModal}
+              className="flex items-center gap-2 px-2.5 sm:px-3 h-9 sm:h-10 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:border-[#4B83B8] transition-all cursor-pointer"
+              title="عرض بيانات الحساب والصلاحيات"
+            >
+              <div className="w-6 h-6 rounded-lg bg-[#233B5D] text-white flex items-center justify-center text-xs font-black shrink-0">
+                {userProfile.name.charAt(0) || <User className="w-3.5 h-3.5" />}
+              </div>
+              <div className="hidden md:block text-right leading-none">
+                <span className="text-xs font-bold text-slate-900 dark:text-white block truncate max-w-[100px]">
+                  {userProfile.name}
+                </span>
+                <span className="text-[10px] text-[#4B83B8] font-bold block mt-0.5">
+                  {roleName}
+                </span>
+              </div>
+            </button>
+          )}
+
           {/* PWA Install */}
           <div className="hidden sm:block">
             <PWAInstallButton />
@@ -89,14 +121,26 @@ export const TopBar: React.FC<TopBarProps> = ({
             )}
           </button>
 
-          {/* Primary Action Button (+ New Order) */}
+          {/* Primary Action Button (+ New Order) - Protected by order:create permission */}
+          {canCreateOrder && (
+            <button
+              onClick={onOpenNewOrderModal}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 h-9 sm:h-11 rounded-xl text-xs sm:text-sm font-black text-white bg-[#233B5D] hover:bg-[#1E3352] active:bg-[#16253B] shadow-sm hover:shadow-md transition-all active:scale-[0.97] whitespace-nowrap shrink-0 cursor-pointer border border-[#233B5D]"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span className="hidden sm:inline">أمر شغل جديد</span>
+              <span className="sm:hidden">أمر جديد</span>
+            </button>
+          )}
+
+          {/* Quick Logout Button */}
           <button
-            onClick={onOpenNewOrderModal}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 h-9 sm:h-11 rounded-xl text-xs sm:text-sm font-black text-white bg-[#233B5D] hover:bg-[#1E3352] active:bg-[#16253B] shadow-sm hover:shadow-md transition-all active:scale-[0.97] whitespace-nowrap shrink-0 cursor-pointer border border-[#233B5D]"
+            onClick={logout}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+            title="تسجيل الخروج من النظام"
+            aria-label="تسجيل الخروج"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span className="hidden sm:inline">أمر شغل جديد</span>
-            <span className="sm:hidden">أمر جديد</span>
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
 

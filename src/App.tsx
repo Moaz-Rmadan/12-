@@ -16,6 +16,14 @@ import { CriticalOverdueReport } from './components/CriticalOverdueReport';
 import { BottleneckReport } from './components/BottleneckReport';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { ExecutiveDashboard } from './components/ExecutiveDashboard';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoginPage } from './components/auth/LoginPage';
+import { AccessDenied } from './components/auth/AccessDenied';
+import { UserProfileModal } from './components/auth/UserProfileModal';
+import { UserManagementView } from './components/admin/UserManagementView';
+import { canAccessTab, TAB_PERMISSION_MAP } from './lib/permissions';
+import { logAuditEvent } from './lib/audit';
+import { Hammer } from 'lucide-react';
 
 import {
   subscribeToJobOrders,
@@ -50,7 +58,10 @@ import {
 } from './data/mockData';
 import { initialTruckManifests } from './data/truckManifestData';
 
-export default function App() {
+function MainApp() {
+  const { currentUser, userProfile, loading, isDeactivated, isDemoMode } = useAuth();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
@@ -123,6 +134,8 @@ export default function App() {
 
   // Firebase Real-time Firestore Sync Listeners & Workshop Seed Check
   useEffect(() => {
+    if (isDemoMode) return;
+    
     // Ensure all 5 customers and 12 workshop orders are stored in Firestore
     seedWorkshopDataIfMissing(initialCustomers, getPopulatedOrders()).catch((e) =>
       console.warn('Initial workshop seed check:', e)
@@ -151,7 +164,7 @@ export default function App() {
       unsubscribeCustomers();
       unsubscribeManifests();
     };
-  }, []);
+  }, [isDemoMode]);
 
   // Handle Order Create or Edit (Firebase Firestore + Local Fallback)
   const handleSaveOrder = async (payload: CreateJobOrderPayload, orderId?: string) => {
@@ -321,6 +334,28 @@ export default function App() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center font-sans" dir="rtl">
+        <div className="w-16 h-16 rounded-2xl bg-[#233B5D] flex items-center justify-center text-white shadow-xl animate-pulse">
+          <Hammer className="w-8 h-8 stroke-[2.2]" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900 dark:text-white mt-4">
+          النجار فيرنتشر
+        </h2>
+        <p className="text-xs text-slate-500 font-bold mt-1">
+          جاري التحقق من الهوية والصلاحيات المركزية...
+        </p>
+      </div>
+    );
+  }
+
+  if ((!currentUser && !isDemoMode) || isDeactivated) {
+    return <LoginPage />;
+  }
+
+  const isCurrentTabAllowed = canAccessTab(userProfile, activeTab);
+
   return (
     <div className="min-h-screen bg-[#F1F5F9] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-row transition-colors duration-200">
       
@@ -345,6 +380,7 @@ export default function App() {
             setOrderToEdit(null);
             setIsNewOrderModalOpen(true);
           }}
+          onOpenProfileModal={() => setIsProfileModalOpen(true)}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
           orders={orders}
@@ -479,6 +515,11 @@ export default function App() {
           <MonthlyDeliveredReport orders={orders} />
         )}
 
+        {/* TAB 9: USER MANAGEMENT & RBAC GOVERNANCE */}
+        {activeTab === 'user-management' && (
+          <UserManagementView />
+        )}
+
       </main>
 
         {/* Footer */}
@@ -537,6 +578,20 @@ export default function App() {
       {/* Offline Indicator Banner */}
       <OfflineIndicator />
 
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
+
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
   );
 }

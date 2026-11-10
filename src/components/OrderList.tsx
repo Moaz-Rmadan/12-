@@ -239,8 +239,12 @@ export const OrderList: React.FC<OrderListProps> = ({
         } else {
           if (ord.is_archived) return false; // Hide archived orders from active lists
           // 1. Status Filter
-          if (activeFilter !== 'الكل' && ord.status !== activeFilter) {
-            return false;
+          if (activeFilter !== 'الكل') {
+            if (activeFilter === 'مسودة') {
+              if (ord.status !== 'Draft') return false;
+            } else if (ord.status !== activeFilter) {
+              return false;
+            }
           }
         }
 
@@ -319,12 +323,16 @@ export const OrderList: React.FC<OrderListProps> = ({
 
   const getStatusStyle = (status: OrderStatus) => {
     switch (status) {
+      case 'Draft':
+        return 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700';
       case 'قيد التشغيل':
         return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800';
       case 'تم التنفيذ':
         return 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800';
       case 'تسليم':
         return 'bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-indigo-950/80 dark:text-indigo-300 dark:border-indigo-800';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
@@ -770,7 +778,7 @@ export const OrderList: React.FC<OrderListProps> = ({
           
           {/* Status Filters */}
           <div className="flex items-center gap-1 p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl overflow-x-auto scrollbar-none max-w-full snap-x">
-            {['الكل', 'قيد التشغيل', 'تم التنفيذ', 'تسليم', 'الأرشيف'].map((filter) => {
+            {['الكل', 'مسودة', 'قيد التشغيل', 'تم التنفيذ', 'تسليم', 'الأرشيف'].map((filter) => {
               const isActive = activeFilter === filter;
               return (
                 <button
@@ -952,7 +960,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                   </div>
 
                   <span className={`px-3 py-1 rounded-full text-xs font-extrabold border shadow-2xs ${getStatusStyle(ord.status)} shrink-0 transition-transform duration-200 group-hover:scale-105`}>
-                    {ord.status}
+                    {ord.status === 'Draft' ? 'مسودة' : ord.status}
                   </span>
                 </div>
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Hammer, X, ChevronDown, Sparkles } from 'lucide-react';
 import { NAV_GROUPS, NavGroupConfig, NavItemConfig, getNavGroupForTab } from './navConfig';
+import { useAuth } from '../../contexts/AuthContext';
+import { canAccessTab } from '../../lib/permissions';
 
 interface MobileNavigationDrawerProps {
   isOpen: boolean;
@@ -19,6 +21,14 @@ export const MobileNavigationDrawer: React.FC<MobileNavigationDrawerProps> = ({
 }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
   const currentParentGroup = getNavGroupForTab(activeTab);
+
+  const { userProfile } = useAuth();
+  const visibleGroups = React.useMemo(() => {
+    return NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canAccessTab(userProfile, item.id)),
+    })).filter((group) => group.items.length > 0);
+  }, [userProfile]);
 
   // Single-Open Accordion state for mobile drawer
   const [openGroupId, setOpenGroupId] = useState<string | null>(
@@ -101,7 +111,7 @@ export const MobileNavigationDrawer: React.FC<MobileNavigationDrawerProps> = ({
 
         {/* Drawer Single-Open Accordion Navigation */}
         <div className="flex-1 overflow-y-auto py-4 px-4 space-y-3">
-          {NAV_GROUPS.map((group: NavGroupConfig) => {
+          {visibleGroups.map((group: NavGroupConfig) => {
             const GroupIcon = group.icon;
             const isGroupOpen = openGroupId === group.id;
             const hasActiveChild = group.items.some((item) => item.id === activeTab);

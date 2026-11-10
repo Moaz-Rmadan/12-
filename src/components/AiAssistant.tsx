@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { JobOrderPopulated } from '../types';
 import { Bot, Send, Sparkles, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AiAssistantProps {
   orders: JobOrderPopulated[];
@@ -9,6 +10,7 @@ interface AiAssistantProps {
 export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
   const [selectedOrderId, setSelectedOrderId] = useState<string>(orders[0]?.id || '');
   const [prompt, setPrompt] = useState('');
+  const { currentUser, isDemoMode } = useAuth();
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
     {
       role: 'assistant',
@@ -29,9 +31,20 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
     setLoading(true);
 
     try {
+      let token = '';
+      
+      if (!isDemoMode && currentUser) {
+        token = await currentUser.getIdToken();
+      } else if (isDemoMode) {
+        token = 'DEMO_MODE_TOKEN';
+      }
+
       const response = await fetch('/api/ai-assistant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           prompt: userMsg,
           orderContext: selectedOrder

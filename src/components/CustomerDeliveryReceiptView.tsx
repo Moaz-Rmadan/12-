@@ -225,28 +225,29 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
     <div className="space-y-6 sm:space-y-10">
       
       {/* TOP HEADER & PREMIUM CONTROL BAR */}
-      <div className="no-print bg-gradient-to-br from-emerald-950 via-slate-900 to-emerald-900 text-white p-5 sm:p-8 rounded-3xl border border-emerald-800/40 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative overflow-hidden">
-        {/* Decorative Glow */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] -mr-32 -mt-32 rounded-full" />
-        
+      <div className="no-print bg-gradient-to-r from-[#16253B] via-[#233B5D] to-[#1E3352] text-white p-5 sm:p-8 rounded-3xl border border-[#4B83B8]/30 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative overflow-hidden">
+        {/* Subtle ambient glow */}
+        <div className="absolute -left-20 -top-20 w-80 h-80 rounded-full bg-[#4B83B8]/15 blur-3xl pointer-events-none" />
+        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+
         <div className="relative z-10 min-w-0">
-          <div className="flex items-center gap-2 text-emerald-400 text-[10px] sm:text-xs font-mono font-black uppercase tracking-[0.2em] mb-2">
-            <Sparkles className="w-4 h-4 animate-pulse" />
+          <div className="flex items-center gap-2 text-blue-200 text-xs font-mono font-bold tracking-wide mb-2">
+            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
             <span>Official Delivery Protocol • Smart Receipt Studio</span>
           </div>
-          <h2 className="text-xl sm:text-3xl font-black font-serif text-white leading-tight">
+          <h2 className="text-xl sm:text-3xl font-black font-serif text-white tracking-tight leading-tight">
             إقرار وتقـريـر اسـتـلام الـمـنـتـج
           </h2>
-          <p className="text-[11px] sm:text-sm text-emerald-100/60 mt-2 max-w-2xl leading-relaxed font-bold">
+          <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed font-normal">
             قم بتوليد إقرار استلام رسمي مطابق للمواصفات الفنية، مع نظام ذكي لملاءمة المحتوى داخل ورقة A4 واحدة مهما كان عدد المنتجات.
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-wrap items-center gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-emerald-800/30 shrink-0">
+        <div className="relative z-10 flex flex-wrap items-center gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-[#4B83B8]/30 shrink-0">
           {onCloseModal && (
             <button
               onClick={onCloseModal}
-              className="p-3 rounded-2xl bg-white/5 hover:bg-rose-600/20 text-emerald-200 hover:text-white transition-all cursor-pointer group"
+              className="p-3 rounded-2xl bg-white/5 hover:bg-rose-600/20 text-slate-300 hover:text-white transition-all cursor-pointer group"
             >
               <X className="w-6 h-6 group-hover:rotate-90 transition-transform" />
             </button>
@@ -256,7 +257,7 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
             type="button"
             onClick={() => handlePrintReceipt('portrait')}
             disabled={!selectedCustomer}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-2xl text-xs sm:text-sm font-black text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-xl shadow-amber-900/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 whitespace-nowrap border-b-4 border-amber-600"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-2xl text-xs sm:text-sm font-black text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-xl shadow-amber-900/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 whitespace-nowrap"
           >
             <Printer className="w-5 h-5" />
             <span>طباعة الإقرار المعتمد (A4)</span>
