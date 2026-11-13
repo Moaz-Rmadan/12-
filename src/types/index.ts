@@ -36,6 +36,9 @@ export interface JobOrder {
   total_price: number;
   deposit_paid: number;
   is_archived?: boolean; // أرشفة أمر الشغل
+  delivery_receipt_id?: string; // معرف إقرار استلام العميل المرتبط
+  delivery_receipt_number?: string; // الرقم التسلسلي لإقرار الاستلام (DR-YYYY-XXXX)
+  delivered_at?: string; // تاريخ التسليم الفعلي المسجل بالإقرار
   created_at?: string;
   updated_at?: string;
 }
@@ -144,4 +147,38 @@ export interface TruckManifest {
   items: TruckManifestItem[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface DeliveryReceiptItemSnapshot {
+  order_id: string;
+  order_number: string;
+  room_model_code: string;
+  general_specs: string;
+  paint_details: string;
+  fabric_source: string;
+  dimensions_cm: string;
+  total_price: number;
+  deposit_paid: number;
+}
+
+export interface DeliveryReceiptRecord {
+  id: string;
+  receipt_number: string; // e.g. "DR-2026-0001"
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  receipt_date: string; // YYYY-MM-DD
+  order_ids: string[];
+  order_numbers: string[];
+  items: DeliveryReceiptItemSnapshot[];
+  total_contract_value: number;
+  total_deposit_paid: number;
+  remaining_balance: number;
+  notes?: string;
+  delivery_branch?: string;
+  issued_by_name?: string;
+  issued_by_uid?: string;
+  mark_orders_delivered?: boolean;
+  created_at: string;
+  updated_at?: string;
 }

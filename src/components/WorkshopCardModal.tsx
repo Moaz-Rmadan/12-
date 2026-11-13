@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { JobOrderPopulated, OrderStatus, ProductionStage } from '../types';
 import { printElementById } from '../utils/printHelper';
 import {
@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canApproveDraft, canCancelOrder, isValidStatusTransition } from '../lib/permissions';
-import { Check, ShieldCheck } from 'lucide-react';
+import { Check, ShieldCheck, FileCheck } from 'lucide-react';
 
 interface WorkshopCardModalProps {
   order: JobOrderPopulated | null;
@@ -32,6 +32,7 @@ interface WorkshopCardModalProps {
   onUpdateStage?: (id: string, newStage: ProductionStage) => void;
   onEditOrder?: (order: JobOrderPopulated) => void;
   onUpdateArchiveStatus?: (id: string, isArchived: boolean) => void;
+  onOpenDeliveryReceipt?: (order: JobOrderPopulated) => void;
 }
 
 export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
@@ -41,9 +42,36 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
   onUpdateStage,
   onEditOrder,
   onUpdateArchiveStatus,
+  onOpenDeliveryReceipt,
 }) => {
-  if (!order) return null;
   const { userProfile } = useAuth();
+
+  const imageAttachments = order?.attachments?.filter(
+    (a) => /\.(jpe?g|png|webp)$/i.test(a.file_url || '')
+  ) || [];
+
+  const pdfAttachments = order?.attachments?.filter(
+    (a) => /\.pdf$/i.test(a.file_url || '')
+  ) || [];
+
+  // Default to 'original_image' mode if uploaded image attachments exist
+  const [viewMode, setViewMode] = useState<'original_image' | 'digital_card'>(
+    imageAttachments.length > 0 ? 'original_image' : 'digital_card'
+  );
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+
+  // Fullscreen / Zoom Lightbox for mobile viewing of handwritten specs
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+
+  useEffect(() => {
+    setViewMode(imageAttachments.length > 0 ? 'original_image' : 'digital_card');
+    setSelectedImageIndex(null);
+    setFullscreenImage(null);
+    setZoomLevel(1);
+  }, [order?.id, imageAttachments.length]);
+
+  if (!order) return null;
 
   const handlePrint = (orientation: 'portrait' | 'landscape' = 'portrait') => {
     printElementById('printable-workshop-card', orientation);
@@ -54,6 +82,15 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
     const fullText = `${order.general_specs} ${order.job_details?.installation_notes || ''}`;
     if (fullText.includes('بشير')) {
       return 'م النجار: بشير';
+    }
+    if (fullText.includes('وليد النجار')) {
+      return 'م: وليد النجار';
+    }
+    if (fullText.includes('احمد وليد') || fullText.includes('أحمد وليد')) {
+      return 'م: أحمد وليد';
+    }
+    if (fullText.includes('محمد حسين')) {
+      return 'محمد حسين';
     }
     if (fullText.includes('مروان هلال') || fullText.includes('مروان')) {
       return 'مروان هلال';
@@ -112,22 +149,6 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
     return dStr.replace(/-/g, ' / ');
   };
 
-  const imageAttachments = order.attachments?.filter(
-    (a) => a.file_url.endsWith('.jpeg') || a.file_url.endsWith('.jpg') || a.file_url.endsWith('.png')
-  ) || [];
-
-  const pdfAttachments = order.attachments?.filter((a) => a.file_url.endsWith('.pdf')) || [];
-
-  // Default to 'original_image' mode if uploaded image attachments exist
-  const [viewMode, setViewMode] = useState<'original_image' | 'digital_card'>(
-    imageAttachments.length > 0 ? 'original_image' : 'digital_card'
-  );
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
-
-  // Fullscreen / Zoom Lightbox for mobile viewing of handwritten specs
-  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 2.5));
   const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.25, 0.75));
   const handleResetZoom = () => setZoomLevel(1);
@@ -151,16 +172,22 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
                   <h3 className="text-sm sm:text-lg font-black text-white truncate font-serif leading-none mb-1">
                     {cardTitle} • {order.room_model_code}
                   </h3>
-                  <div className="flex items-center gap-2 text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-tight">
+                  <div className="flex items-center gap-2 text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-tight flex-wrap">
                     <span className="truncate max-w-[120px] sm:max-w-none">العميل: {order.customer?.name || 'غير مسجل'}</span>
                     <span className="w-1 h-1 rounded-full bg-slate-600 shrink-0" />
                     <span className="font-mono tabular-nums">{order.contract_date}</span>
+                    {order.delivery_receipt_number && (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono text-[10px]">
+                        إقرار: {order.delivery_receipt_number}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               <button
                 onClick={onClose}
+                aria-label="إغلاق"
                 className="p-2.5 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition-all cursor-pointer shrink-0 shadow-inner group active:scale-90"
               >
                 <X className="w-5 h-5 transition-transform group-hover:rotate-90" />
@@ -273,6 +300,19 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
                 >
                   <Archive className="w-3.5 h-3.5" />
                   <span>{order.is_archived ? 'استعادة' : 'أرشفة'}</span>
+                </button>
+              )}
+
+              {onOpenDeliveryReceipt && (
+                <button
+                  onClick={() => {
+                    onOpenDeliveryReceipt(order);
+                    onClose();
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-black bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-500/60 shadow-lg shadow-emerald-950/30 transition-all cursor-pointer shrink-0 whitespace-nowrap active:scale-95"
+                >
+                  <FileCheck className="w-3.5 h-3.5" />
+                  <span>{order.delivery_receipt_number ? `عرض الإقرار (${order.delivery_receipt_number})` : 'إقرار استلام العميل'}</span>
                 </button>
               )}
             </div>

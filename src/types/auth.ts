@@ -43,7 +43,7 @@ export interface AuditLogEntry {
   user_email: string;
   user_role: UserRole;
   action: string;
-  entity_type: 'job_order' | 'user' | 'customer' | 'manifest' | 'auth';
+  entity_type: 'job_order' | 'user' | 'customer' | 'manifest' | 'delivery_receipt' | 'auth';
   entity_id: string;
   timestamp: string;
   before: Record<string, any> | null;

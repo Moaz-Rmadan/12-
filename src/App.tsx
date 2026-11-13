@@ -16,6 +16,7 @@ import { CriticalOverdueReport } from './components/CriticalOverdueReport';
 import { BottleneckReport } from './components/BottleneckReport';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { ExecutiveDashboard } from './components/ExecutiveDashboard';
+import { SmartSearchStudio } from './components/SmartSearchStudio';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { AccessDenied } from './components/auth/AccessDenied';
@@ -42,6 +43,9 @@ import {
   saveBatchCustomersToFirestore,
   saveBatchJobOrdersToFirestore,
   seedWorkshopDataIfMissing,
+  subscribeToDeliveryReceipts,
+  issueDeliveryReceiptToFirestore,
+  deleteDeliveryReceiptFromFirestore,
 } from './lib/firebase';
 
 import {
@@ -51,12 +55,18 @@ import {
   ProductionStage,
   CreateJobOrderPayload,
   TruckManifest,
+  DeliveryReceiptRecord,
 } from './types';
 import {
   initialCustomers,
   getPopulatedOrders,
 } from './data/mockData';
 import { initialTruckManifests } from './data/truckManifestData';
+import {
+  buildDeliveryReceiptRecord,
+  generateNextDeliveryReceiptNumber,
+  planOrderReceiptLinksAndDeliveryTransitions,
+} from './utils/deliveryReceiptLink';
 
 function MainApp() {
   const { currentUser, userProfile, loading, isDeactivated, isDemoMode } = useAuth();
@@ -83,11 +93,13 @@ function MainApp() {
   const [orders, setOrders] = useState<JobOrderPopulated[]>(() => getPopulatedOrders());
   const [customers, setCustomers] = useState<Customer[]>(() => initialCustomers);
   const [truckManifests, setTruckManifests] = useState<TruckManifest[]>(() => initialTruckManifests);
+  const [deliveryReceipts, setDeliveryReceipts] = useState<DeliveryReceiptRecord[]>([]);
 
   const [selectedOrderForCard, setSelectedOrderForCard] = useState<JobOrderPopulated | null>(null);
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState<boolean>(false);
   const [orderToEdit, setOrderToEdit] = useState<JobOrderPopulated | null>(null);
   const [selectedCustomerForReceiptId, setSelectedCustomerForReceiptId] = useState<string>('');
+  const [selectedOrderForReceiptId, setSelectedOrderForReceiptId] = useState<string>('');
 
   // Save sidebar preference
   const handleToggleSidebar = (collapsed: boolean) => {
@@ -159,10 +171,15 @@ function MainApp() {
       }
     });
 
+    const unsubscribeReceipts = subscribeToDeliveryReceipts((firestoreReceipts) => {
+      setDeliveryReceipts(firestoreReceipts);
+    });
+
     return () => {
       unsubscribeOrders();
       unsubscribeCustomers();
       unsubscribeManifests();
+      unsubscribeReceipts();
     };
   }, [isDemoMode]);
 
@@ -334,6 +351,112 @@ function MainApp() {
     }
   };
 
+  // Navigate directly to Customer Delivery Receipt linked to a specific order or customer
+  const handleOpenDeliveryReceiptForOrder = (ord: JobOrderPopulated) => {
+    setSelectedCustomerForReceiptId(ord.customer_id);
+    setSelectedOrderForReceiptId(ord.id);
+    setActiveTab('receipt');
+  };
+
+  // Issue & Persist Official Delivery Receipt linked to selected Job Orders
+  const handleIssueDeliveryReceipt = async (params: {
+    customer: Customer;
+    selectedOrders: JobOrderPopulated[];
+    receiptDate: string;
+    notes?: string;
+    deliveryBranch?: string;
+    markAsDelivered: boolean;
+  }) => {
+    const receiptNumber = generateNextDeliveryReceiptNumber(deliveryReceipts);
+    const nowIso = new Date().toISOString();
+
+    const receiptRecord = buildDeliveryReceiptRecord({
+      receiptNumber,
+      customer: params.customer,
+      selectedOrders: params.selectedOrders,
+      receiptDate: params.receiptDate,
+      notes: params.notes,
+      deliveryBranch: params.deliveryBranch,
+      userProfile,
+      markOrdersDelivered: params.markAsDelivered,
+      nowIso,
+    });
+
+    const { orderUpdates, transitionedOrderIds } = planOrderReceiptLinksAndDeliveryTransitions({
+      selectedOrders: params.selectedOrders,
+      receiptRecord,
+      markAsDelivered: params.markAsDelivered,
+      userProfile,
+      nowIso,
+    });
+
+    if (!isDemoMode) {
+      await issueDeliveryReceiptToFirestore({
+        receiptRecord,
+        orderUpdates,
+      });
+
+      if (userProfile) {
+        await logAuditEvent({
+          user_uid: userProfile.uid,
+          user_email: userProfile.email,
+          user_role: userProfile.role,
+          action: 'DELIVERY_RECEIPT_ISSUED',
+          entity_type: 'delivery_receipt',
+          entity_id: receiptRecord.id,
+          after: {
+            receipt_number: receiptRecord.receipt_number,
+            customer_id: receiptRecord.customer_id,
+            order_numbers: receiptRecord.order_numbers,
+            transitioned_to_delivered: transitionedOrderIds,
+          },
+          reason: `إصدار إقرار استلام العميل وربطه بـ ${orderUpdates.length} أمر شغل`,
+        });
+      }
+    }
+
+    const updateMap = new Map(orderUpdates.map((u) => [u.orderId, u.updates]));
+    setOrders((prev) =>
+      prev.map((ord) => {
+        const patch = updateMap.get(ord.id);
+        return patch ? { ...ord, ...patch } : ord;
+      })
+    );
+
+    if (selectedOrderForCard && updateMap.has(selectedOrderForCard.id)) {
+      const patch = updateMap.get(selectedOrderForCard.id)!;
+      setSelectedOrderForCard((prev) => (prev ? { ...prev, ...patch } : null));
+    }
+
+    setDeliveryReceipts((prev) => [
+      receiptRecord,
+      ...prev.filter((r) => r.id !== receiptRecord.id),
+    ]);
+
+    return { receiptRecord, transitionedOrderIds };
+  };
+
+  const handleDeleteDeliveryReceipt = async (receipt: DeliveryReceiptRecord) => {
+    if (!isDemoMode) {
+      await deleteDeliveryReceiptFromFirestore(receipt.id, receipt.order_ids);
+    }
+
+    const unlinkedIds = new Set(receipt.order_ids);
+    setOrders((prev) =>
+      prev.map((ord) =>
+        unlinkedIds.has(ord.id) && ord.delivery_receipt_id === receipt.id
+          ? {
+              ...ord,
+              delivery_receipt_id: '',
+              delivery_receipt_number: '',
+              delivered_at: '',
+            }
+          : ord
+      )
+    );
+    setDeliveryReceipts((prev) => prev.filter((r) => r.id !== receipt.id));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center font-sans" dir="rtl">
@@ -405,11 +528,28 @@ function MainApp() {
               setOrderToEdit(null);
               setIsNewOrderModalOpen(true);
             }}
-            onNavigateTab={(tab, contextId) => {
-              if (tab === 'receipt' && contextId) {
-                setSelectedCustomerForReceiptId(contextId);
+            onNavigateTab={(tab, contextId, orderId) => {
+              if (tab === 'receipt') {
+                setSelectedCustomerForReceiptId(contextId || '');
+                setSelectedOrderForReceiptId(orderId || '');
               }
               setActiveTab(tab);
+            }}
+          />
+        )}
+
+        {/* TAB 0-A: SMART SEARCH & DELIVERY AUDIT STUDIO */}
+        {activeTab === 'smart-search' && (
+          <SmartSearchStudio
+            orders={orders}
+            customers={customers}
+            receipts={deliveryReceipts}
+            truckManifests={truckManifests}
+            onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
+            onOpenDeliveryReceipt={handleOpenDeliveryReceiptForOrder}
+            onEditOrder={(ord) => {
+              setOrderToEdit(ord);
+              setIsNewOrderModalOpen(true);
             }}
           />
         )}
@@ -436,6 +576,7 @@ function MainApp() {
                 setOrderToEdit(ord);
                 setIsNewOrderModalOpen(true);
               }}
+              onOpenDeliveryReceipt={handleOpenDeliveryReceiptForOrder}
               onUpdateStatus={handleUpdateStatus}
               onUpdateStage={handleUpdateOrderStage}
               onUpdateArchiveStatus={handleUpdateArchiveStatus}
@@ -459,6 +600,7 @@ function MainApp() {
             }}
             onOpenDeliveryReceiptForCustomer={(cust) => {
               setSelectedCustomerForReceiptId(cust.id);
+              setSelectedOrderForReceiptId('');
               setActiveTab('receipt');
             }}
             onDeleteCustomer={handleDeleteCustomer}
@@ -472,7 +614,12 @@ function MainApp() {
           <CustomerDeliveryReceiptView
             customers={customers}
             orders={orders}
+            receipts={deliveryReceipts}
             initialCustomerId={selectedCustomerForReceiptId}
+            initialOrderId={selectedOrderForReceiptId}
+            onIssueReceipt={handleIssueDeliveryReceipt}
+            onDeleteReceipt={handleDeleteDeliveryReceipt}
+            onSelectOrderForCard={(ord) => setSelectedOrderForCard(ord)}
           />
         )}
 
@@ -556,6 +703,10 @@ function MainApp() {
           onUpdateStatus={handleUpdateStatus}
           onUpdateStage={handleUpdateOrderStage}
           onUpdateArchiveStatus={handleUpdateArchiveStatus}
+          onOpenDeliveryReceipt={(ord) => {
+            setSelectedOrderForCard(null);
+            handleOpenDeliveryReceiptForOrder(ord);
+          }}
           onEditOrder={(ord) => {
             setOrderToEdit(ord);
             setIsNewOrderModalOpen(true);

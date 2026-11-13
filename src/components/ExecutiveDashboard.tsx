@@ -100,7 +100,7 @@ interface ExecutiveDashboardProps {
   onSelectOrder: (order: JobOrderPopulated) => void;
   onEditOrder: (order: JobOrderPopulated) => void;
   onOpenNewOrderModal: () => void;
-  onNavigateTab: (tab: string, contextId?: string) => void;
+  onNavigateTab: (tab: string, contextId?: string, orderId?: string) => void;
 }
 
 type SlaFilter = 'all' | 'critical' | 'week' | 'month' | 'delivered';
@@ -647,6 +647,14 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
 
           {/* Quick Header Actions */}
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <button
+              onClick={() => onNavigateTab('smart-search')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4B83B8]/30 hover:bg-[#4B83B8]/45 border border-blue-300/30 text-white text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
+            >
+              <Search className="w-4 h-4 text-sky-300" />
+              <span>البحث الشامل وجرد التسليمات</span>
+            </button>
+
             <button
               onClick={() => window.print()}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
@@ -1986,7 +1994,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                       </button>
 
                       <button
-                        onClick={() => onNavigateTab('receipt', order.customer_id)}
+                        onClick={() => onNavigateTab('receipt', order.customer_id, order.id)}
                         className="p-2 rounded-xl text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/60 transition-colors cursor-pointer border border-amber-200 dark:border-amber-800/60"
                         title="إقرار استلام العميل"
                       >

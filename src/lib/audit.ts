@@ -12,7 +12,7 @@ export async function logAuditEvent(params: {
   user_email: string;
   user_role: UserRole;
   action: string;
-  entity_type: 'job_order' | 'user' | 'customer' | 'manifest' | 'auth';
+  entity_type: 'job_order' | 'user' | 'customer' | 'manifest' | 'delivery_receipt' | 'auth';
   entity_id: string;
   before?: Record<string, any> | null;
   after?: Record<string, any> | null;

@@ -17,8 +17,21 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Customer, JobOrderPopulated, CreateJobOrderPayload, OrderStatus, TruckManifest } from '../types';
+import {
+  Customer,
+  JobOrderPopulated,
+  CreateJobOrderPayload,
+  OrderStatus,
+  TruckManifest,
+  DeliveryReceiptRecord,
+} from '../types';
+import { PlannedOrderReceiptUpdate } from '../utils/deliveryReceiptLink';
 import { initialCustomers, initialOrders, getPopulatedOrders } from '../data/mockData';
+import { initialTruckManifests } from '../data/truckManifestData';
+import {
+  buildRepairedBaselineOrderUpdate,
+  buildRepairedBaselineCustomerUpdate,
+} from '../utils/baselineSync';
 
 // Initialize Firebase App & Firestore Database with persistent offline IndexedDB cache
 const app = initializeApp(firebaseConfig);
@@ -503,62 +516,126 @@ export async function saveBatchJobOrdersToFirestore(
   return populatedResults;
 }
 
-// Ensure all workshop job orders & customers are stored in Firestore
+// Ensure all workshop job orders & customers are stored in Firestore and baseline attachments stay valid
 export async function seedWorkshopDataIfMissing(
   customers: Customer[],
   populatedOrders: JobOrderPopulated[]
 ): Promise<boolean> {
   try {
     const ordersSnap = await getDocs(collection(db, 'job_orders'));
-    const existingOrderIds = new Set<string>();
+    const existingOrdersMap = new Map<string, Partial<JobOrderPopulated>>();
     ordersSnap.forEach((docSnap) => {
-      existingOrderIds.add(docSnap.id);
+      existingOrdersMap.set(docSnap.id, docSnap.data() as Partial<JobOrderPopulated>);
     });
 
     const custSnap = await getDocs(collection(db, 'customers'));
-    const existingCustIds = new Set<string>();
+    const existingCustMap = new Map<string, Partial<Customer>>();
     custSnap.forEach((docSnap) => {
-      existingCustIds.add(docSnap.id);
+      existingCustMap.set(docSnap.id, docSnap.data() as Partial<Customer>);
     });
 
-    const batch = writeBatch(db);
-    let hasChanges = false;
+    type BatchOp =
+      | { type: 'set'; col: 'customers' | 'job_orders'; id: string; data: Record<string, unknown> }
+      | { type: 'update'; col: 'customers' | 'job_orders'; id: string; data: Record<string, unknown> }
+      | { type: 'delete'; col: 'job_orders'; id: string };
 
-    // 1. Seed any missing customers
+    const ops: BatchOp[] = [];
+    const nowIso = new Date().toISOString();
+
+    // 1. Seed any missing customers or repair collided placeholder phones
     for (const cust of customers) {
-      if (!existingCustIds.has(cust.id)) {
-        const custRef = doc(db, 'customers', cust.id);
-        batch.set(custRef, JSON.parse(JSON.stringify(cust)));
-        hasChanges = true;
+      const existingCust = existingCustMap.get(cust.id);
+      if (!existingCust) {
+        ops.push({
+          type: 'set',
+          col: 'customers',
+          id: cust.id,
+          data: JSON.parse(JSON.stringify(cust)),
+        });
+      } else {
+        const custRepair = buildRepairedBaselineCustomerUpdate(existingCust, cust, nowIso);
+        if (custRepair) {
+          ops.push({
+            type: 'update',
+            col: 'customers',
+            id: cust.id,
+            data: JSON.parse(JSON.stringify(custRepair)),
+          });
+        }
       }
     }
 
-    // 2. Seed any missing job orders
+    // 2. Seed missing job orders OR repair broken/stale baseline attachments & details
     for (const ord of populatedOrders) {
-      if (!existingOrderIds.has(ord.id)) {
-        const ordRef = doc(db, 'job_orders', ord.id);
-        batch.set(ordRef, JSON.parse(JSON.stringify(ord)));
-        hasChanges = true;
+      const existingDoc = existingOrdersMap.get(ord.id);
+      if (!existingDoc) {
+        ops.push({
+          type: 'set',
+          col: 'job_orders',
+          id: ord.id,
+          data: JSON.parse(JSON.stringify(ord)),
+        });
+      } else {
+        const repairUpdates = buildRepairedBaselineOrderUpdate(existingDoc, ord, nowIso);
+        if (repairUpdates) {
+          ops.push({
+            type: 'update',
+            col: 'job_orders',
+            id: ord.id,
+            data: JSON.parse(JSON.stringify(repairUpdates)),
+          });
+        }
       }
     }
 
-    // 3. Clean up legacy dummy orders if present
+    // 3. Seed any missing truck manifests
+    const manifestsSnap = await getDocs(collection(db, 'truck_manifests'));
+    if (manifestsSnap.empty) {
+      for (const manifest of initialTruckManifests) {
+        ops.push({
+          type: 'set',
+          col: 'truck_manifests' as any,
+          id: manifest.id,
+          data: JSON.parse(JSON.stringify(manifest)),
+        });
+      }
+    }
+
+    // 4. Clean up legacy dummy orders if present
     const legacyIds = ['ord-1', 'ord-2', 'ord-3'];
     for (const legId of legacyIds) {
-      if (existingOrderIds.has(legId)) {
-        const legRef = doc(db, 'job_orders', legId);
-        batch.delete(legRef);
-        hasChanges = true;
+      if (existingOrdersMap.has(legId)) {
+        ops.push({
+          type: 'delete',
+          col: 'job_orders',
+          id: legId,
+        });
       }
     }
 
-    if (hasChanges) {
-      await batch.commit();
-      console.log('[Firebase] Successfully synchronized workshop customers and orders to Firestore.');
-      return true;
+    if (ops.length === 0) {
+      return false;
     }
 
-    return false;
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < ops.length; i += CHUNK_SIZE) {
+      const batch = writeBatch(db);
+      const chunk = ops.slice(i, i + CHUNK_SIZE);
+      for (const op of chunk) {
+        const ref = doc(db, op.col, op.id);
+        if (op.type === 'set') {
+          batch.set(ref, op.data);
+        } else if (op.type === 'update') {
+          batch.update(ref, op.data);
+        } else {
+          batch.delete(ref);
+        }
+      }
+      await batch.commit();
+    }
+
+    console.log(`[Firebase] Successfully synchronized ${ops.length} workshop updates to Firestore.`);
+    return true;
   } catch (err) {
     console.error('[Firebase] Error syncing workshop orders to Firestore:', err);
     return false;
@@ -616,5 +693,83 @@ export async function deleteTruckManifestFromFirestore(manifestId: string): Prom
     handleFirestoreError(err, OperationType.DELETE, `truck_manifests/${manifestId}`);
   }
 }
+
+// -----------------------------------------------------------------------------
+// CUSTOMER DELIVERY RECEIPT SERVICES ("إقرار استلام العميل المرتبط بأوامر الشغل")
+// -----------------------------------------------------------------------------
+
+export function subscribeToDeliveryReceipts(callback: (receipts: DeliveryReceiptRecord[]) => void) {
+  const colRef = collection(db, 'delivery_receipts');
+
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const list: DeliveryReceiptRecord[] = [];
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data() as DeliveryReceiptRecord;
+        if (data && data.id) {
+          list.push(data);
+        }
+      });
+      list.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      callback(list);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'delivery_receipts');
+    }
+  );
+}
+
+export async function issueDeliveryReceiptToFirestore(params: {
+  receiptRecord: DeliveryReceiptRecord;
+  orderUpdates: PlannedOrderReceiptUpdate[];
+}): Promise<DeliveryReceiptRecord> {
+  const cleanReceipt = JSON.parse(JSON.stringify(params.receiptRecord)) as DeliveryReceiptRecord;
+
+  try {
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'delivery_receipts', cleanReceipt.id), cleanReceipt);
+
+    for (const item of params.orderUpdates) {
+      const cleanUpdate = JSON.parse(JSON.stringify(item.updates));
+      batch.update(doc(db, 'job_orders', item.orderId), cleanUpdate);
+    }
+
+    await batch.commit();
+    console.log(
+      `[Firebase] Issued delivery receipt ${cleanReceipt.receipt_number} linked to ${params.orderUpdates.length} orders.`
+    );
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `delivery_receipts/${cleanReceipt.id}`);
+  }
+
+  return cleanReceipt;
+}
+
+export async function deleteDeliveryReceiptFromFirestore(
+  receiptId: string,
+  linkedOrderIds: string[] = []
+): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'delivery_receipts', receiptId));
+
+    const nowIso = new Date().toISOString();
+    for (const orderId of linkedOrderIds) {
+      batch.update(doc(db, 'job_orders', orderId), {
+        delivery_receipt_id: '',
+        delivery_receipt_number: '',
+        delivered_at: '',
+        updated_at: nowIso,
+      });
+    }
+
+    await batch.commit();
+    console.log('[Firebase] Deleted delivery receipt and unlinked orders:', receiptId);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, `delivery_receipts/${receiptId}`);
+  }
+}
+
 
 

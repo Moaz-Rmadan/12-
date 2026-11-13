@@ -12,6 +12,7 @@ import {
   Hammer,
   BarChart3,
   ShieldCheck,
+  Search,
   LucideIcon,
 } from 'lucide-react';
 
@@ -45,6 +46,13 @@ export const NAV_GROUPS: NavGroupConfig[] = [
         shortLabel: 'الداشبورد',
         icon: LayoutDashboard,
         description: 'مؤشرات الأداء العامة والبحث الشامل',
+      },
+      {
+        id: 'smart-search',
+        label: 'البحث الشامل وجرد التسليمات',
+        shortLabel: 'البحث الشامل',
+        icon: Search,
+        description: 'جرد الغرف المسلمة والتعاقدات بالفترات، المعايير المتعددة، والتدقيق المالي',
       },
     ],
   },

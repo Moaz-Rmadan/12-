@@ -29,6 +29,9 @@
         "status": { "type": "string", "enum": ["قيد التشغيل", "تم التنفيذ", "تسليم"] },
         "total_price": { "type": "number", "description": "Total contract value" },
         "deposit_paid": { "type": "number", "description": "Deposit amount paid" },
+        "delivery_receipt_id": { "type": "string", "description": "Linked delivery receipt ID" },
+        "delivery_receipt_number": { "type": "string", "description": "Linked delivery receipt number" },
+        "delivered_at": { "type": "string", "description": "Actual delivery date YYYY-MM-DD" },
         "created_at": { "type": "string", "format": "date-time" },
         "updated_at": { "type": "string", "format": "date-time" }
       },
@@ -66,6 +69,28 @@
         "uploaded_at": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "job_order_id", "file_type", "file_url", "title"]
+    },
+    "DeliveryReceipt": {
+      "title": "DeliveryReceipt",
+      "description": "Official customer delivery acceptance receipt linked to one or more job orders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique delivery receipt ID" },
+        "receipt_number": { "type": "string", "description": "Sequential delivery receipt number e.g. DR-2026-0001", "maxLength": 50 },
+        "customer_id": { "type": "string", "description": "Linked customer ID" },
+        "customer_name": { "type": "string", "maxLength": 120 },
+        "customer_phone": { "type": "string", "maxLength": 40 },
+        "receipt_date": { "type": "string", "description": "Delivery receipt date YYYY-MM-DD" },
+        "order_ids": { "type": "array", "description": "Linked job order IDs" },
+        "order_numbers": { "type": "array", "description": "Linked job order numbers" },
+        "total_contract_value": { "type": "number" },
+        "total_deposit_paid": { "type": "number" },
+        "remaining_balance": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "receipt_number", "customer_id", "receipt_date", "order_ids"]
     }
   },
   "firestore": {
@@ -84,6 +109,10 @@
     "/job_orders/{jobOrderId}/attachments/{attachmentId}": {
       "schema": { "$ref": "#/entities/Attachment" },
       "description": "Subcollection storing attached image drawings and swatch tags"
+    },
+    "/delivery_receipts/{receiptId}": {
+      "schema": { "$ref": "#/entities/DeliveryReceipt" },
+      "description": "Collection storing issued customer delivery receipts linked to job orders"
     }
   }
 }

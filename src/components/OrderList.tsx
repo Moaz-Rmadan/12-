@@ -30,6 +30,7 @@ import {
   Archive,
   Activity,
   ChevronRight,
+  FileCheck,
 } from 'lucide-react';
 import { BatchOrderImportModal } from './BatchOrderImportModal';
 import {
@@ -45,6 +46,7 @@ interface OrderListProps {
   customers?: Customer[];
   onSelectOrder: (order: JobOrderPopulated) => void;
   onEditOrder: (order: JobOrderPopulated) => void;
+  onOpenDeliveryReceipt?: (order: JobOrderPopulated) => void;
   onUpdateStatus: (id: string, newStatus: OrderStatus) => void;
   onUpdateStage?: (id: string, newStage: ProductionStage) => void;
   onUpdateArchiveStatus?: (id: string, isArchived: boolean) => void;
@@ -60,6 +62,7 @@ export const OrderList: React.FC<OrderListProps> = ({
   customers = [],
   onSelectOrder,
   onEditOrder,
+  onOpenDeliveryReceipt,
   onUpdateStatus,
   onUpdateStage,
   onUpdateArchiveStatus,
@@ -952,6 +955,15 @@ export const OrderList: React.FC<OrderListProps> = ({
                       <span>📍</span>
                       <span>{ord.current_stage || 'لم يبدأ'}</span>
                     </span>
+                    {ord.delivery_receipt_number && (
+                      <span
+                        className="inline-flex items-center gap-1 text-[10px] bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300 px-2 py-0.5 rounded-full font-black border border-emerald-300 dark:border-emerald-700 font-mono"
+                        title={`مرتبط بإقرار استلام العميل رقم ${ord.delivery_receipt_number}`}
+                      >
+                        <FileCheck className="w-3 h-3" />
+                        <span>{ord.delivery_receipt_number}</span>
+                      </span>
+                    )}
                     {ord.updated_at && ord.created_at && ord.updated_at !== ord.created_at && (
                       <span className="text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-400/40">
                         معدّل
@@ -1050,6 +1062,26 @@ export const OrderList: React.FC<OrderListProps> = ({
                   <Edit3 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
                   <span>تعديل</span>
                 </button>
+
+                {onOpenDeliveryReceipt && (
+                  <button
+                    onClick={() => onOpenDeliveryReceipt(ord)}
+                    aria-label={`إقرار استلام العميل لأمر ${ord.order_number}`}
+                    className={`flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 shadow-2xs border ${
+                      ord.delivery_receipt_number
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700'
+                        : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50 dark:bg-slate-800 dark:text-emerald-300 dark:border-emerald-800'
+                    }`}
+                    title={
+                      ord.delivery_receipt_number
+                        ? `عرض إقرار الاستلام المرتبط (${ord.delivery_receipt_number})`
+                        : 'إصدار وربط إقرار استلام العميل لهذا الأمر'
+                    }
+                  >
+                    <FileCheck className="w-3.5 h-3.5" />
+                    <span>{ord.delivery_receipt_number ? 'الإقرار' : 'إقرار استلام'}</span>
+                  </button>
+                )}
 
                 <div className="flex items-center gap-1 flex-wrap">
                   <select

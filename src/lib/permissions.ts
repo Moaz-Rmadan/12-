@@ -117,6 +117,7 @@ export function canCancelOrder(user: UserProfile | null | undefined): boolean {
  */
 export const TAB_PERMISSION_MAP: Record<string, PermissionKey[]> = {
   'executive-dashboard': ['dashboard:read'],
+  'smart-search': ['order:read'],
   'orders': ['order:read'],
   'template-studio': ['template:manage'],
   'bottleneck-report': ['order:read'],

@@ -5,70 +5,37 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
-import admin from 'firebase-admin';
+import { getFirebaseAdminApp } from './server/lib/firebase-admin';
+import { authenticate } from './server/middleware/authenticate';
+import {
+  requireAuth,
+  requireRole,
+  requireAdmin,
+  requireAccounting,
+  requireOperations,
+  requireSales,
+  requireDelegatedOperationsManager,
+} from './server/middleware/authorize';
+import { requestLogger } from './server/middleware/request-logger';
+import { errorHandler } from './server/middleware/error-handler';
 
 dotenv.config();
 
-// Initialize Firebase Admin for token verification
-// NOTE: For full security, provide FIREBASE_SERVICE_ACCOUNT in .env
-try {
-  if (!admin.apps.length) {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
-      : undefined;
-
-    if (serviceAccount) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-    } else {
-      // Fallback for environment without service account - only token decoding (less secure)
-      admin.initializeApp({
-        projectId: 'alert-bedrock-707pf'
-      });
-      console.warn('[Server] Firebase Admin initialized without Service Account. Token verification may be limited.');
-    }
-  }
-} catch (err) {
-  console.error('[Server] Firebase Admin Init Error:', err);
-}
+// Ensure Firebase Admin singleton initialization
+getFirebaseAdminApp();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Middleware: Verify Firebase ID Token
-async function verifyToken(req: Request, res: Response, next: any) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: Missing token' });
-  }
-
-  const token = authHeader.split('Bearer ')[1];
-
-  // Emergency Bypass for Admin Demo Mode
-  if (token === 'DEMO_MODE_TOKEN') {
-    (req as any).user = { email: 'cfo.moaz@gmail.com', role: 'admin', uid: 'demo-admin-uid' };
-    return next();
-  }
-
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    (req as any).user = decodedToken;
-    next();
-  } catch (error) {
-    console.error('[Server] Token verification failed:', error);
-    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-  }
-}
 
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
 
   app.use(express.json());
+  app.use(requestLogger);
 
   // Gemini AI Assistant for Workshop & Quality Check
-  app.post('/api/ai-assistant', verifyToken, async (req: Request, res: Response) => {
+  app.post('/api/ai-assistant', authenticate, async (req: Request, res: Response) => {
     const { prompt, orderContext } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
     const isExplicitDemo = process.env.ENABLE_AI_DEMO_MODE === 'true';
@@ -167,10 +134,64 @@ async function startServer() {
     }
   });
 
+  // ---------------------------------------------------------------------------
+  // Phase 1: Authentication & Trusted Authorization Endpoints
+  // ---------------------------------------------------------------------------
+  app.get('/api/auth/me', authenticate, (req: Request, res: Response) => {
+    const user = req.user;
+    res.json({
+      status: 'authenticated',
+      user: {
+        uid: user?.uid,
+        email: user?.email,
+        role: user?.role,
+        isActive: user?.isActive,
+        isDelegatedManager: user?.isDelegatedManager,
+        name: user?.name,
+      },
+    });
+  });
+
+  // Diagnostic Test Routes: STRICTLY isolated to non-production environments
+  // In production (NODE_ENV === 'production'), these routes are not registered and return 404.
+  if (process.env.NODE_ENV !== 'production') {
+    app.get('/api/auth/test/admin-only', authenticate, requireAdmin, (req: Request, res: Response) => {
+      res.json({ status: 'authorized', role: req.user?.role });
+    });
+
+    app.get('/api/auth/test/accounting', authenticate, requireAccounting, (req: Request, res: Response) => {
+      res.json({ status: 'authorized', role: req.user?.role });
+    });
+
+    app.get('/api/auth/test/operations', authenticate, requireOperations, (req: Request, res: Response) => {
+      res.json({ status: 'authorized', role: req.user?.role });
+    });
+
+    app.get('/api/auth/test/sales', authenticate, requireSales, (req: Request, res: Response) => {
+      res.json({ status: 'authorized', role: req.user?.role });
+    });
+
+    app.get(
+      '/api/auth/test/delegated-operations',
+      authenticate,
+      requireDelegatedOperationsManager,
+      (req: Request, res: Response) => {
+        res.json({
+          status: 'authorized',
+          role: req.user?.role,
+          isDelegatedManager: req.user?.isDelegatedManager,
+        });
+      }
+    );
+  }
+
   // Explicit 404 handler for API routes to prevent SPA fallback from swallowing API requests
   app.all('/api/*', (_req: Request, res: Response) => {
     res.status(404).json({ error: 'المسار البرمجي غير موجود (API endpoint not found)' });
   });
+
+  // Centralized Error-Handling Middleware (catches AppErrors, ZodErrors, and unexpected exceptions)
+  app.use(errorHandler);
 
   // Serve Vite in development
   if (process.env.NODE_ENV !== 'production') {
