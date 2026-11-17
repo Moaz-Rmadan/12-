@@ -29,6 +29,7 @@ import { LoginPage } from './components/auth/LoginPage';
 import { AccessDenied } from './components/auth/AccessDenied';
 import { UserProfileModal } from './components/auth/UserProfileModal';
 import { UserManagementView } from './components/admin/UserManagementView';
+import { SettingsView } from './components/SettingsView';
 import { canAccessTab, TAB_PERMISSION_MAP } from './lib/permissions';
 import { logAuditEvent } from './lib/audit';
 import { Hammer } from 'lucide-react';
@@ -939,6 +940,31 @@ function MainApp() {
         {/* TAB 9: USER MANAGEMENT & RBAC GOVERNANCE */}
         {activeTab === 'user-management' && (
           <UserManagementView />
+        )}
+
+        {/* TAB 9-B: SETTINGS HUB */}
+        {activeTab === 'settings' && (
+          <SettingsView
+            userProfile={userProfile}
+            onExportBackup={() => {
+              const data = {
+                orders,
+                customers,
+                deliveryReceipts,
+                truckManifests,
+                exportDate: new Date().toISOString(),
+              };
+              const blob = new Blob([JSON.stringify(data, null, 2)], {
+                type: 'application/json;charset=utf-8',
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `elnaggar-erp-backup-${new Date().toISOString().split('T')[0]}.json`;
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }}
+          />
         )}
 
         {/* TAB 10: AI WORKSHOP QUALITY ASSISTANT */}

@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import http from 'http';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -318,10 +319,16 @@ async function startServer() {
   // Centralized Error-Handling Middleware
   app.use(errorHandler);
 
+  const httpServer = http.createServer(app);
+
   // Serve Vite in development
   if (process.env.NODE_ENV !== 'production') {
+    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: isHmrDisabled ? false : { server: httpServer },
+      },
       appType: 'custom',
     });
     app.use(vite.middlewares);
@@ -346,7 +353,7 @@ async function startServer() {
   }
 
   const host = '0.0.0.0';
-  app.listen(Number(PORT), host, () => {
+  httpServer.listen(Number(PORT), host, () => {
     console.log(`[النجار فيرنتشر - El-Naggar Server] running on http://${host}:${PORT}`);
   });
 }

@@ -16,6 +16,7 @@ import {
   Bot,
   PackageCheck,
   Archive,
+  Sliders,
   LucideIcon,
 } from 'lucide-react';
 
@@ -175,6 +176,13 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     icon: ShieldCheck,
     description: 'إدارة المستخدمين والصلاحيات وسجلات التدقيق',
     items: [
+      {
+        id: 'settings',
+        label: 'إعدادات النظام العامة',
+        shortLabel: 'الإعدادات',
+        icon: Sliders,
+        description: 'إعدادات المصنع، الفروع، وبادئات التكويد',
+      },
       {
         id: 'user-management',
         label: 'إدارة المستخدمين والصلاحيات',

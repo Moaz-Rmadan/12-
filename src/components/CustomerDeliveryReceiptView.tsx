@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { Customer, DeliveryReceiptRecord, JobOrderPopulated } from '../types';
-import { printElementById } from '../utils/printHelper';
+import { downloadPrintableElementAsHtml, printElementById } from '../utils/printHelper';
 import { useAuth } from '../contexts/AuthContext';
 import { isValidStatusTransition } from '../lib/permissions';
 import {
@@ -32,6 +32,7 @@ import {
   History,
   Save,
   Wallet,
+  Download,
 } from 'lucide-react';
 
 interface CustomerDeliveryReceiptViewProps {
@@ -384,8 +385,16 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
   ) => {
     const targetNumber = overrideReceipt?.receipt_number || displayReceiptNumber;
     const targetCustomer = overrideReceipt?.customer_name || displayCustomerName;
+    const printTitle = `إقرار استلام - ${targetCustomer} - ${targetNumber}`;
     const printed = printElementById('printable-delivery-receipt', orientation, {
-      title: `إقرار استلام - ${targetCustomer} - ${targetNumber}`,
+      title: printTitle,
+      onPrintBlocked: () => {
+        setIssueFeedback({
+          type: 'error',
+          message:
+            'نافذة المعاينة المدمجة تمنع أمر الطباعة التلقائي. استخدم الشريط الظاهر أسفل الشاشة لفتح التطبيق في تبويب مستقل أو تنزيل نسخة الطباعة الجاهزة (A4).',
+        });
+      },
     });
     if (!printed) {
       setIssueFeedback({
@@ -393,6 +402,14 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
         message: 'تعذر تجهيز ورقة الإقرار للطباعة. تأكد من عدم حجب نافذة الطباعة في المتصفح.',
       });
     }
+  };
+
+  const handleDownloadPrintableSheet = () => {
+    downloadPrintableElementAsHtml(
+      'printable-delivery-receipt',
+      'portrait',
+      `إقرار استلام - ${displayCustomerName} - ${displayReceiptNumber}`
+    );
   };
 
   const handlePreviewAndScroll = (rec: DeliveryReceiptRecord) => {
@@ -496,6 +513,16 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
           >
             <Printer className="w-5 h-5" />
             <span>طباعة الإقرار المعتمد (A4)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownloadPrintableSheet}
+            title="تنزيل نسخة طباعة A4 مستقلة للطباعة أو الحفظ كـ PDF"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs sm:text-sm font-black text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+          >
+            <Download className="w-4 h-4 text-amber-300" />
+            <span>نسخة طباعة A4</span>
           </button>
         </div>
       </div>

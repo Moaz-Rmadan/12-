@@ -130,6 +130,7 @@ export const TAB_PERMISSION_MAP: Record<string, PermissionKey[]> = {
   'top-models': ['dashboard:read'],
   'delivery-report': ['finance:read'],
   'user-management': ['users:manage'],
+  'settings': ['users:manage'],
   'audit-logs': ['audit:read'],
   'ai-assistant': ['order:read'],
 };
