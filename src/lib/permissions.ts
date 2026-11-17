@@ -119,6 +119,8 @@ export const TAB_PERMISSION_MAP: Record<string, PermissionKey[]> = {
   'executive-dashboard': ['dashboard:read'],
   'smart-search': ['order:read'],
   'orders': ['order:read'],
+  'deliveries': ['order:read'],
+  'archive': ['order:read'],
   'template-studio': ['template:manage'],
   'bottleneck-report': ['order:read'],
   'customers': ['customer:read'],
@@ -129,6 +131,7 @@ export const TAB_PERMISSION_MAP: Record<string, PermissionKey[]> = {
   'delivery-report': ['finance:read'],
   'user-management': ['users:manage'],
   'audit-logs': ['audit:read'],
+  'ai-assistant': ['order:read'],
 };
 
 /**
@@ -267,6 +270,17 @@ export function isValidStatusTransition(
       return { allowed: true };
     }
     return { allowed: false, error: 'Unauthorized to mark order as delivered' };
+  }
+
+  // Controlled return / revert from delivered state (e.g. warranty return or accidental delivery)
+  if (fromStatus === 'تسليم' && (toStatus === 'تم التنفيذ' || toStatus === 'قيد التشغيل')) {
+    if (user.role === 'admin' || (user.role === 'operations' && Boolean(user.isDelegatedManager))) {
+      return { allowed: true };
+    }
+    return {
+      allowed: false,
+      error: 'إرجاع أمر مُسلّم إلى التشغيل يتطلب صلاحية مدير النظام أو مدير التشغيل المفوض',
+    };
   }
 
   // Do not automatically reopen completed or canceled orders

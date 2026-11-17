@@ -16,8 +16,15 @@ import { CriticalOverdueReport } from './components/CriticalOverdueReport';
 import { BottleneckReport } from './components/BottleneckReport';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { ExecutiveDashboard } from './components/ExecutiveDashboard';
-import { SmartSearchStudio } from './components/SmartSearchStudio';
+import { SmartSearchStudio, SmartSearchSeed } from './components/SmartSearchStudio';
+import { SmartSearchFilters } from './utils/smartSearchEngine';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { FeedbackProvider, useFeedback } from './contexts/FeedbackContext';
+import { AiAssistant } from './components/AiAssistant';
+import { DeliveriesView } from './components/DeliveriesView';
+import { ArchiveView } from './components/ArchiveView';
+import { isDeliveredActiveOrder } from './utils/orderLifecycle';
+import { ALL_NAV_ITEMS } from './components/navigation/navConfig';
 import { LoginPage } from './components/auth/LoginPage';
 import { AccessDenied } from './components/auth/AccessDenied';
 import { UserProfileModal } from './components/auth/UserProfileModal';
@@ -37,6 +44,7 @@ import {
   updateOrderStatusInFirestore,
   updateOrderStageInFirestore,
   updateOrderArchiveStatusInFirestore,
+  archiveOrdersBatchInFirestore,
   deleteOrderFromFirestore,
   deleteCustomerFromFirestore,
   saveCustomerToFirestore,
@@ -70,6 +78,7 @@ import {
 
 function MainApp() {
   const { currentUser, userProfile, loading, isDeactivated, isDemoMode } = useAuth();
+  const { showToast } = useFeedback();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -100,6 +109,12 @@ function MainApp() {
   const [orderToEdit, setOrderToEdit] = useState<JobOrderPopulated | null>(null);
   const [selectedCustomerForReceiptId, setSelectedCustomerForReceiptId] = useState<string>('');
   const [selectedOrderForReceiptId, setSelectedOrderForReceiptId] = useState<string>('');
+  const [smartSearchSeed, setSmartSearchSeed] = useState<SmartSearchSeed | null>(null);
+
+  const handleOpenSmartSearch = (filters: Partial<SmartSearchFilters>) => {
+    setSmartSearchSeed({ filters, nonce: Date.now() });
+    setActiveTab('smart-search');
+  };
 
   // Save sidebar preference
   const handleToggleSidebar = (collapsed: boolean) => {
@@ -135,6 +150,11 @@ function MainApp() {
     }).length;
   }, [orders]);
 
+  const deliveredOrdersCount = useMemo(
+    () => orders.filter(isDeliveredActiveOrder).length,
+    [orders]
+  );
+
   // Sync Dark mode with <html> tag
   useEffect(() => {
     if (darkMode) {
@@ -144,14 +164,28 @@ function MainApp() {
     }
   }, [darkMode]);
 
-  // Firebase Real-time Firestore Sync Listeners & Workshop Seed Check
+  // Auto-redirect to first permitted tab if user lacks access to activeTab
   useEffect(() => {
-    if (isDemoMode) return;
-    
-    // Ensure all 5 customers and 12 workshop orders are stored in Firestore
+    if (!userProfile || !userProfile.isActive) return;
+    if (!canAccessTab(userProfile, activeTab)) {
+      const firstPermitted = ALL_NAV_ITEMS.find((item) => canAccessTab(userProfile, item.id));
+      if (firstPermitted) {
+        setActiveTab(firstPermitted.id);
+      }
+    }
+  }, [userProfile, activeTab]);
+
+  // Admin-only baseline workshop data seed
+  useEffect(() => {
+    if (isDemoMode || !currentUser || userProfile?.role !== 'admin') return;
     seedWorkshopDataIfMissing(initialCustomers, getPopulatedOrders()).catch((e) =>
       console.warn('Initial workshop seed check:', e)
     );
+  }, [isDemoMode, currentUser?.uid, userProfile?.role]);
+
+  // Firebase Real-time Firestore Sync Listeners
+  useEffect(() => {
+    if (isDemoMode || !currentUser || !userProfile?.isActive) return;
 
     const unsubscribeOrders = subscribeToJobOrders((firestoreOrders) => {
       if (firestoreOrders && firestoreOrders.length > 0) {
@@ -181,13 +215,76 @@ function MainApp() {
       unsubscribeManifests();
       unsubscribeReceipts();
     };
-  }, [isDemoMode]);
+  }, [isDemoMode, currentUser?.uid, userProfile?.isActive]);
 
-  // Handle Order Create or Edit (Firebase Firestore + Local Fallback)
+  // Handle Order Create or Edit
   const handleSaveOrder = async (payload: CreateJobOrderPayload, orderId?: string) => {
+    if (isDemoMode) {
+      const nowIso = new Date().toISOString();
+      if (orderId) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  ...payload.job_order,
+                  updated_at: nowIso,
+                  customer: o.customer
+                    ? { ...o.customer, ...payload.customer }
+                    : {
+                        id: `cust-${Date.now()}`,
+                        name: payload.customer.name,
+                        phone: payload.customer.phone,
+                        address: payload.customer.address || '',
+                        created_at: nowIso,
+                      },
+                  job_details: { ...o.job_details, ...payload.job_details, id: o.job_details?.id || `det-${Date.now()}`, job_order_id: orderId },
+                }
+              : o
+          )
+        );
+        showToast('تم تحديث أمر الشغل (وضع المعاينة)', 'success');
+      } else {
+        const newId = `ord-demo-${Date.now()}`;
+        const custId = `cust-demo-${Date.now()}`;
+        const demoCust: Customer = {
+          id: custId,
+          name: payload.customer.name,
+          phone: payload.customer.phone,
+          address: payload.customer.address || '',
+          created_at: nowIso,
+        };
+        const demoOrder: JobOrderPopulated = {
+          id: newId,
+          order_number: payload.job_order.order_number,
+          customer_id: custId,
+          room_model_code: payload.job_order.room_model_code,
+          contract_date: payload.job_order.contract_date,
+          delivery_date: payload.job_order.delivery_date,
+          general_specs: payload.job_order.general_specs,
+          status: payload.job_order.status,
+          current_stage: payload.job_order.current_stage || 'لم يبدأ',
+          total_price: payload.job_order.total_price,
+          deposit_paid: payload.job_order.deposit_paid,
+          created_at: nowIso,
+          updated_at: nowIso,
+          customer: demoCust,
+          job_details: {
+            id: `det-demo-${Date.now()}`,
+            job_order_id: newId,
+            ...payload.job_details,
+          },
+          attachments: [],
+        };
+        setOrders((prev) => [demoOrder, ...prev]);
+        setCustomers((prev) => [demoCust, ...prev]);
+        showToast('تم حفظ أمر الشغل (وضع المعاينة)', 'success');
+      }
+      return;
+    }
+
     try {
       if (orderId) {
-        // Edit existing order in Firestore
         const updated = await updateJobOrderInFirestore(orderId, payload);
         setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
         if (updated.customer) {
@@ -198,8 +295,8 @@ function MainApp() {
         if (selectedOrderForCard && selectedOrderForCard.id === orderId) {
           setSelectedOrderForCard(updated);
         }
+        showToast('تم حفظ تعديلات أمر الشغل بنجاح', 'success');
       } else {
-        // Create new order in Firestore
         const newPopulated = await saveJobOrderToFirestore(payload);
         setOrders((prev) => {
           const exists = prev.some((o) => o.id === newPopulated.id);
@@ -215,89 +312,211 @@ function MainApp() {
             return [newCust, ...prev];
           });
         }
+        showToast(`تم تسجيل أمر الشغل ${newPopulated.order_number} بنجاح`, 'success');
       }
     } catch (e) {
-      console.error('Firebase save or update error, falling back locally', e);
+      console.error('Firebase save or update error:', e);
+      showToast('تعذر حفظ أمر الشغل في قاعدة البيانات. تحقق من الصلاحيات أو الاتصال.', 'error');
+      throw e;
     }
   };
 
-  // Handle Quick Status Update (Firebase Firestore)
+  // Handle Quick Status Update
   const handleUpdateStatus = async (id: string, newStatus: OrderStatus) => {
+    const targetOrder = orders.find((o) => o.id === id);
+    const previousStatus = targetOrder?.status;
+    const nowIso = new Date().toISOString();
+    const todayDate = nowIso.slice(0, 10);
+
     try {
-      await updateOrderStatusInFirestore(id, newStatus);
+      if (!isDemoMode) {
+        await updateOrderStatusInFirestore(id, newStatus, {
+          deliveredAt: targetOrder?.delivered_at || todayDate,
+        });
+      }
+
+      setOrders((prev) =>
+        prev.map((ord) => {
+          if (ord.id !== id) return ord;
+          if (newStatus === 'تسليم') {
+            return {
+              ...ord,
+              status: newStatus,
+              delivered_at: ord.delivered_at || todayDate,
+              current_stage: 'جاهز للتسليم',
+              stage_updated_at: nowIso,
+              updated_at: nowIso,
+            };
+          }
+          return { ...ord, status: newStatus, updated_at: nowIso };
+        })
+      );
+
+      if (selectedOrderForCard && selectedOrderForCard.id === id) {
+        setSelectedOrderForCard((prev) => {
+          if (!prev) return null;
+          if (newStatus === 'تسليم') {
+            return {
+              ...prev,
+              status: newStatus,
+              delivered_at: prev.delivered_at || todayDate,
+              current_stage: 'جاهز للتسليم',
+              stage_updated_at: nowIso,
+              updated_at: nowIso,
+            };
+          }
+          return { ...prev, status: newStatus, updated_at: nowIso };
+        });
+      }
+
+      if (newStatus === 'تسليم') {
+        showToast(
+          `تم تسليم الأمر ${targetOrder?.order_number || ''} — اختفى من الأوامر الجارية وانتقل إلى «التسليمات»`,
+          'success'
+        );
+      } else if (previousStatus === 'تسليم') {
+        showToast(
+          `تم إرجاع الأمر ${targetOrder?.order_number || ''} إلى «أوامر الشغل الجارية» (${newStatus})`,
+          'info'
+        );
+      } else {
+        showToast(`تم تحديث حالة الأمر إلى "${newStatus}"`, 'success');
+      }
     } catch (e) {
-      console.error('Firebase status update error', e);
-    }
-
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === id ? { ...ord, status: newStatus } : ord))
-    );
-
-    if (selectedOrderForCard && selectedOrderForCard.id === id) {
-      setSelectedOrderForCard((prev) => (prev ? { ...prev, status: newStatus } : null));
+      console.error('Firebase status update error:', e);
+      showToast('فشل تحديث حالة أمر الشغل. تحقق من صلاحيات دورك الوظيفي.', 'error');
     }
   };
 
-  // Handle Production Stage Update (Firebase Firestore)
+  // Handle Production Stage Update
   const handleUpdateOrderStage = async (id: string, newStage: ProductionStage) => {
     const nowIso = new Date().toISOString();
     try {
-      await updateOrderStageInFirestore(id, newStage);
+      if (!isDemoMode) {
+        await updateOrderStageInFirestore(id, newStage);
+      }
+
+      setOrders((prev) =>
+        prev.map((ord) => (ord.id === id ? { ...ord, current_stage: newStage, stage_updated_at: nowIso } : ord))
+      );
+
+      if (selectedOrderForCard && selectedOrderForCard.id === id) {
+        setSelectedOrderForCard((prev) => (prev ? { ...prev, current_stage: newStage, stage_updated_at: nowIso } : null));
+      }
+      showToast(`تم نقل المرحلة إلى "${newStage}"`, 'success');
     } catch (e) {
-      console.error('Firebase stage update error', e);
-    }
-
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === id ? { ...ord, current_stage: newStage, stage_updated_at: nowIso } : ord))
-    );
-
-    if (selectedOrderForCard && selectedOrderForCard.id === id) {
-      setSelectedOrderForCard((prev) => (prev ? { ...prev, current_stage: newStage, stage_updated_at: nowIso } : null));
+      console.error('Firebase stage update error:', e);
+      showToast('تعذر تحديث مرحلة التصنيع في قاعدة البيانات.', 'error');
     }
   };
 
-  // Handle Archive Status Update (Firebase Firestore)
+  // Handle Archive Status Update
   const handleUpdateArchiveStatus = async (id: string, isArchived: boolean) => {
+    const targetOrder = orders.find((o) => o.id === id);
     try {
-      await updateOrderArchiveStatusInFirestore(id, isArchived);
+      if (!isDemoMode) {
+        await updateOrderArchiveStatusInFirestore(id, isArchived);
+      }
+
+      setOrders((prev) =>
+        prev.map((ord) => (ord.id === id ? { ...ord, is_archived: isArchived } : ord))
+      );
+
+      if (selectedOrderForCard && selectedOrderForCard.id === id) {
+        setSelectedOrderForCard((prev) => (prev ? { ...prev, is_archived: isArchived } : null));
+      }
+      showToast(
+        isArchived
+          ? `تم نقل الأمر ${targetOrder?.order_number || ''} إلى الأرشيف النهائي`
+          : `تمت استعادة الأمر ${targetOrder?.order_number || ''} إلى ${
+              targetOrder?.status === 'تسليم' ? 'التسليمات' : 'أوامر الشغل الجارية'
+            }`,
+        'success'
+      );
     } catch (e) {
-      console.error('Firebase archive update error', e);
-    }
-
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === id ? { ...ord, is_archived: isArchived } : ord))
-    );
-
-    if (selectedOrderForCard && selectedOrderForCard.id === id) {
-      setSelectedOrderForCard((prev) => (prev ? { ...prev, is_archived: isArchived } : null));
+      console.error('Firebase archive update error:', e);
+      showToast('تعذر تعديل حالة الأرشفة.', 'error');
     }
   };
 
-  // Handle Order Deletion (Firebase Firestore)
+  // Handle Batch Archiving of Settled Deliveries
+  const handleBatchArchiveOrders = async (orderIds: string[]) => {
+    if (!orderIds || orderIds.length === 0) return;
+    const nowIso = new Date().toISOString();
+    const idSet = new Set(orderIds);
+    try {
+      if (!isDemoMode) {
+        await archiveOrdersBatchInFirestore(orderIds);
+        if (userProfile) {
+          await logAuditEvent({
+            user_uid: userProfile.uid,
+            user_email: userProfile.email,
+            user_role: userProfile.role,
+            action: 'BATCH_ORDERS_ARCHIVED',
+            entity_type: 'job_order',
+            entity_id: orderIds.join(','),
+            after: { archived_count: orderIds.length, order_ids: orderIds },
+            reason: 'أرشفة دفعة التسليمات المكتملة مالياً والموثقة بإقرار استلام',
+          });
+        }
+      }
+
+      setOrders((prev) =>
+        prev.map((ord) => (idSet.has(ord.id) ? { ...ord, is_archived: true, updated_at: nowIso } : ord))
+      );
+      showToast(`تمت أرشفة ${orderIds.length} أمر تسليم مكتمل بنجاح`, 'success');
+    } catch (e) {
+      console.error('Batch archive error:', e);
+      showToast('تعذر أرشفة التسليمات المحددة.', 'error');
+    }
+  };
+
+  // Handle Order Deletion
   const handleDeleteOrder = async (id: string) => {
     try {
-      await deleteOrderFromFirestore(id);
+      if (!isDemoMode) {
+        await deleteOrderFromFirestore(id);
+      }
+      setOrders((prev) => prev.filter((o) => o.id !== id));
+      showToast('تم حذف أمر الشغل', 'success');
     } catch (e) {
-      console.error('Firebase delete error', e);
+      console.error('Firebase delete error:', e);
+      showToast('غير مصرح بالحذف أو تعذر الاتصال بقاعدة البيانات.', 'error');
     }
-    setOrders((prev) => prev.filter((o) => o.id !== id));
   };
 
-  // Handle Customer Deletion (Firebase Firestore)
+  // Handle Customer Deletion
   const handleDeleteCustomer = async (id: string) => {
     try {
-      await deleteCustomerFromFirestore(id);
+      if (!isDemoMode) {
+        await deleteCustomerFromFirestore(id);
+      }
+      setCustomers((prev) => prev.filter((c) => c.id !== id));
+      showToast('تم حذف سجل العميل', 'success');
     } catch (e) {
-      console.error('Firebase customer delete error', e);
+      console.error('Firebase customer delete error:', e);
+      showToast('تعذر حذف سجل العميل. قد يتطلب صلاحية مدير النظام.', 'error');
     }
-    setCustomers((prev) => prev.filter((c) => c.id !== id));
   };
 
-  // Handle Batch Customer Import (Firebase Firestore)
+  // Handle Batch Customer Import
   const handleAddBatchCustomers = async (
     newCustomersList: Array<{ name: string; phone: string; address?: string }>
   ): Promise<number> => {
     try {
+      if (isDemoMode) {
+        const nowIso = new Date().toISOString();
+        const created = newCustomersList.map((c, idx) => ({
+          id: `cust-demo-${Date.now()}-${idx}`,
+          name: c.name,
+          phone: c.phone || '01000000000',
+          address: c.address || '',
+          created_at: nowIso,
+        }));
+        setCustomers((prev) => [...created, ...prev]);
+        return created.length;
+      }
+
       const added = await saveBatchCustomersToFirestore(newCustomersList);
       if (added.length > 0) {
         setCustomers((prev) => {
@@ -308,22 +527,37 @@ function MainApp() {
       }
       return added.length;
     } catch (e) {
-      console.error('Firebase batch import error', e);
+      console.error('Firebase batch import error:', e);
+      showToast('تعذر استيراد العملاء إلى قاعدة البيانات.', 'error');
       return 0;
     }
   };
 
-  // Handle Single Customer Quick Add (Firebase Firestore)
+  // Handle Single Customer Quick Add
   const handleAddSingleCustomer = async (custData: { name: string; phone: string; address?: string }) => {
     try {
+      if (isDemoMode) {
+        const saved: Customer = {
+          id: `cust-demo-${Date.now()}`,
+          name: custData.name,
+          phone: custData.phone,
+          address: custData.address || '',
+          created_at: new Date().toISOString(),
+        };
+        setCustomers((prev) => [saved, ...prev]);
+        showToast('تمت إضافة العميل بنجاح', 'success');
+        return;
+      }
       const saved = await saveCustomerToFirestore(custData);
       setCustomers((prev) => [saved, ...prev.filter((c) => c.id !== saved.id)]);
+      showToast('تمت إضافة العميل بنجاح', 'success');
     } catch (e) {
-      console.error('Firebase single customer save error', e);
+      console.error('Firebase single customer save error:', e);
+      showToast('تعذر إضافة العميل. تحقق من الصلاحيات.', 'error');
     }
   };
 
-  // Handle Batch Job Orders Import (auto-filters customers and orders into Firestore)
+  // Handle Batch Job Orders Import
   const handleAddBatchOrders = async (ordersList: CreateJobOrderPayload[]): Promise<number> => {
     try {
       const savedOrders = await saveBatchJobOrdersToFirestore(ordersList);
@@ -346,7 +580,8 @@ function MainApp() {
       }
       return savedOrders.length;
     } catch (e) {
-      console.error('Firebase batch job orders error', e);
+      console.error('Firebase batch job orders error:', e);
+      showToast('تعذر استيراد دفعة أوامر الشغل.', 'error');
       return 0;
     }
   };
@@ -460,7 +695,7 @@ function MainApp() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center font-sans" dir="rtl">
-        <div className="w-16 h-16 rounded-2xl bg-[#233B5D] flex items-center justify-center text-white shadow-xl animate-pulse">
+        <div className="w-16 h-16 rounded-2xl bg-[#233B5D] flex items-center justify-center text-white shadow-xl">
           <Hammer className="w-8 h-8 stroke-[2.2]" />
         </div>
         <h2 className="text-lg font-black text-slate-900 dark:text-white mt-4">
@@ -489,6 +724,7 @@ function MainApp() {
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={handleToggleSidebar}
         urgentOrdersCount={urgentOrdersCount}
+        deliveredOrdersCount={deliveredOrdersCount}
         totalOrdersCount={orders.length}
       />
 
@@ -512,8 +748,17 @@ function MainApp() {
 
         {/* Main Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        
-        {/* TAB -1: MASTER EXECUTIVE DASHBOARD & GLOBAL OMNI-SEARCH */}
+        {!isCurrentTabAllowed ? (
+          <AccessDenied
+            requiredPermission={TAB_PERMISSION_MAP[activeTab]?.join(', ')}
+            onGoHome={() => {
+              const firstPermitted = ALL_NAV_ITEMS.find((item) => canAccessTab(userProfile, item.id));
+              if (firstPermitted) setActiveTab(firstPermitted.id);
+            }}
+          />
+        ) : (
+        <>
+        {/* TAB -1: MASTER EXECUTIVE DASHBOARD */}
         {activeTab === 'executive-dashboard' && (
           <ExecutiveDashboard
             orders={orders}
@@ -528,6 +773,7 @@ function MainApp() {
               setOrderToEdit(null);
               setIsNewOrderModalOpen(true);
             }}
+            onOpenSmartSearch={handleOpenSmartSearch}
             onNavigateTab={(tab, contextId, orderId) => {
               if (tab === 'receipt') {
                 setSelectedCustomerForReceiptId(contextId || '');
@@ -538,13 +784,14 @@ function MainApp() {
           />
         )}
 
-        {/* TAB 0-A: SMART SEARCH & DELIVERY AUDIT STUDIO */}
+        {/* TAB 0-A: SMART SEARCH, MONTH CENTER & WORKSHOP ROOM INVENTORY */}
         {activeTab === 'smart-search' && (
           <SmartSearchStudio
             orders={orders}
             customers={customers}
             receipts={deliveryReceipts}
             truckManifests={truckManifests}
+            initialSeed={smartSearchSeed}
             onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
             onOpenDeliveryReceipt={handleOpenDeliveryReceiptForOrder}
             onEditOrder={(ord) => {
@@ -559,13 +806,14 @@ function MainApp() {
           <TemplateStudio onSaveToDatabase={(payload) => handleSaveOrder(payload)} />
         )}
 
-        {/* TAB 1: JOB ORDERS MANAGEMENT */}
+        {/* TAB 1: JOB ORDERS MANAGEMENT (ACTIVE FACTORY QUEUE) */}
         {activeTab === 'orders' && (
           <div className="space-y-6">
             <DashboardStats
               orders={orders}
               activeFilter={activeFilter}
               onFilterByStatus={(st) => setActiveFilter(st)}
+              onOpenDeliveriesTab={() => setActiveTab('deliveries')}
             />
 
             <OrderList
@@ -585,8 +833,34 @@ function MainApp() {
               activeFilter={activeFilter}
               setActiveFilter={setActiveFilter}
               onNavigateToDashboard={() => setActiveTab('executive-dashboard')}
+              onOpenDeliveries={() => setActiveTab('deliveries')}
+              onOpenArchive={() => setActiveTab('archive')}
             />
           </div>
+        )}
+
+        {/* TAB 1B: DELIVERIES & POST-DELIVERY CLOSURE */}
+        {activeTab === 'deliveries' && (
+          <DeliveriesView
+            orders={orders}
+            onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
+            onOpenDeliveryReceipt={handleOpenDeliveryReceiptForOrder}
+            onUpdateArchiveStatus={handleUpdateArchiveStatus}
+            onBatchArchiveOrders={handleBatchArchiveOrders}
+            onUpdateStatus={handleUpdateStatus}
+            onNavigateToArchive={() => setActiveTab('archive')}
+          />
+        )}
+
+        {/* TAB 1C: HISTORICAL ARCHIVE */}
+        {activeTab === 'archive' && (
+          <ArchiveView
+            orders={orders}
+            onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
+            onRestoreOrder={handleUpdateArchiveStatus}
+            onDeleteOrder={handleDeleteOrder}
+            onNavigateToDeliveries={() => setActiveTab('deliveries')}
+          />
         )}
 
         {/* TAB 2: CUSTOMERS */}
@@ -667,12 +941,19 @@ function MainApp() {
           <UserManagementView />
         )}
 
+        {/* TAB 10: AI WORKSHOP QUALITY ASSISTANT */}
+        {activeTab === 'ai-assistant' && (
+          <AiAssistant orders={orders} />
+        )}
+        </>
+        )}
+
       </main>
 
         {/* Footer */}
         <footer className="no-print bg-white/70 dark:bg-slate-900/70 border-t border-slate-200 dark:border-slate-800 py-6 mt-12 transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
-            <div className="flex items-center gap-2 font-serif font-bold text-amber-950 dark:text-amber-200">
+            <div className="flex items-center gap-2 font-serif font-bold text-[#233B5D] dark:text-[#8CB4D9]">
               <span>مصنع النجار فيرنتشر للأثاث والديكور</span>
               <span>·</span>
               <span>ديفلوبر معاذ رمضان</span>
@@ -693,6 +974,7 @@ function MainApp() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         urgentOrdersCount={urgentOrdersCount}
+        deliveredOrdersCount={deliveredOrdersCount}
       />
 
       {/* MODALS */}
@@ -742,7 +1024,9 @@ function MainApp() {
 export default function App() {
   return (
     <AuthProvider>
-      <MainApp />
+      <FeedbackProvider>
+        <MainApp />
+      </FeedbackProvider>
     </AuthProvider>
   );
 }

@@ -2,7 +2,7 @@
   "entities": {
     "Customer": {
       "title": "Customer",
-      "description": "Customer entity representing a client of El-Naggar Design Furniture Factory",
+      "description": "Customer entity representing a client of El-Naggar Furniture Factory",
       "type": "object",
       "properties": {
         "id": { "type": "string", "description": "Unique customer ID" },
@@ -20,13 +20,29 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "description": "Job order ID" },
-        "order_number": { "type": "string", "description": "Unique order reference number e.g. JO-2026-101", "maxLength": 50 },
+        "order_number": { "type": "string", "description": "Unique order reference number e.g. JO-2026-0101", "maxLength": 50 },
         "customer_id": { "type": "string", "description": "Reference to customer ID" },
         "room_model_code": { "type": "string", "description": "Room or model code", "maxLength": 100 },
         "contract_date": { "type": "string", "description": "Contract date YYYY-MM-DD" },
         "delivery_date": { "type": "string", "description": "Delivery date YYYY-MM-DD" },
-        "general_specs": { "type": "string", "description": "General furniture specifications", "maxLength": 1000 },
-        "status": { "type": "string", "enum": ["قيد التشغيل", "تم التنفيذ", "تسليم"] },
+        "general_specs": { "type": "string", "description": "General furniture specifications", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["Draft", "قيد التشغيل", "تم التنفيذ", "تسليم"] },
+        "current_stage": {
+          "type": "string",
+          "enum": [
+            "لم يبدأ",
+            "نجارة عفش",
+            "نجارة انتريهات",
+            "خدمة وتجهيز",
+            "كابينة أستر",
+            "كابينة دوكو",
+            "تنجيد",
+            "تشطيب وتغليف",
+            "جاهز للتسليم"
+          ]
+        },
+        "stage_updated_at": { "type": "string", "format": "date-time" },
+        "is_archived": { "type": "boolean" },
         "total_price": { "type": "number", "description": "Total contract value" },
         "deposit_paid": { "type": "number", "description": "Deposit amount paid" },
         "delivery_receipt_id": { "type": "string", "description": "Linked delivery receipt ID" },
@@ -91,6 +107,80 @@
         "updated_at": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "receipt_number", "customer_id", "receipt_date", "order_ids"]
+    },
+    "TruckManifest": {
+      "title": "TruckManifest",
+      "description": "Delivery truck cargo manifest and driver loading sheet",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tripDate": { "type": "string" },
+        "tripDay": { "type": "string" },
+        "driverName": { "type": "string" },
+        "truckNumber": { "type": "string" },
+        "items": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "tripDate", "items"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authorized ERP user account and RBAC role record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "accounting", "operations", "sales"] },
+        "isActive": { "type": "boolean" },
+        "isDelegatedManager": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "name", "role", "isActive"]
+    },
+    "UserInvite": {
+      "title": "UserInvite",
+      "description": "Pending administrator-issued invite keyed by lowercase email until user's first Firebase Auth login",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "accounting", "operations", "sales"] },
+        "isActive": { "type": "boolean" },
+        "isDelegatedManager": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["email", "name", "role", "isActive"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Append-only security and business audit trail entry",
+      "type": "object",
+      "properties": {
+        "user_uid": { "type": "string" },
+        "user_email": { "type": "string" },
+        "user_role": { "type": "string", "enum": ["admin", "accounting", "operations", "sales"] },
+        "action": { "type": "string" },
+        "entity_type": { "type": "string" },
+        "entity_id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string" }
+      },
+      "required": ["user_uid", "action", "entity_type", "entity_id", "timestamp"]
+    },
+    "OrderCounter": {
+      "title": "OrderCounter",
+      "description": "Yearly atomic sequence counter for JO-YYYY-XXXX generation",
+      "type": "object",
+      "properties": {
+        "year": { "type": "number" },
+        "last_sequence": { "type": "number" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["year", "last_sequence"]
     }
   },
   "firestore": {
@@ -113,6 +203,26 @@
     "/delivery_receipts/{receiptId}": {
       "schema": { "$ref": "#/entities/DeliveryReceipt" },
       "description": "Collection storing issued customer delivery receipts linked to job orders"
+    },
+    "/truck_manifests/{manifestId}": {
+      "schema": { "$ref": "#/entities/TruckManifest" },
+      "description": "Collection storing truck cargo manifests"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Collection storing RBAC user profiles keyed by Firebase Auth UID"
+    },
+    "/user_invites/{inviteEmail}": {
+      "schema": { "$ref": "#/entities/UserInvite" },
+      "description": "Collection storing pending admin-provisioned invites keyed by lowercase email"
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Append-only audit log entries readable by administrators"
+    },
+    "/order_counters/{counterId}": {
+      "schema": { "$ref": "#/entities/OrderCounter" },
+      "description": "Transactional sequence counters for job order numbers"
     }
   }
 }

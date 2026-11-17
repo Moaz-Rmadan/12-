@@ -31,8 +31,14 @@ import {
   Activity,
   ChevronRight,
   FileCheck,
+  Check,
+  PackageCheck,
 } from 'lucide-react';
 import { BatchOrderImportModal } from './BatchOrderImportModal';
+import { useAuth } from '../contexts/AuthContext';
+import { useFeedback } from '../contexts/FeedbackContext';
+import { canApproveDraft, canCancelOrder, isValidStatusTransition } from '../lib/permissions';
+import { isActiveWorkshopOrder, isArchivedOrder, isDeliveredActiveOrder } from '../utils/orderLifecycle';
 import {
   FURNITURE_CATEGORIES,
   getOrderCategory,
@@ -55,6 +61,8 @@ interface OrderListProps {
   activeFilter: string;
   setActiveFilter: (status: string) => void;
   onNavigateToDashboard?: () => void;
+  onOpenDeliveries?: () => void;
+  onOpenArchive?: () => void;
 }
 
 export const OrderList: React.FC<OrderListProps> = ({
@@ -71,7 +79,12 @@ export const OrderList: React.FC<OrderListProps> = ({
   activeFilter,
   setActiveFilter,
   onNavigateToDashboard,
+  onOpenDeliveries,
+  onOpenArchive,
 }) => {
+  const { userProfile, hasPerm } = useAuth();
+  const { showToast, confirmAction } = useFeedback();
+
   // General text query (Order number, Specs, Model code)
   const [generalSearch, setGeneralSearch] = useState('');
   
@@ -101,34 +114,38 @@ export const OrderList: React.FC<OrderListProps> = ({
   const [isBatchImportOpen, setIsBatchImportOpen] = useState(false);
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
 
-  // Extract unique customer names with order counts for quick dropdown
+  const activeWorkshopOrders = useMemo(() => orders.filter(isActiveWorkshopOrder), [orders]);
+  const deliveredQueueCount = useMemo(() => orders.filter(isDeliveredActiveOrder).length, [orders]);
+  const archivedQueueCount = useMemo(() => orders.filter(isArchivedOrder).length, [orders]);
+
+  // Extract unique customer names with active order counts for quick dropdown
   const customerOptions = useMemo(() => {
     const map = new Map<string, number>();
-    orders.forEach((o) => {
+    activeWorkshopOrders.forEach((o) => {
       const name = o.customer?.name?.trim();
       if (name) {
         map.set(name, (map.get(name) || 0) + 1);
       }
     });
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-  }, [orders]);
+  }, [activeWorkshopOrders]);
 
-  // Extract unique delivery dates present in orders
+  // Extract unique delivery dates present in active orders
   const availableDeliveryDates = useMemo(() => {
     const dates = new Set<string>();
-    orders.forEach((o) => {
+    activeWorkshopOrders.forEach((o) => {
       if (o.delivery_date) dates.add(o.delivery_date.trim());
     });
     return Array.from(dates).sort();
-  }, [orders]);
+  }, [activeWorkshopOrders]);
 
-  // Base orders for category counts (filtered by month/date and status)
+  // Base orders for category counts (strictly active workshop queue)
   const baseOrdersForCounts = useMemo(() => {
-    return orders.filter((ord) => {
-      if (ord.is_archived) return false;
+    return activeWorkshopOrders.filter((ord) => {
       // 1. Status Filter
-      if (activeFilter !== 'الكل' && activeFilter !== 'الأرشيف' && ord.status !== activeFilter) {
-        return false;
+      if (activeFilter !== 'الكل' && activeFilter !== 'الأرشيف') {
+        const target = activeFilter === 'مسودة' ? 'Draft' : activeFilter;
+        if (ord.status !== target) return false;
       }
       // 2. Month / Date Filter
       if (selectedMonth !== 'all') {
@@ -145,27 +162,25 @@ export const OrderList: React.FC<OrderListProps> = ({
       }
       return true;
     });
-  }, [orders, activeFilter, selectedMonth, deliveryDateFilter]);
+  }, [activeWorkshopOrders, activeFilter, selectedMonth, deliveryDateFilter]);
 
   // Compute Live Furniture Category Counts across baseOrdersForCounts
   const categoryCounts = useMemo(() => {
     return getCategoryCounts(baseOrdersForCounts);
   }, [baseOrdersForCounts]);
 
-  // Compute Orders count per month
+  // Compute Active Orders count per month
   const monthCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    orders.forEach((o) => {
-      if (!o.is_archived) {
-        const d = o.delivery_date?.trim();
-        if (d && d.length >= 7) {
-          const monthKey = d.substring(0, 7);
-          counts[monthKey] = (counts[monthKey] || 0) + 1;
-        }
+    activeWorkshopOrders.forEach((o) => {
+      const d = o.delivery_date?.trim();
+      if (d && d.length >= 7) {
+        const monthKey = d.substring(0, 7);
+        counts[monthKey] = (counts[monthKey] || 0) + 1;
       }
     });
     return counts;
-  }, [orders]);
+  }, [activeWorkshopOrders]);
 
   // Helper to render Category Icon safely
   const renderCategoryIcon = (iconType: string, className: string = 'w-3.5 h-3.5') => {
@@ -236,11 +251,13 @@ export const OrderList: React.FC<OrderListProps> = ({
   const filteredAndSortedOrders = useMemo(() => {
     return orders
       .filter((ord) => {
-        // 0. Archive filter check
+        // Active workshop queue excludes delivered ('تسليم') and archived orders automatically
         if (activeFilter === 'الأرشيف') {
           if (!ord.is_archived) return false;
+        } else if (activeFilter === 'تسليم') {
+          if (ord.is_archived || ord.status !== 'تسليم') return false;
         } else {
-          if (ord.is_archived) return false; // Hide archived orders from active lists
+          if (!isActiveWorkshopOrder(ord)) return false;
           // 1. Status Filter
           if (activeFilter !== 'الكل') {
             if (activeFilter === 'مسودة') {
@@ -317,7 +334,7 @@ export const OrderList: React.FC<OrderListProps> = ({
         }
         return 0;
       });
-  }, [orders, activeFilter, customerNameSearch, selectedCategory, deliveryDateFilter, generalSearch, sortBy]);
+  }, [orders, activeFilter, selectedStage, customerNameSearch, selectedCategory, deliveryDateFilter, generalSearch, sortBy]);
 
   // Remove duplicate IDs if any
   const uniqueFilteredOrders = Array.from(
@@ -450,7 +467,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                   }}
                   className="w-full px-3 py-2 text-xs font-black rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500 cursor-pointer shadow-2xs"
                 >
-                  <option value="all">جميع الشهور ({orders.length} أمر)</option>
+                  <option value="all">جميع الشهور ({activeWorkshopOrders.length} أمر جاري)</option>
                   <option value="2026-11">نوفمبر 2026 ({monthCounts['2026-11'] || 0})</option>
                   <option value="2026-12">ديسمبر 2026 ({monthCounts['2026-12'] || 0})</option>
                   {Object.keys(monthCounts)
@@ -571,7 +588,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                   >
                     <span>{cName}</span>
                     <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                      isSelected ? 'bg-amber-950 text-amber-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                      isSelected ? 'bg-[#16253B] text-amber-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
                     }`}>
                       {count}
                     </span>
@@ -586,7 +603,7 @@ export const OrderList: React.FC<OrderListProps> = ({
             
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
               <span className="text-[11px] font-bold text-slate-400 shrink-0 ml-1 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                <Clock className="w-3.5 h-3.5 text-[#4B83B8]" />
                 <span>مواعيد التسليم السريعة:</span>
               </span>
 
@@ -594,7 +611,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                 onClick={() => handleSelectQuickDate('all')}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors ${
                   quickDatePreset === 'all' && !deliveryDateFilter
-                    ? 'bg-amber-950 text-amber-200'
+                    ? 'bg-[#16253B] text-white'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
@@ -605,7 +622,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                 onClick={() => handleSelectQuickDate('november-2026')}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors ${
                   deliveryDateFilter === '2026-11'
-                    ? 'bg-amber-800 text-amber-100 shadow-xs'
+                    ? 'bg-[#233B5D] text-white shadow-xs'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
@@ -750,15 +767,15 @@ export const OrderList: React.FC<OrderListProps> = ({
             </button>
 
             {[
-              { id: 'لم يبدأ', label: '⏳ لم يبدأ' },
-              { id: 'نجارة عفش', label: '🪚 نجارة عفش' },
-              { id: 'نجارة انتريهات', label: '🪵 نجارة انتريهات' },
-              { id: 'خدمة وتجهيز', label: '⏱️ خدمة وتجهيز' },
-              { id: 'كابينة أستر', label: '🎨 كابينة أستر' },
-              { id: 'كابينة دوكو', label: '🖌️ كابينة دوكو' },
-              { id: 'تنجيد', label: '🛋️ تنجيد' },
-              { id: 'تشطيب وتغليف', label: '📦 تشطيب وتغليف' },
-              { id: 'جاهز للتسليم', label: '🚀 جاهز للتسليم' },
+              { id: 'لم يبدأ', label: 'لم يبدأ' },
+              { id: 'نجارة عفش', label: 'نجارة عفش' },
+              { id: 'نجارة انتريهات', label: 'نجارة انتريهات' },
+              { id: 'خدمة وتجهيز', label: 'خدمة وتجهيز' },
+              { id: 'كابينة أستر', label: 'كابينة أستر' },
+              { id: 'كابينة دوكو', label: 'كابينة دوكو' },
+              { id: 'تنجيد', label: 'تنجيد' },
+              { id: 'تشطيب وتغليف', label: 'تشطيب وتغليف' },
+              { id: 'جاهز للتسليم', label: 'جاهز للتسليم' },
             ].map((stg) => (
               <button
                 key={stg.id}
@@ -779,9 +796,9 @@ export const OrderList: React.FC<OrderListProps> = ({
         {/* ROW 2: STATUS TABS & ACTIONS */}
         <div className="p-2 sm:p-3 bg-slate-50/80 dark:bg-slate-850 px-3 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           
-          {/* Status Filters */}
+          {/* Active Workshop Status Filters */}
           <div className="flex items-center gap-1 p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl overflow-x-auto scrollbar-none max-w-full snap-x">
-            {['الكل', 'مسودة', 'قيد التشغيل', 'تم التنفيذ', 'تسليم', 'الأرشيف'].map((filter) => {
+            {['الكل', 'مسودة', 'قيد التشغيل', 'تم التنفيذ'].map((filter) => {
               const isActive = activeFilter === filter;
               return (
                 <button
@@ -789,23 +806,47 @@ export const OrderList: React.FC<OrderListProps> = ({
                   onClick={() => setActiveFilter(filter)}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer shrink-0 min-h-[32px] snap-start ${
                     isActive
-                      ? 'bg-white dark:bg-slate-900 text-amber-950 dark:text-amber-200 shadow-2xs font-black'
+                      ? 'bg-white dark:bg-slate-900 text-[#16253B] dark:text-[#8CB4D9] shadow-2xs font-black'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                   }`}
                 >
-                  {filter}
+                  {filter === 'الكل' ? 'الجارية بالورش' : filter}
                 </button>
               );
             })}
           </div>
 
-          {/* Results Summary & Action Buttons */}
-          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-3 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800">
+          {/* Results Summary & Lifecycle Shortcuts */}
+          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-2.5 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800 flex-wrap">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400">
-              عرض <strong className="text-amber-800 dark:text-amber-400 font-mono text-sm tabular-nums">{uniqueFilteredOrders.length}</strong> من أصل <span className="font-mono tabular-nums">{orders.length}</span> أمر
+              عرض <strong className="text-[#233B5D] dark:text-[#8CB4D9] font-mono text-sm tabular-nums">{uniqueFilteredOrders.length}</strong> من <span className="font-mono tabular-nums">{activeWorkshopOrders.length}</span> جاري
             </span>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {onOpenDeliveries && (
+                <button
+                  type="button"
+                  onClick={onOpenDeliveries}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-colors cursor-pointer shrink-0"
+                  title="الانتقال إلى سجل التسليمات للأوامر الخارجة من المصنع"
+                >
+                  <PackageCheck className="w-3.5 h-3.5" />
+                  <span>التسليمات ({deliveredQueueCount})</span>
+                </button>
+              )}
+
+              {onOpenArchive && (
+                <button
+                  type="button"
+                  onClick={onOpenArchive}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 transition-colors cursor-pointer shrink-0"
+                  title="فتح الأرشيف والسجل التاريخي للمصنع"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>الأرشيف ({archivedQueueCount})</span>
+                </button>
+              )}
+
               {hasActiveFilters && (
                 <button
                   onClick={handleResetFilters}
@@ -816,13 +857,13 @@ export const OrderList: React.FC<OrderListProps> = ({
                 </button>
               )}
 
-              {onAddBatchOrders && (
+              {onAddBatchOrders && hasPerm('order:create') && (
                 <button
                   onClick={() => setIsBatchImportOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-100 hover:bg-amber-200/80 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 transition-colors cursor-pointer shrink-0"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#233B5D] dark:text-blue-200 bg-[#EBF3FA] hover:bg-blue-100 dark:bg-slate-800 border border-[#4B83B8]/40 dark:border-slate-700 transition-colors cursor-pointer shrink-0"
                   title="استيراد وتوزيع أوامر الشغل والعملاء تلقائياً"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-[#4B83B8]" />
                   <span className="hidden xs:inline">استيراد وفرز</span>
                   <span className="xs:hidden">استيراد</span>
                 </button>
@@ -918,94 +959,104 @@ export const OrderList: React.FC<OrderListProps> = ({
           {uniqueFilteredOrders.map((ord) => {
             const ordCategory = getOrderCategory(ord);
             const catInfo = getCategoryBadge(ordCategory);
+            const canEditThisOrder =
+              userProfile?.role === 'admin' ||
+              userProfile?.role === 'operations' ||
+              (userProfile?.role === 'sales' && ord.status === 'Draft');
+            const canChangeStage = hasPerm('order:update_stage');
+            const canArchiveOrder = hasPerm('order:update_production_fields');
+            const canDeleteOrder = canCancelOrder(userProfile);
+            const canManageStatus =
+              userProfile?.role === 'admin' ||
+              userProfile?.role === 'operations' ||
+              userProfile?.role === 'accounting';
             
             // Status-driven accent gradient
             const statusGradient =
-              ord.status === 'قيد التشغيل'
-                ? 'from-amber-600 via-amber-400 to-yellow-600'
+              ord.status === 'Draft'
+                ? 'from-slate-500 via-slate-400 to-slate-600'
+                : ord.status === 'قيد التشغيل'
+                ? 'from-[#233B5D] via-[#4B83B8] to-[#C6A355]'
                 : ord.status === 'تم التنفيذ'
-                ? 'from-emerald-600 via-teal-400 to-emerald-500'
+                ? 'from-emerald-600 via-teal-500 to-emerald-500'
                 : 'from-blue-600 via-indigo-500 to-indigo-700';
 
             return (
             <div
               key={ord.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-xl hover:shadow-amber-950/5 hover:border-amber-400/80 dark:hover:border-amber-600/70 card-motion flex flex-col justify-between overflow-hidden group relative"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-xl hover:shadow-slate-900/5 hover:border-[#4B83B8]/80 dark:hover:border-[#4B83B8]/60 card-motion flex flex-col justify-between overflow-hidden group relative"
             >
-              {/* Dynamic Top Gradient Accent Strip with Glow */}
+              {/* Dynamic Top Gradient Accent Strip */}
               <div className={`absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r ${statusGradient} opacity-90 transition-opacity duration-300 group-hover:opacity-100`} />
 
               <div>
-                {/* Order Top Banner */}
+                {/* Order Top Banner (Clean Header - Max 1 Status Pill) */}
                 <div className="p-4 bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-black px-2.5 py-1 rounded-lg bg-amber-950 text-amber-200 shadow-2xs border border-amber-800/40 tracking-wider tabular-nums">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-xs font-black px-2.5 py-1 rounded-lg bg-[#16253B] text-white shadow-2xs tracking-wider tabular-nums shrink-0">
                       {ord.order_number}
                     </span>
-                    <span className="text-[11px] font-extrabold font-mono text-slate-700 dark:text-slate-300 bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300/60 dark:border-slate-700 tabular-nums">
+                    <span className="text-[11px] font-extrabold font-mono text-slate-700 dark:text-slate-300 truncate tabular-nums">
                       {ord.room_model_code}
                     </span>
-                    {catInfo && (
-                      <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs ${catInfo.badgeClass}`}>
-                        <span className={`w-2 h-2 rounded-full ${catInfo.dotColor}`} />
-                        <span>{catInfo.shortName}</span>
-                      </span>
-                    )}
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1 shadow-2xs">
-                      <span>📍</span>
-                      <span>{ord.current_stage || 'لم يبدأ'}</span>
-                    </span>
-                    {ord.delivery_receipt_number && (
-                      <span
-                        className="inline-flex items-center gap-1 text-[10px] bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300 px-2 py-0.5 rounded-full font-black border border-emerald-300 dark:border-emerald-700 font-mono"
-                        title={`مرتبط بإقرار استلام العميل رقم ${ord.delivery_receipt_number}`}
-                      >
-                        <FileCheck className="w-3 h-3" />
-                        <span>{ord.delivery_receipt_number}</span>
-                      </span>
-                    )}
-                    {ord.updated_at && ord.created_at && ord.updated_at !== ord.created_at && (
-                      <span className="text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-400/40">
-                        معدّل
-                      </span>
-                    )}
                   </div>
 
-                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold border shadow-2xs ${getStatusStyle(ord.status)} shrink-0 transition-transform duration-200 group-hover:scale-105`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold border shadow-2xs ${getStatusStyle(ord.status)} shrink-0`}>
                     {ord.status === 'Draft' ? 'مسودة' : ord.status}
                   </span>
                 </div>
 
                 {/* Card Body */}
                 <div className="p-5 space-y-4">
-                  {/* General Specs Title */}
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 group-hover:text-amber-900 dark:group-hover:text-amber-300 transition-colors line-clamp-2 leading-relaxed">
+                  {/* General Specs Title + Clean Typographic Metadata Line */}
+                  <div className="space-y-1.5">
+                    <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 group-hover:text-[#233B5D] dark:group-hover:text-[#8CB4D9] transition-colors line-clamp-2 leading-relaxed">
                       {ord.general_specs}
                     </h3>
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                      {catInfo && <span>{catInfo.shortName}</span>}
+                      {catInfo && <span>·</span>}
+                      <span className="text-[#233B5D] dark:text-[#8CB4D9]">
+                        {ord.current_stage || 'لم يبدأ'}
+                      </span>
+                      {ord.delivery_receipt_number && (
+                        <>
+                          <span>·</span>
+                          <span className="text-emerald-700 dark:text-emerald-400 font-mono">
+                            إقرار {ord.delivery_receipt_number}
+                          </span>
+                        </>
+                      )}
+                      {ord.updated_at && ord.created_at && ord.updated_at !== ord.created_at && (
+                        <>
+                          <span>·</span>
+                          <span className="text-amber-700 dark:text-amber-400">معدّل</span>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   {/* Customer Info Card */}
-                  <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 p-3 rounded-xl bg-amber-50/60 dark:bg-slate-800/50 border border-amber-200/50 dark:border-slate-800 transition-colors group-hover:border-amber-300/70">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-amber-800/15 text-amber-900 dark:text-amber-300 flex items-center justify-center font-black text-xs shrink-0 shadow-inner">
+                  <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800 transition-colors">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-[#233B5D]/15 text-[#233B5D] dark:text-[#8CB4D9] flex items-center justify-center font-black text-xs shrink-0">
                           {ord.customer?.name ? ord.customer.name.slice(0, 1) : <User className="w-3.5 h-3.5" />}
                         </div>
-                        <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm tracking-tight">
+                        <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm tracking-tight truncate">
                           {ord.customer?.name || 'عميل غير مسجل'}
                         </span>
                       </div>
-                      <span className="text-xs text-amber-900 dark:text-amber-300 font-bold font-mono bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-amber-200/80 dark:border-slate-700 shadow-2xs tabular-nums">
+                      <span className="text-xs text-[#233B5D] dark:text-blue-200 font-bold font-mono bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs tabular-nums shrink-0">
                         {ord.customer?.phone || 'بدون هاتف'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Specs Snapshot with Elegant Icon Grid */}
+                  {/* Specs Snapshot with Clean Icon Grid */}
                   <div className="grid grid-cols-1 gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50/70 dark:bg-slate-850/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
                     <div className="flex items-center gap-2">
-                      <div className="p-1 rounded bg-amber-100/70 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 shrink-0">
+                      <div className="p-1 rounded bg-[#EBF3FA] dark:bg-slate-800 text-[#233B5D] dark:text-[#8CB4D9] shrink-0">
                         <Ruler className="w-3.5 h-3.5" />
                       </div>
                       <span className="truncate">
@@ -1014,7 +1065,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className="p-1 rounded bg-amber-100/70 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 shrink-0">
+                      <div className="p-1 rounded bg-[#EBF3FA] dark:bg-slate-800 text-[#233B5D] dark:text-[#8CB4D9] shrink-0">
                         <Scissors className="w-3.5 h-3.5" />
                       </div>
                       <span className="truncate">
@@ -1026,12 +1077,12 @@ export const OrderList: React.FC<OrderListProps> = ({
                   {/* Delivery Date Highlight & Due Countdown */}
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 shadow-2xs">
+                      <div className="p-1.5 rounded-lg bg-[#EBF3FA] dark:bg-slate-800 text-[#233B5D] dark:text-[#8CB4D9] shadow-2xs">
                         <Calendar className="w-4 h-4" />
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 font-bold block leading-none">موعد التسليم:</span>
-                        <strong className="font-mono text-xs font-black text-amber-950 dark:text-amber-200 tabular-nums">
+                        <strong className="font-mono text-xs font-black text-slate-900 dark:text-slate-100 tabular-nums">
                           {ord.delivery_date}
                         </strong>
                       </div>
@@ -1044,26 +1095,28 @@ export const OrderList: React.FC<OrderListProps> = ({
                 </div>
               </div>
 
-              {/* Card Footer Actions */}
-              <div className="p-3 bg-slate-50/95 dark:bg-slate-800/80 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2">
+              {/* Card Footer Actions (RBAC Enforced) */}
+              <div className="p-3 bg-slate-50/95 dark:bg-slate-800/80 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
                 <button
                   onClick={() => onSelectOrder(ord)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-amber-700 via-amber-800 to-amber-950 hover:from-amber-800 hover:to-slate-900 shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-95 group/btn"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-[#16253B] via-[#233B5D] to-[#1E3352] hover:from-[#1E3352] hover:to-[#16253B] shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-95 group/btn"
                 >
-                  <Eye className="w-4 h-4 text-amber-200 transition-transform duration-200 group-hover/btn:scale-110" />
-                  <span>كارت الورشة المطابق</span>
+                  <Eye className="w-4 h-4 text-[#C6A355] transition-transform duration-200 group-hover/btn:scale-110" />
+                  <span>كارت الورشة</span>
                 </button>
 
-                <button
-                  onClick={() => onEditOrder(ord)}
-                  className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer active:scale-95 shadow-2xs"
-                  title="تعديل بيانات ومواصفات الأمر"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
-                  <span>تعديل</span>
-                </button>
+                {canEditThisOrder && (
+                  <button
+                    onClick={() => onEditOrder(ord)}
+                    className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                    title="تعديل بيانات ومواصفات الأمر"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-[#233B5D] dark:text-[#8CB4D9]" />
+                    <span>تعديل</span>
+                  </button>
+                )}
 
-                {onOpenDeliveryReceipt && (
+                {onOpenDeliveryReceipt && hasPerm('delivery:manage') && (
                   <button
                     onClick={() => onOpenDeliveryReceipt(ord)}
                     aria-label={`إقرار استلام العميل لأمر ${ord.order_number}`}
@@ -1084,19 +1137,53 @@ export const OrderList: React.FC<OrderListProps> = ({
                 )}
 
                 <div className="flex items-center gap-1 flex-wrap">
-                  <select
-                    value={ord.status}
-                    onChange={(e) => onUpdateStatus(ord.id, e.target.value as OrderStatus)}
-                    aria-label="تغيير حالة الأمر"
-                    className="text-[11px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 font-black cursor-pointer text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500/50 shadow-2xs hover:border-amber-400 transition-colors"
-                    title="تغيير حالة الأمر"
-                  >
-                    <option value="قيد التشغيل">تشغيل</option>
-                    <option value="تم التنفيذ">تنفيذ</option>
-                    <option value="تسليم">تسليم</option>
-                  </select>
+                  {ord.status === 'Draft' ? (
+                    canApproveDraft(userProfile) && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateStatus(ord.id, 'قيد التشغيل')}
+                        className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs cursor-pointer"
+                        title="اعتماد المسودة وتحويلها للتشغيل"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>اعتماد</span>
+                      </button>
+                    )
+                  ) : (
+                    canManageStatus && (
+                      <select
+                        value={ord.status}
+                        onChange={async (e) => {
+                          const targetStatus = e.target.value as OrderStatus;
+                          const transition = isValidStatusTransition(ord.status, targetStatus, userProfile);
+                          if (!transition.allowed) {
+                            showToast(transition.error || 'انتقال الحالة غير مصرح به لهذا الدور', 'error');
+                            return;
+                          }
+                          if (targetStatus === 'تسليم' && ord.status !== 'تسليم') {
+                            const ok = await confirmAction({
+                              title: `تأكيد تسليم الأمر ${ord.order_number}`,
+                              message:
+                                'بمجرد تأكيد التسليم، سيختفي الأمر تلقائياً من طابور أوامر الشغل الجارية وينتقل إلى "التسليمات" لمتابعة إقرار الاستلام وتحصيل باقي الحساب قبل الأرشفة.',
+                              confirmLabel: 'تأكيد التسليم والنقل',
+                              tone: 'primary',
+                            });
+                            if (!ok) return;
+                          }
+                          onUpdateStatus(ord.id, targetStatus);
+                        }}
+                        aria-label="تغيير حالة الأمر"
+                        className="text-[11px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 font-black cursor-pointer text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-[#4B83B8]/50 shadow-2xs hover:border-[#4B83B8] transition-colors"
+                        title="تغيير حالة الأمر"
+                      >
+                        <option value="قيد التشغيل">قيد التشغيل</option>
+                        <option value="تم التنفيذ">تم التنفيذ</option>
+                        <option value="تسليم">تسليم</option>
+                      </select>
+                    )
+                  )}
 
-                  {onUpdateStage && (
+                  {onUpdateStage && canChangeStage && (
                     <select
                       value={ord.current_stage || 'لم يبدأ'}
                       onChange={(e) => onUpdateStage(ord.id, e.target.value as ProductionStage)}
@@ -1104,34 +1191,36 @@ export const OrderList: React.FC<OrderListProps> = ({
                       className="text-[11px] bg-purple-50 dark:bg-purple-950/80 border border-purple-300 dark:border-purple-800 rounded-xl px-2 py-2 font-black cursor-pointer text-purple-950 dark:text-purple-200 focus:ring-2 focus:ring-purple-500/50 shadow-2xs hover:border-purple-400 transition-colors"
                       title="تغيير مرحلة الورشة والإنتاج الحالية"
                     >
-                      <option value="لم يبدأ">⏳ لم يبدأ</option>
-                      <option value="نجارة عفش">🪚 نجارة عفش</option>
-                      <option value="نجارة انتريهات">🪵 نجارة انتريهات</option>
-                      <option value="خدمة وتجهيز">⏱️ خدمة وتجهيز</option>
-                      <option value="كابينة أستر">🎨 كابينة أستر</option>
-                      <option value="كابينة دوكو">🖌️ كابينة دوكو</option>
-                      <option value="تنجيد">🛋️ تنجيد</option>
-                      <option value="تشطيب وتغليف">📦 تشطيب وتغليف</option>
-                      <option value="جاهز للتسليم">🚀 جاهز للتسليم</option>
+                      <option value="لم يبدأ">لم يبدأ</option>
+                      <option value="نجارة عفش">نجارة عفش</option>
+                      <option value="نجارة انتريهات">نجارة انتريهات</option>
+                      <option value="خدمة وتجهيز">خدمة وتجهيز</option>
+                      <option value="كابينة أستر">كابينة أستر</option>
+                      <option value="كابينة دوكو">كابينة دوكو</option>
+                      <option value="تنجيد">تنجيد</option>
+                      <option value="تشطيب وتغليف">تشطيب وتغليف</option>
+                      <option value="جاهز للتسليم">جاهز للتسليم</option>
                     </select>
                   )}
 
-                  <button
-                    onClick={() => setOrderToDelete(ord)}
-                    aria-label="حذف أمر الشغل"
-                    className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer active:scale-90"
-                    title="حذف الأمر"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canDeleteOrder && (
+                    <button
+                      onClick={() => setOrderToDelete(ord)}
+                      aria-label="حذف أمر الشغل"
+                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer active:scale-90"
+                      title="حذف الأمر"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
 
-                  {onUpdateArchiveStatus && (
+                  {onUpdateArchiveStatus && canArchiveOrder && (
                     <button
                       onClick={() => onUpdateArchiveStatus(ord.id, !ord.is_archived)}
                       className={`p-2 rounded-xl transition-all cursor-pointer active:scale-90 ${
                         ord.is_archived
                           ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
-                          : 'text-amber-800 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300'
+                          : 'text-[#233B5D] bg-[#EBF3FA] hover:bg-blue-100 dark:bg-slate-800 dark:text-blue-300'
                       }`}
                       title={ord.is_archived ? 'استعادة من الأرشيف' : 'أرشفة أمر الشغل'}
                     >

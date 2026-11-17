@@ -65,10 +65,17 @@ test('Real Gemini API Live Integration Check', async (t) => {
 
   // Live test only executed when valid server-side credentials exist
   // Secrets are strictly masked and never logged
-  t.diagnostic('GEMINI_API_KEY detected. Executing live Gemini 3.8 Flash query...');
-  const ai = new GoogleGenAI({ apiKey });
+  t.diagnostic('GEMINI_API_KEY detected. Executing live Gemini 4 Hydrogen query...');
+  const ai = new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
   const response = await ai.models.generateContent({
-    model: 'gemini-3.8-flash',
+    model: 'gemini-4-hydrogen',
     contents: 'اختبار مهندسي ورشة الأثاث: هل خشب الزان الأحمر مناسب للأرجل والقوائم؟ أجب بكلمة واحدة.',
   });
 

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Customer, JobOrderPopulated, TruckManifest, TruckManifestItem } from '../types';
 import { initialTruckManifests } from '../data/truckManifestData';
 import { printElementById } from '../utils/printHelper';
+import { useFeedback } from '../contexts/FeedbackContext';
 import {
   Truck,
   Plus,
@@ -44,6 +45,7 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
   onSaveManifestToDb,
   onDeleteManifestFromDb,
 }) => {
+  const { showToast } = useFeedback();
   // All manifests list
   const [manifestsList, setManifestsList] = useState<TruckManifest[]>(() => manifests || initialTruckManifests);
 
@@ -320,7 +322,7 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
   // Delete Manifest
   const handleDeleteManifest = async () => {
     if (manifestsList.length <= 1) {
-      alert('لا يمكن حذف البيان الأخير، يجب وجود بيان واحد على الأقل.');
+      showToast('لا يمكن حذف البيان الأخير، يجب وجود بيان واحد على الأقل.', 'warning');
       return;
     }
 
@@ -556,9 +558,9 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
             <Truck className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-blue-200 text-xs font-mono font-bold tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-              <span className="truncate">Professional Cargo Manifest Studio &amp; Loading Sheet</span>
+            <div className="flex items-center gap-2 text-blue-200 text-xs font-bold tracking-wide">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span className="truncate">إدارة وتجهيز شيتات التحميل والرحلات</span>
             </div>
             <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white font-serif tracking-tight mt-1">
               بيـان وسـجل حمـولـة السـيارة (حمولة العربية)
@@ -1472,7 +1474,7 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
         <div className="no-print bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-emerald-300 dark:border-emerald-800/60 rounded-2xl p-3.5 shadow-sm space-y-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2.5">
-              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shrink-0 shadow-xs" />
+              <span className="w-3 h-3 rounded-full bg-emerald-500 shrink-0 shadow-xs" />
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-emerald-950 dark:text-emerald-200 text-sm">

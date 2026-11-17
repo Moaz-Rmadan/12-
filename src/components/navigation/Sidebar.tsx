@@ -16,6 +16,7 @@ interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
   urgentOrdersCount?: number;
+  deliveredOrdersCount?: number;
   totalOrdersCount?: number;
 }
 
@@ -25,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   setIsCollapsed,
   urgentOrdersCount = 0,
+  deliveredOrdersCount = 0,
 }) => {
   // Single-Open Accordion State: only one group is open at a time
   const currentParentGroup = getNavGroupForTab(activeTab);
@@ -181,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       {hasUrgent && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-black font-mono rounded-full bg-rose-500 text-white animate-pulse">
+                        <span className="px-1.5 py-0.5 text-[9px] font-black font-mono rounded-full bg-rose-500 text-white">
                           {urgentOrdersCount}
                         </span>
                       )}
@@ -209,7 +211,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {group.items.map((item: NavItemConfig) => {
                     const ItemIcon = item.icon;
                     const isActive = activeTab === item.id;
-                    const badgeVal = item.badgeKey === 'urgentOrders' ? urgentOrdersCount : 0;
+                    const badgeVal =
+                      item.badgeKey === 'urgentOrders'
+                        ? urgentOrdersCount
+                        : item.badgeKey === 'deliveredCount'
+                        ? deliveredOrdersCount
+                        : 0;
 
                     return (
                       <button
@@ -229,7 +236,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         />
                         <span className="flex-1 truncate">{item.label}</span>
                         {badgeVal > 0 && (
-                          <span className="px-1.5 py-0.5 text-[9px] font-black font-mono rounded-full bg-rose-600 text-white shrink-0">
+                          <span
+                            className={`px-1.5 py-0.5 text-[9px] font-black font-mono rounded-full shrink-0 ${
+                              item.badgeKey === 'urgentOrders'
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-[#C6A355] text-[#16253B]'
+                            }`}
+                          >
                             {badgeVal}
                           </span>
                         )}
@@ -255,7 +268,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {group.items.map((item: NavItemConfig) => {
                       const ItemIcon = item.icon;
                       const isActive = activeTab === item.id;
-                      const badgeVal = item.badgeKey === 'urgentOrders' ? urgentOrdersCount : 0;
+                      const badgeVal =
+                        item.badgeKey === 'urgentOrders'
+                          ? urgentOrdersCount
+                          : item.badgeKey === 'deliveredCount'
+                          ? deliveredOrdersCount
+                          : 0;
 
                       return (
                         <button
@@ -274,7 +292,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           <ItemIcon className="w-4 h-4 shrink-0 text-slate-400" />
                           <span className="flex-1 truncate">{item.label}</span>
                           {badgeVal > 0 && (
-                            <span className="px-1.5 py-0.5 text-[9px] font-black font-mono rounded-full bg-rose-600 text-white shrink-0">
+                            <span
+                              className={`px-1.5 py-0.5 text-[9px] font-black font-mono rounded-full shrink-0 ${
+                                item.badgeKey === 'urgentOrders'
+                                  ? 'bg-rose-600 text-white'
+                                  : 'bg-[#C6A355] text-[#16253B]'
+                              }`}
+                            >
                               {badgeVal}
                             </span>
                           )}
@@ -301,8 +325,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="text-xs font-bold text-white block leading-tight truncate">
                   مصنع النجار للأثاث
                 </span>
-                <span className="text-[10px] text-slate-400 block truncate font-mono">
-                  ERP Suite v2.5
+                <span className="text-[10px] text-slate-400 block truncate font-semibold">
+                  نظام إدارة المصنع
                 </span>
               </div>
             </div>

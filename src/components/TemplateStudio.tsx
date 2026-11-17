@@ -444,9 +444,9 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#4B83B8]/15 blur-[100px] -mr-32 -mt-32 rounded-full" />
         
         <div className="relative z-10 min-w-0">
-          <div className="flex items-center gap-2 text-blue-200 text-xs font-mono font-bold tracking-wide mb-2">
-            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-            <span className="truncate">Production Intelligence • Template Studio</span>
+          <div className="flex items-center gap-2 text-blue-200 text-xs font-bold mb-2">
+            <Sparkles className="w-4 h-4 text-[#C6A355]" />
+            <span className="truncate">استوديو قوالب الإنتاج والطباعة</span>
           </div>
           <h2 className="text-xl sm:text-3xl font-black font-serif text-white tracking-tight leading-tight">
             مصمم قوالب أوامر الشغل
@@ -517,7 +517,7 @@ export const TemplateStudio: React.FC<TemplateStudioProps> = ({ onSaveToDatabase
               {/* Active Highlight */}
               {selectedTemplate.id === t.id && (
                 <div className="absolute bottom-0 right-0 w-8 h-8 bg-amber-500/10 rounded-tl-3xl flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 </div>
               )}
             </button>

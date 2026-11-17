@@ -260,9 +260,9 @@ export const BottleneckReport: React.FC<BottleneckReportProps> = ({ orders, onUp
             <Activity className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-blue-200 text-xs font-mono font-bold tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-              <span className="truncate">Factory Intelligence System • Workshop Flow</span>
+            <div className="flex items-center gap-2 text-blue-200 text-xs font-bold">
+              <Sparkles className="w-3.5 h-3.5 text-[#C6A355]" />
+              <span className="truncate">تحليل تدفق الورش ومراحل الإنتاج</span>
             </div>
             <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white font-serif tracking-tight mt-1">
               تقرير مراحل الإنتاج وحركة الورش
@@ -425,7 +425,7 @@ export const BottleneckReport: React.FC<BottleneckReportProps> = ({ orders, onUp
               <span className="text-[10px] text-purple-300 font-bold block mb-1 opacity-70 group-hover:opacity-100 transition-opacity">تأخير (7+)</span>
               <strong className={`text-xl sm:text-2xl font-black font-mono tabular-nums leading-none flex items-center justify-center gap-1 ${currentIsolatedStageOverdueCount > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                 {currentIsolatedStageOverdueCount}
-                {currentIsolatedStageOverdueCount > 0 && <AlertTriangle className="w-4 h-4 animate-bounce" />}
+                {currentIsolatedStageOverdueCount > 0 && <AlertTriangle className="w-4 h-4" />}
               </strong>
             </div>
           </div>
@@ -505,10 +505,10 @@ export const BottleneckReport: React.FC<BottleneckReportProps> = ({ orders, onUp
                 className="w-full pl-10 pr-3 py-3 text-xs font-black rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 cursor-pointer appearance-none focus:ring-2 focus:ring-purple-500 transition-all"
               >
                 <option value="all">جميع مستويات البقاء</option>
-                <option value="today">✨ غرف جديدة (اليوم)</option>
-                <option value="1_3_days">⚡ سريعة (1 - 3 أيام)</option>
-                <option value="4_6_days">⚖️ مستقرة (4 - 6 أيام)</option>
-                <option value="overdue_7">⚠️ متأخرة (7+ أيام)</option>
+                <option value="today">غرف جديدة (اليوم)</option>
+                <option value="1_3_days">سريعة (1 - 3 أيام)</option>
+                <option value="4_6_days">مستقرة (4 - 6 أيام)</option>
+                <option value="overdue_7">متأخرة (7+ أيام)</option>
               </select>
               <Clock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
@@ -534,7 +534,7 @@ export const BottleneckReport: React.FC<BottleneckReportProps> = ({ orders, onUp
             >
               {/* Active Indicator */}
               {isSelected && (
-                <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
               )}
               
               <div className={`p-2 rounded-xl mx-auto w-fit transition-all duration-300 group-hover:rotate-12 ${

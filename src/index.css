@@ -52,7 +52,8 @@
     .no-print,
     header,
     footer,
-    nav {
+    nav,
+    aside {
       display: none !important;
     }
 
@@ -71,6 +72,27 @@
       page-break-inside: avoid;
       break-inside: avoid;
       background: #ffffff !important;
+    }
+
+    /* Customer Delivery Receipt Single-Page A4 Layout */
+    #printable-delivery-receipt {
+      border: 2px solid #000000 !important;
+      box-shadow: none !important;
+      max-height: 285mm !important;
+      min-height: 268mm !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 auto !important;
+      page-break-inside: avoid !important;
+      page-break-before: avoid !important;
+      page-break-after: avoid !important;
+      break-inside: avoid !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      box-sizing: border-box !important;
+      background: #ffffff !important;
+      color: #000000 !important;
     }
 
     /* Single-Page Enforcement for Truck Manifest with Adaptive Full-Height Auto-Scale */

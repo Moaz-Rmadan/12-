@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { Customer, DeliveryReceiptRecord, JobOrderPopulated } from '../types';
 import { printElementById } from '../utils/printHelper';
 import { useAuth } from '../contexts/AuthContext';
@@ -213,15 +214,14 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
   }, [receipts, historyFilterMode, selectedCustomer]);
 
   // Display values for the A4 canvas (either viewing a saved receipt OR live builder)
+  const fallbackOrderCustomer =
+    initialSelection.targetOrder?.customer || activeReceiptOrders[0]?.customer || null;
   const displayReceiptNumber = viewingSavedReceipt
     ? viewingSavedReceipt.receipt_number
     : nextPreviewReceiptNumber;
   const displayCustomerName = viewingSavedReceipt
     ? viewingSavedReceipt.customer_name
-    : selectedCustomer?.name || 'غير محدد';
-  const displayCustomerPhone = viewingSavedReceipt
-    ? viewingSavedReceipt.customer_phone
-    : selectedCustomer?.phone || '';
+    : selectedCustomer?.name || fallbackOrderCustomer?.name || 'غير محدد';
   const displayReceiptDate = viewingSavedReceipt
     ? viewingSavedReceipt.receipt_date
     : receiptDate;
@@ -378,8 +378,36 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
     }
   }, [activeDensity]);
 
-  const handlePrintReceipt = (orientation: 'portrait' | 'landscape' = 'portrait') => {
-    printElementById('printable-delivery-receipt', orientation);
+  const handlePrintReceipt = (
+    orientation: 'portrait' | 'landscape' = 'portrait',
+    overrideReceipt?: DeliveryReceiptRecord
+  ) => {
+    const targetNumber = overrideReceipt?.receipt_number || displayReceiptNumber;
+    const targetCustomer = overrideReceipt?.customer_name || displayCustomerName;
+    const printed = printElementById('printable-delivery-receipt', orientation, {
+      title: `إقرار استلام - ${targetCustomer} - ${targetNumber}`,
+    });
+    if (!printed) {
+      setIssueFeedback({
+        type: 'error',
+        message: 'تعذر تجهيز ورقة الإقرار للطباعة. تأكد من عدم حجب نافذة الطباعة في المتصفح.',
+      });
+    }
+  };
+
+  const handlePreviewAndScroll = (rec: DeliveryReceiptRecord) => {
+    setViewingSavedReceipt(rec);
+    document.getElementById('printable-delivery-receipt')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  };
+
+  const handlePrintSavedReceiptDirectly = (rec: DeliveryReceiptRecord) => {
+    flushSync(() => {
+      setViewingSavedReceipt(rec);
+    });
+    handlePrintReceipt('portrait', rec);
   };
 
   const handleIssueAndLink = async () => {
@@ -464,8 +492,7 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
           <button
             type="button"
             onClick={() => handlePrintReceipt('portrait')}
-            disabled={!selectedCustomer && !viewingSavedReceipt}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-7 py-3 rounded-2xl text-xs sm:text-sm font-black text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-xl shadow-amber-900/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 whitespace-nowrap"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-7 py-3 rounded-2xl text-xs sm:text-sm font-black text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-xl shadow-amber-900/40 transition-all cursor-pointer active:scale-95 whitespace-nowrap"
           >
             <Printer className="w-5 h-5" />
             <span>طباعة الإقرار المعتمد (A4)</span>
@@ -1010,14 +1037,24 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
                       ))}
                     </div>
                     <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70 dark:border-slate-700">
-                      <button
-                        type="button"
-                        onClick={() => setViewingSavedReceipt(rec)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] font-black cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>معاينة / طباعة</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handlePreviewAndScroll(rec)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] font-black cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>معاينة</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePrintSavedReceiptDirectly(rec)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-[11px] font-black cursor-pointer"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>طباعة</span>
+                        </button>
+                      </div>
 
                       {onDeleteReceipt && userProfile?.role === 'admin' && (
                         <button
@@ -1067,7 +1104,7 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
               </div>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setFillPageHeight((f) => !f)}
@@ -1077,8 +1114,17 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
                     : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
                 }`}
               >
-                <div className={`w-2 h-2 rounded-full ${fillPageHeight ? 'bg-white animate-pulse' : 'bg-slate-400'}`} />
+                <div className={`w-2 h-2 rounded-full ${fillPageHeight ? 'bg-white' : 'bg-slate-400'}`} />
                 <span>{fillPageHeight ? 'تفعيل ملء الصفحة بالكامل' : 'تعبئة طبيعية'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePrintReceipt('portrait')}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-500 shadow-sm transition-all cursor-pointer active:scale-95"
+              >
+                <Printer className="w-4 h-4" />
+                <span>طباعة فورية (A4)</span>
               </button>
             </div>
           </div>
@@ -1164,7 +1210,7 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
 
           <div
             id="printable-delivery-receipt"
-            className={`bg-white text-black density-${activeDensity} ${receiptDensity.containerPadding} rounded-none border-2 sm:border-4 border-slate-900 shadow-2xl max-w-[210mm] w-full font-serif ${receiptDensity.fontSize} leading-snug relative flex flex-col justify-between print-card my-auto`}
+            className={`bg-white text-black density-${activeDensity} ${receiptDensity.containerPadding} rounded-none border-2 sm:border-4 border-slate-900 shadow-2xl max-w-[210mm] w-full font-serif ${receiptDensity.fontSize} leading-snug relative flex flex-col justify-between my-auto`}
             style={{
               color: '#000000',
               backgroundColor: '#ffffff',
@@ -1172,7 +1218,7 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
               pageBreakInside: 'avoid',
               pageBreakAfter: 'avoid',
               breakInside: 'avoid',
-              minHeight: fillPageHeight ? (activeDensity === 'spacious' ? '274mm' : '272mm') : 'auto',
+              minHeight: fillPageHeight ? (activeDensity === 'spacious' ? '270mm' : '268mm') : 'auto',
               fontSize: manualFontScale !== 100 ? `${manualFontScale}%` : undefined,
             }}
           >
@@ -1219,7 +1265,7 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-950 font-black shrink-0">تاريخ الاستلام :</span>
                     <span className="font-mono font-bold text-slate-900 border-b border-dotted border-slate-400 px-2 dir-ltr">
-                      {displayReceiptDate.replace(/-/g, ' / ')}
+                      {(displayReceiptDate || '').replace(/-/g, ' / ')}
                     </span>
                   </div>
                 </div>
@@ -1398,13 +1444,13 @@ export const CustomerDeliveryReceiptView: React.FC<CustomerDeliveryReceiptViewPr
                   <div className="grid grid-cols-3 gap-2 text-[11px] font-semibold pt-0.5">
                     <p>التوقيع / ....................</p>
                     <p>الرقم القومي / ....................</p>
-                    <p>رقم الهاتف / {displayCustomerPhone || '....................'}</p>
+                    <p>رقم الهاتف / ....................</p>
                   </div>
                 </div>
 
                 <div className="text-left space-y-1 shrink-0 pl-2">
                   <div className="font-mono font-bold text-xs text-slate-700">
-                    تحريراً في : {displayReceiptDate.replace(/-/g, ' / ')}
+                    تحريراً في : {(displayReceiptDate || '').replace(/-/g, ' / ')}
                   </div>
                   <div className="text-[10px] text-slate-500 italic">
                     ختم الاستلام والتسليم • {displayReceiptNumber}

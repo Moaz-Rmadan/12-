@@ -1,58 +1,225 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // Default Deny Catch-All
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Helper to check authentication
+    // -------------------------------------------------------------------------
+    // Core Auth & RBAC Helpers
+    // -------------------------------------------------------------------------
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Job Orders Collection
-    match /job_orders/{orderId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+    function hasUserProfile() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Customers Collection
-    match /customers/{customerId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+    function userProfileData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Truck Manifests Collection ("حمولة العربية")
-    match /truck_manifests/{manifestId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+    function isActiveUser() {
+      return hasUserProfile() && userProfileData().isActive == true;
     }
 
-    // Delivery Receipts Collection ("إقرار استلام العميل")
-    match /delivery_receipts/{receiptId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+    function hasRole(role) {
+      return isActiveUser() && userProfileData().role == role;
     }
 
-    // Users Collection (RBAC & Profiles)
+    function hasAnyRole(roles) {
+      return isActiveUser() && (userProfileData().role in roles);
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBootstrapOwner() {
+      return isSignedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == 'cfo.moaz@gmail.com';
+    }
+
+    function isValidRole(role) {
+      return role in ['admin', 'accounting', 'operations', 'sales'];
+    }
+
+    function isValidOrderStatus(status) {
+      return status in ['Draft', 'قيد التشغيل', 'تم التنفيذ', 'تسليم'];
+    }
+
+    function hasPendingInvite() {
+      return isSignedIn()
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/user_invites/$(request.auth.token.email.lower()));
+    }
+
+    function pendingInviteData() {
+      return get(/databases/$(database)/documents/user_invites/$(request.auth.token.email.lower())).data;
+    }
+
+    // Connectivity verification document
+    match /test/connection {
+      allow read: if isSignedIn();
+    }
+
+    // -------------------------------------------------------------------------
+    // Users Collection (RBAC Profiles)
+    // -------------------------------------------------------------------------
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if
+        (isAdmin()
+          && request.resource.data.uid == userId
+          && isValidRole(request.resource.data.role)
+          && request.resource.data.isActive is bool)
+        || (isOwner(userId)
+          && isBootstrapOwner()
+          && request.resource.data.uid == userId
+          && request.resource.data.role == 'admin'
+          && request.resource.data.isActive == true)
+        || (isOwner(userId)
+          && hasPendingInvite()
+          && pendingInviteData().isActive == true
+          && request.resource.data.uid == userId
+          && request.resource.data.email.lower() == request.auth.token.email.lower()
+          && request.resource.data.role == pendingInviteData().role
+          && request.resource.data.isActive == true
+          && request.resource.data.get('isDelegatedManager', false) == pendingInviteData().get('isDelegatedManager', false));
+
+      allow update: if
+        (isAdmin()
+          && isValidRole(request.resource.data.role)
+          && request.resource.data.uid == resource.data.uid)
+        || (isOwner(userId)
+          && isActiveUser()
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.isActive == resource.data.isActive
+          && request.resource.data.get('isDelegatedManager', false) == resource.data.get('isDelegatedManager', false)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLoginAt', 'updatedAt']));
+
+      allow delete: if isAdmin() && request.auth.uid != userId;
     }
 
-    // Audit Logs Collection
+    // -------------------------------------------------------------------------
+    // Pending User Invites Collection (keyed by lowercase email)
+    // -------------------------------------------------------------------------
+    match /user_invites/{inviteEmail} {
+      allow read: if isAdmin()
+        || (isSignedIn() && request.auth.token.email != null && inviteEmail == request.auth.token.email.lower());
+      allow create, update: if isAdmin()
+        && isValidRole(request.resource.data.role)
+        && request.resource.data.email is string
+        && request.resource.data.email.lower() == inviteEmail;
+      allow delete: if isAdmin()
+        || (isSignedIn() && request.auth.token.email != null && inviteEmail == request.auth.token.email.lower());
+    }
+
+    // -------------------------------------------------------------------------
+    // Job Orders Collection
+    // -------------------------------------------------------------------------
+    match /job_orders/{orderId} {
+      allow read: if isActiveUser();
+
+      allow create: if isValidOrderStatus(request.resource.data.status)
+        && request.resource.data.order_number is string
+        && request.resource.data.customer_id is string
+        && (
+          isAdmin()
+          || (hasRole('sales')
+              && request.resource.data.status == 'Draft'
+              && request.resource.data.get('total_price', 0) == 0
+              && request.resource.data.get('deposit_paid', 0) == 0)
+        );
+
+      allow update: if isValidOrderStatus(request.resource.data.status)
+        && (
+          isAdmin()
+          || hasRole('accounting')
+          || (hasRole('operations')
+              && request.resource.data.get('total_price', 0) == resource.data.get('total_price', 0)
+              && request.resource.data.get('deposit_paid', 0) == resource.data.get('deposit_paid', 0))
+          || (hasRole('sales')
+              && resource.data.status == 'Draft'
+              && request.resource.data.status == 'Draft'
+              && request.resource.data.get('total_price', 0) == resource.data.get('total_price', 0)
+              && request.resource.data.get('deposit_paid', 0) == resource.data.get('deposit_paid', 0))
+        );
+
+      allow delete: if isAdmin();
+
+      match /job_details/{detailId} {
+        allow read: if isActiveUser();
+        allow write: if hasAnyRole(['admin', 'operations', 'sales']);
+      }
+
+      match /attachments/{attachmentId} {
+        allow read: if isActiveUser();
+        allow write: if hasAnyRole(['admin', 'operations', 'sales']);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Customers Collection
+    // -------------------------------------------------------------------------
+    match /customers/{customerId} {
+      allow read: if isActiveUser();
+      allow create, update: if hasAnyRole(['admin', 'sales']);
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Truck Manifests Collection ("حمولة العربية")
+    // -------------------------------------------------------------------------
+    match /truck_manifests/{manifestId} {
+      allow read: if isActiveUser();
+      allow create, update, delete: if hasAnyRole(['admin', 'operations']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Delivery Receipts Collection ("إقرار استلام العميل")
+    // -------------------------------------------------------------------------
+    match /delivery_receipts/{receiptId} {
+      allow read: if isActiveUser();
+      allow create, update: if hasAnyRole(['admin', 'accounting', 'operations', 'sales']);
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Order Counters Collection (Atomic Order Numbers)
+    // -------------------------------------------------------------------------
+    match /order_counters/{counterId} {
+      allow read: if isActiveUser();
+      allow create, update: if hasAnyRole(['admin', 'sales']);
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Audit Logs Collection (Append-Only)
+    // -------------------------------------------------------------------------
     match /audit_logs/{logId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow read: if isAdmin();
+      allow create: if isActiveUser()
+        && request.resource.data.user_uid == request.auth.uid;
+      allow update, delete: if false;
     }
 
+    // -------------------------------------------------------------------------
     // Smart Saved Queries Collection
+    // -------------------------------------------------------------------------
     match /smart_queries/{queryId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow read, create, update, delete: if isActiveUser();
     }
   }
 }

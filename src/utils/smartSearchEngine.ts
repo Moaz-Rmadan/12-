@@ -65,6 +65,8 @@ export interface SmartSearchFilters {
   auditMode: AuditFilterMode;
   includeArchived: boolean;
   sortBy: SmartSortBy;
+  selectedMonth?: string;
+  monthMode?: 'both' | 'contract' | 'delivery';
 }
 
 export interface TimePresetRange {
@@ -186,7 +188,136 @@ export const DEFAULT_SMART_SEARCH_FILTERS: SmartSearchFilters = {
   auditMode: 'all',
   includeArchived: false,
   sortBy: 'delivery_desc',
+  selectedMonth: 'all',
+  monthMode: 'both',
 };
+
+export const ARABIC_MONTH_NAMES: Record<string, string> = {
+  '01': 'يناير',
+  '02': 'فبراير',
+  '03': 'مارس',
+  '04': 'أبريل',
+  '05': 'مايو',
+  '06': 'يونيو',
+  '07': 'يوليو',
+  '08': 'أغسطس',
+  '09': 'سبتمبر',
+  '10': 'أكتوبر',
+  '11': 'نوفمبر',
+  '12': 'ديسمبر',
+};
+
+export function formatMonthYearArabic(monthKey: string): string {
+  if (!monthKey || monthKey === 'all') return 'كافة الشهور';
+  const parts = monthKey.split('-');
+  if (parts.length < 2) return monthKey;
+  const year = parts[0];
+  const monthNum = parts[1];
+  const monthName = ARABIC_MONTH_NAMES[monthNum] || `شهر ${monthNum}`;
+  return `${monthName} ${year}`;
+}
+
+export interface MonthlyComparisonData {
+  monthKey: string;
+  contractCount: number;
+  contractTotalValue: number;
+  contractTotalDeposits: number;
+  deliveryCount: number;
+  deliveredCount: number;
+  deliveryPendingCount: number;
+  deliveryTotalValue: number;
+  deliveryRemainingBalance: number;
+  totalUniqueOrders: number;
+}
+
+export function computeMonthlySummaryMap(orders: JobOrderPopulated[]): {
+  availableMonths: string[];
+  monthsMap: Record<string, MonthlyComparisonData>;
+} {
+  const monthSet = new Set<string>();
+  orders.forEach((o) => {
+    const cIso = normalizeIsoDate(o.contract_date);
+    const dIso = normalizeIsoDate(o.delivered_at || o.delivery_date);
+    if (cIso.length >= 7) monthSet.add(cIso.substring(0, 7));
+    if (dIso.length >= 7) monthSet.add(dIso.substring(0, 7));
+    const schedIso = normalizeIsoDate(o.delivery_date);
+    if (schedIso.length >= 7) monthSet.add(schedIso.substring(0, 7));
+  });
+
+  const availableMonths = Array.from(monthSet).sort((a, b) => b.localeCompare(a));
+  const monthsMap: Record<string, MonthlyComparisonData> = {};
+
+  for (const m of availableMonths) {
+    monthsMap[m] = {
+      monthKey: m,
+      contractCount: 0,
+      contractTotalValue: 0,
+      contractTotalDeposits: 0,
+      deliveryCount: 0,
+      deliveredCount: 0,
+      deliveryPendingCount: 0,
+      deliveryTotalValue: 0,
+      deliveryRemainingBalance: 0,
+      totalUniqueOrders: 0,
+    };
+  }
+
+  for (const o of orders) {
+    const cMonth = normalizeIsoDate(o.contract_date).substring(0, 7);
+    const dMonth = normalizeIsoDate(o.delivery_date).substring(0, 7);
+
+    if (cMonth && monthsMap[cMonth]) {
+      monthsMap[cMonth].contractCount += 1;
+      monthsMap[cMonth].contractTotalValue += Number(o.total_price) || 0;
+      monthsMap[cMonth].contractTotalDeposits += Number(o.deposit_paid) || 0;
+    }
+
+    if (dMonth && monthsMap[dMonth]) {
+      monthsMap[dMonth].deliveryCount += 1;
+      monthsMap[dMonth].deliveryTotalValue += Number(o.total_price) || 0;
+      monthsMap[dMonth].deliveryRemainingBalance += Math.max(
+        0,
+        (Number(o.total_price) || 0) - (Number(o.deposit_paid) || 0)
+      );
+      if (o.status === 'تسليم') {
+        monthsMap[dMonth].deliveredCount += 1;
+      } else {
+        monthsMap[dMonth].deliveryPendingCount += 1;
+      }
+    }
+  }
+
+  for (const m of availableMonths) {
+    monthsMap[m].totalUniqueOrders = orders.filter((o) => {
+      const cIso = normalizeIsoDate(o.contract_date);
+      const dIso = normalizeIsoDate(o.delivery_date);
+      return cIso.startsWith(m) || dIso.startsWith(m);
+    }).length;
+  }
+
+  return { availableMonths, monthsMap };
+}
+
+export function detectMonthQueryFromText(query: string, availableMonths: string[]): string | null {
+  const normQ = normalizeSearchText(query);
+  if (!normQ) return null;
+
+  for (const m of availableMonths) {
+    const [year, monthNum] = m.split('-');
+    const monthName = normalizeSearchText(ARABIC_MONTH_NAMES[monthNum] || '');
+    if (
+      (monthName && normQ.includes(monthName)) ||
+      normQ.includes(m) ||
+      normQ.includes(`شهر ${parseInt(monthNum, 10)}`) ||
+      normQ.includes(`شهر ${monthNum}`) ||
+      normQ.includes(`${monthNum}/${year}`) ||
+      normQ.includes(`${year}-${monthNum}`)
+    ) {
+      return m;
+    }
+  }
+  return null;
+}
 
 /**
  * Normalize various date strings (YYYY-MM-DD, YYYY/MM/DD, DD/MM/YYYY, ISO timestamps)
@@ -624,6 +755,19 @@ function matchesNonDateFilters(item: EnrichedSearchOrder, filters: SmartSearchFi
   if (filters.auditMode === 'on_time_only' && item.isOnTimeDelivered !== true) return false;
   if (filters.auditMode === 'delayed_delivered' && !(item.order.status === 'تسليم' && (item.deliveryDelayDays || 0) > 0)) {
     return false;
+  }
+
+  const activeMonth = filters.selectedMonth && filters.selectedMonth !== 'all' ? filters.selectedMonth : null;
+  if (activeMonth) {
+    const mode = filters.monthMode || 'both';
+    const matchContract = item.contractDate.startsWith(activeMonth);
+    const matchDelivery =
+      item.scheduledDeliveryDate.startsWith(activeMonth) ||
+      (item.order.status === 'تسليم' && item.effectiveDeliveryDate.startsWith(activeMonth));
+
+    if (mode === 'contract' && !matchContract) return false;
+    if (mode === 'delivery' && !matchDelivery) return false;
+    if (mode === 'both' && !matchContract && !matchDelivery) return false;
   }
 
   const q = normalizeSearchText(filters.query);

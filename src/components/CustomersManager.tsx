@@ -17,6 +17,7 @@ import {
   FileText,
   FileCheck,
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface CustomersManagerProps {
   customers: Customer[];
@@ -37,6 +38,12 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
   onAddBatchCustomers,
   onAddSingleCustomer,
 }) => {
+  const { hasPerm } = useAuth();
+  const canCreateCustomer = hasPerm('customer:create');
+  const canDeleteCustomer = hasPerm('customer:delete');
+  const canCreateOrder = hasPerm('order:create');
+  const canManageDelivery = hasPerm('delivery:manage');
+
   const [searchTerm, setSearchTerm] = useState('');
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -199,15 +206,15 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
       {/* Header and Action Bar */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-950 flex items-center justify-center text-amber-800 dark:text-amber-300">
+          <div className="w-9 h-9 rounded-lg bg-[#EBF3FA] dark:bg-slate-800 flex items-center justify-center text-[#233B5D] dark:text-[#8CB4D9]">
             <User className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-amber-950 dark:text-amber-100">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
               سجل العملاء ودليل الاتصال
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              إجمالي العملاء المسجلين: <strong className="font-mono text-amber-800 dark:text-amber-300">{customers.length}</strong> عميل
+              إجمالي العملاء المسجلين: <strong className="font-mono text-[#233B5D] dark:text-[#8CB4D9]">{customers.length}</strong> عميل
             </p>
           </div>
         </div>
@@ -221,12 +228,12 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
               placeholder="بحث بالاسم أو الهاتف..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-3 pr-9 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full pl-3 pr-9 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#4B83B8]"
             />
           </div>
 
           {/* Import Customers Button */}
-          {onAddBatchCustomers && (
+          {onAddBatchCustomers && canCreateCustomer && (
             <button
               onClick={() => {
                 setIsImportModalOpen(true);
@@ -234,18 +241,18 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
                 setPastedText('');
                 setImportSuccessMessage(null);
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-100/80 hover:bg-amber-200/80 dark:bg-amber-950/60 dark:hover:bg-amber-950 border border-amber-200 dark:border-amber-900 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-[#233B5D] dark:text-blue-200 bg-[#EBF3FA] hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-[#4B83B8]/40 dark:border-slate-700 transition-colors cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+              <FileSpreadsheet className="w-4 h-4 text-[#4B83B8]" />
               <span>استيراد عملاء (ملف / لصق)</span>
             </button>
           )}
 
           {/* Quick Add Single Customer Button */}
-          {onAddSingleCustomer && (
+          {onAddSingleCustomer && canCreateCustomer && (
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white bg-amber-800 hover:bg-amber-900 transition-colors shadow-xs cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white bg-[#233B5D] hover:bg-[#1E3352] transition-colors shadow-xs cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>إضافة عميل</span>
@@ -292,7 +299,7 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
                         {custOrders.length} أوامر
                       </span>
 
-                      {onDeleteCustomer && (
+                      {onDeleteCustomer && canDeleteCustomer && (
                         <button
                           type="button"
                           onClick={() => setCustomerToDelete(cust)}
@@ -367,21 +374,21 @@ export const CustomersManager: React.FC<CustomersManagerProps> = ({
                   </a>
 
                   <div className="flex items-center gap-2">
-                    {onOpenDeliveryReceiptForCustomer && (
+                    {onOpenDeliveryReceiptForCustomer && canManageDelivery && (
                       <button
                         onClick={() => onOpenDeliveryReceiptForCustomer(cust)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-100/90 dark:bg-amber-950/80 hover:bg-amber-200 dark:hover:bg-amber-900 border border-amber-300/60 dark:border-amber-800/60 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-[#233B5D] dark:text-blue-200 bg-[#EBF3FA] dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700 border border-[#4B83B8]/40 dark:border-slate-700 transition-all cursor-pointer active:scale-95 shadow-2xs"
                         title="طباعة إقرار استلام منتجات العميل"
                       >
-                        <FileCheck className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
+                        <FileCheck className="w-3.5 h-3.5 text-[#4B83B8]" />
                         <span>إقرار استلام</span>
                       </button>
                     )}
 
-                    {onOpenNewOrderForCustomer && (
+                    {onOpenNewOrderForCustomer && canCreateOrder && (
                       <button
                         onClick={() => onOpenNewOrderForCustomer(cust)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-amber-800 hover:bg-amber-900 transition-all shadow-xs cursor-pointer active:scale-95"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-[#233B5D] hover:bg-[#1E3352] transition-all shadow-xs cursor-pointer active:scale-95"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>أمر جديد</span>

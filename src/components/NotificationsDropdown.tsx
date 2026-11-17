@@ -72,7 +72,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
     }
     if (diffDays === 0) {
       return (
-        <span className="text-[10px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 font-extrabold px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1 animate-pulse">
+        <span className="text-[10px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 font-extrabold px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1">
           <Clock className="w-3 h-3 shrink-0" />
           <span>موعـد الاستلام اليـوم!</span>
         </span>
@@ -93,7 +93,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         className={`relative p-2 sm:p-2.5 rounded-xl border transition-all cursor-pointer ${
           isOpen
-            ? 'bg-amber-100 dark:bg-amber-950/80 border-amber-400 text-amber-900 dark:text-amber-200 shadow-xs ring-2 ring-amber-500/20'
+            ? 'bg-[#EBF3FA] dark:bg-[#233B5D] border-[#4B83B8] text-[#233B5D] dark:text-white shadow-xs ring-2 ring-[#4B83B8]/20'
             : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
         }`}
         title="تنبيهات مواعيد التسليم (خلال 48 ساعة)"
@@ -101,7 +101,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
       >
         <Bell className="w-4 h-4" />
         {count > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-md animate-bounce">
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-md">
             {count}
           </span>
         )}
@@ -120,19 +120,19 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
         <div className="fixed left-3 right-3 top-20 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2.5 w-auto sm:w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[100] overflow-hidden font-sans flex flex-col max-h-[82vh] sm:max-h-[500px]">
           
           {/* Header */}
-          <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+          <div className="p-3.5 bg-[#16253B] text-white flex items-center justify-between border-b border-[#233B5D] shrink-0">
             <div className="flex items-center gap-2">
-              <div className="p-1 rounded bg-amber-500/20 text-amber-400 shrink-0">
+              <div className="p-1 rounded bg-[#C6A355]/20 text-[#C6A355] shrink-0">
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
                 <h4 className="text-xs font-black">تنبيهات الإدارة (مواعيد التسليم)</h4>
-                <p className="text-[10px] text-slate-400">أوامر الشغل المستحقة خلال 48 ساعة أو المتأخرة</p>
+                <p className="text-[10px] text-slate-300">أوامر الشغل المستحقة خلال 48 ساعة أو المتأخرة</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 text-xs font-mono font-bold bg-amber-500 text-amber-950 rounded-full shrink-0">
+              <span className="px-2 py-0.5 text-xs font-mono font-bold bg-[#C6A355] text-[#16253B] rounded-full shrink-0">
                 {count} تنبيه
               </span>
               <button

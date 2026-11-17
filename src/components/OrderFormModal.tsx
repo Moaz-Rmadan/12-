@@ -3,6 +3,7 @@ import { CreateJobOrderPayload, OrderStatus, ProductionStage, AttachmentType, Jo
 import { X, Save, Hammer, Ruler, Paintbrush, Scissors, Plus, Trash2, Upload, Edit3, Sparkles, AlertCircle, ShieldAlert } from 'lucide-react';
 import { compressImage } from '../utils/imageCompressor';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { validateSalesCreatePayload, validateSalesUpdatePayload } from '../lib/permissions';
 import { generateNextOrderNumber } from '../lib/orderNumberService';
 
@@ -21,6 +22,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
 }) => {
   const isEditMode = Boolean(orderToEdit);
   const { userProfile, hasPerm } = useAuth();
+  const { showToast } = useFeedback();
   const isSales = userProfile?.role === 'sales';
   const isDraftForbiddenEdit = isEditMode && isSales && orderToEdit?.status !== 'Draft';
 
@@ -150,12 +152,12 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
     e.preventDefault();
 
     if (isDraftForbiddenEdit) {
-      alert('المبيعات يمكنها تعديل أوامر الشغل في حالة مسودة (Draft) فقط.');
+      showToast('المبيعات يمكنها تعديل أوامر الشغل في حالة مسودة (Draft) فقط.', 'error');
       return;
     }
 
     if (!customerName || !orderNumber || !generalSpecs) {
-      alert('الرجاء إدخال اسم العميل، رقم الأمر والمواصفات العامة');
+      showToast('الرجاء إدخال اسم العميل، رقم الأمر والمواصفات العامة', 'error');
       return;
     }
 
@@ -169,7 +171,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
         general_specs: generalSpecs,
       });
       if (!salesCheck.valid) {
-        alert('مخالفة لصلاحيات المبيعات: ' + salesCheck.error);
+        showToast('مخالفة لصلاحيات المبيعات: ' + salesCheck.error, 'error');
         return;
       }
     }
@@ -181,7 +183,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
         delivery_date: deliveryDate,
       });
       if (!salesUpdateCheck.valid) {
-        alert('مخالفة لصلاحيات المبيعات: ' + salesUpdateCheck.error);
+        showToast('مخالفة لصلاحيات المبيعات: ' + salesUpdateCheck.error, 'error');
         return;
       }
     }
@@ -225,10 +227,10 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="relative bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl max-w-4xl w-full h-[96vh] sm:h-auto sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-300">
         
-        {/* Header - Premium Gradient */}
-        <div className="sticky top-0 z-20 bg-gradient-to-br from-amber-900 via-amber-950 to-slate-900 text-white px-5 py-4 sm:px-8 sm:py-6 flex items-center justify-between border-b border-amber-800/50 shrink-0">
+        {/* Header - Executive Navy */}
+        <div className="sticky top-0 z-20 bg-gradient-to-br from-[#16253B] via-[#233B5D] to-[#1E3352] text-white px-5 py-4 sm:px-8 sm:py-6 flex items-center justify-between border-b border-[#4B83B8]/30 shrink-0">
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-2xl ${isEditMode ? 'bg-amber-400/20 text-amber-300' : 'bg-amber-500/20 text-amber-300'} border border-amber-500/30 shadow-inner`}>
+            <div className="p-3 rounded-2xl bg-[#4B83B8]/20 text-amber-300 border border-[#4B83B8]/40 shadow-inner">
               {isEditMode ? <Edit3 className="w-6 h-6 sm:w-7 sm:h-7" /> : <Hammer className="w-6 h-6 sm:w-7 sm:h-7" />}
             </div>
             <div className="min-w-0">
@@ -237,16 +239,16 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                   {isEditMode ? 'تعديل أمر الشغل' : 'إنشاء أمر شغل جديد'}
                 </h2>
                 {isEditMode ? (
-                  <span className="text-[9px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shadow-sm shrink-0">
+                  <span className="text-[10px] bg-[#C6A355] text-slate-950 font-black px-2 py-0.5 rounded-md font-mono shadow-sm shrink-0">
                     {orderToEdit?.order_number}
                   </span>
                 ) : (
-                  <span className="text-[9px] bg-emerald-500 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shadow-sm shrink-0 animate-pulse">
+                  <span className="text-[10px] bg-emerald-500 text-white font-black px-2 py-0.5 rounded-md shadow-sm shrink-0">
                     أمر جديد
                   </span>
                 )}
               </div>
-              <p className="text-[10px] sm:text-xs text-amber-200/60 font-bold max-w-xs truncate">
+              <p className="text-[10px] sm:text-xs text-blue-200/80 font-bold max-w-xs truncate">
                 {isEditMode
                   ? 'تعديل المواصفات الفنية والمقاسات للهيكل والدهان'
                   : 'إدخال بيانات العميل والموديل برقم الـ Batch'}
@@ -255,8 +257,10 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-2.5 rounded-xl bg-white/5 hover:bg-rose-600/20 text-amber-200 hover:text-white transition-all cursor-pointer group active:scale-90"
+            aria-label="إغلاق"
+            className="p-2.5 rounded-xl bg-white/10 hover:bg-rose-600/30 text-blue-100 hover:text-white transition-all cursor-pointer group active:scale-90"
           >
             <X className="w-6 h-6 group-hover:rotate-90 transition-transform" />
           </button>
@@ -356,10 +360,10 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                     onChange={(e) => setStatus(e.target.value as OrderStatus)}
                     className="w-full px-4 py-3 text-xs sm:text-sm font-black rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 cursor-pointer focus:ring-2 focus:ring-amber-500 outline-none appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <option value="Draft">📝 مسودة (Draft)</option>
-                    <option value="قيد التشغيل">🔨 قيد التشغيل</option>
-                    <option value="تم التنفيذ">✅ تم التنفيذ</option>
-                    <option value="تسليم">🚚 تسليم</option>
+                    <option value="Draft">مسودة (Draft)</option>
+                    <option value="قيد التشغيل">قيد التشغيل</option>
+                    <option value="تم التنفيذ">تم التنفيذ</option>
+                    <option value="تسليم">تسليم</option>
                   </select>
                 </div>
 
@@ -601,10 +605,10 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                       }}
                       className="text-[10px] font-black bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 cursor-pointer outline-none focus:ring-2 focus:ring-amber-500 shrink-0"
                     >
-                      <option value="drawing">📐 رسم CAD</option>
-                      <option value="fabric_sample">🧶 عينة قماش</option>
-                      <option value="3d_render">🧊 رندر 3D</option>
-                      <option value="other">📎 مرفق آخر</option>
+                      <option value="drawing">رسم CAD</option>
+                      <option value="fabric_sample">عينة قماش</option>
+                      <option value="3d_render">رندر 3D</option>
+                      <option value="other">مرفق آخر</option>
                     </select>
 
                     <div className="flex-1 relative group/input">

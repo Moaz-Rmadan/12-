@@ -13,6 +13,9 @@ import {
   BarChart3,
   ShieldCheck,
   Search,
+  Bot,
+  PackageCheck,
+  Archive,
   LucideIcon,
 } from 'lucide-react';
 
@@ -21,7 +24,7 @@ export interface NavItemConfig {
   label: string;
   shortLabel?: string;
   icon: LucideIcon;
-  badgeKey?: 'urgentOrders' | 'ordersCount';
+  badgeKey?: 'urgentOrders' | 'ordersCount' | 'deliveredCount';
   description?: string;
 }
 
@@ -42,17 +45,17 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     items: [
       {
         id: 'executive-dashboard',
-        label: 'الداشبورد والاستعلام الشامل',
-        shortLabel: 'الداشبورد',
+        label: 'لوحة القيادة التنفيذية',
+        shortLabel: 'لوحة القيادة',
         icon: LayoutDashboard,
-        description: 'مؤشرات الأداء العامة والبحث الشامل',
+        description: 'نبض المصنع اللحظي، مؤشرات الأداء، اختناقات الورش، والوصول السريع',
       },
       {
         id: 'smart-search',
-        label: 'البحث الشامل وجرد التسليمات',
+        label: 'البحث الشامل وحصر الغرف والشهور',
         shortLabel: 'البحث الشامل',
         icon: Search,
-        description: 'جرد الغرف المسلمة والتعاقدات بالفترات، المعايير المتعددة، والتدقيق المالي',
+        description: 'مركز استعلام الشهور، حصر وتصنيف غرف الورشة، والتدقيق المالي والتسليمات',
       },
     ],
   },
@@ -60,14 +63,29 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     id: 'operations',
     title: 'التصنيع وأوامر الشغل',
     icon: Hammer,
-    description: 'إدارة الإنتاج، الورش، ومتابعة المراحل',
+    description: 'إدارة الإنتاج، التسليمات، والأرشيف',
     items: [
       {
         id: 'orders',
-        label: 'أوامر الشغل والورش',
-        shortLabel: 'الأوامر',
+        label: 'أوامر الشغل الجارية',
+        shortLabel: 'الأوامر الجارية',
         icon: ClipboardList,
-        description: 'متابعة وتحديث أوامر الورش والتصنيع',
+        description: 'أوامر الورش المفتوحة حالياً بالمصنع (يختفي منها الأمر فور تسليمه)',
+      },
+      {
+        id: 'deliveries',
+        label: 'التسليمات ومتابعة التحصيل',
+        shortLabel: 'التسليمات',
+        icon: PackageCheck,
+        badgeKey: 'deliveredCount',
+        description: 'الأوامر المسلمة قيد متابعة باقي الحساب وإقرارات الاستلام قبل الأرشفة',
+      },
+      {
+        id: 'archive',
+        label: 'الأرشيف والسجل التاريخي',
+        shortLabel: 'الأرشيف',
+        icon: Archive,
+        description: 'السجل التاريخي للأوامر المغلقة نهائياً والمواصفات الفنية السابقة',
       },
       {
         id: 'template-studio',
@@ -82,6 +100,13 @@ export const NAV_GROUPS: NavGroupConfig[] = [
         shortLabel: 'مراحل الإنتاج',
         icon: Activity,
         description: 'توزيع القطع على غرف النجارة والأستر والتنجيد',
+      },
+      {
+        id: 'ai-assistant',
+        label: 'مساعد الورشة الذكي',
+        shortLabel: 'مساعد الجودة',
+        icon: Bot,
+        description: 'تدقيق المواصفات والمقاسات وأكواد الأقمشة والـ Batch بالذكاء الاصطناعي',
       },
     ],
   },

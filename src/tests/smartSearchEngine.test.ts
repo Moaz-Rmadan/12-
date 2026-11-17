@@ -3,10 +3,13 @@ import assert from 'node:assert/strict';
 import {
   buildEnrichedSearchOrders,
   buildSmartSearchCsv,
+  computeMonthlySummaryMap,
   computeSmartSearchAnalytics,
   DEFAULT_SMART_SEARCH_FILTERS,
+  detectMonthQueryFromText,
   extractApproverName,
   filterAndSortSmartSearchOrders,
+  formatMonthYearArabic,
   getTimePresetRange,
   normalizeIsoDate,
 } from '../utils/smartSearchEngine';
@@ -360,4 +363,58 @@ test('supports Arabic hamza/yaa normalization and custom contract-date filtering
     ['o-3', 'o-2']
   );
 });
+
+test('computeMonthlySummaryMap, detectMonthQueryFromText, and selectedMonth/monthMode filter monthly contracts vs deliveries', () => {
+  const { availableMonths, monthsMap } = computeMonthlySummaryMap(sampleOrders);
+
+  assert.ok(availableMonths.includes('2026-11'));
+  assert.ok(availableMonths.includes('2026-10'));
+  assert.equal(formatMonthYearArabic('2026-11'), 'نوفمبر 2026');
+  assert.equal(detectMonthQueryFromText('نوفمبر', availableMonths), '2026-11');
+  assert.equal(detectMonthQueryFromText('اكتوبر', availableMonths), '2026-10');
+
+  // October 2026: o-1, o-2, o-3 signed in Oct (3 contracts), 0 scheduled deliveries
+  assert.equal(monthsMap['2026-10'].contractCount, 3);
+  assert.equal(monthsMap['2026-10'].deliveryCount, 0);
+
+  // November 2026: o-4 signed in Nov (1 contract), o-1..o-4 due in Nov (4 deliveries, 2 delivered)
+  assert.equal(monthsMap['2026-11'].contractCount, 1);
+  assert.equal(monthsMap['2026-11'].deliveryCount, 4);
+  assert.equal(monthsMap['2026-11'].deliveredCount, 2);
+
+  const enriched = buildEnrichedSearchOrders({
+    orders: sampleOrders,
+    receipts: sampleReceipts,
+    truckManifests: sampleManifests,
+    referenceDateIso: '2026-11-13',
+  });
+
+  // Filtering by selectedMonth '2026-11' with monthMode 'contract' matches only o-4
+  const novContracts = filterAndSortSmartSearchOrders({
+    enrichedOrders: enriched,
+    filters: {
+      ...DEFAULT_SMART_SEARCH_FILTERS,
+      selectedMonth: '2026-11',
+      monthMode: 'contract',
+    },
+    referenceDateIso: '2026-11-13',
+  });
+  assert.deepEqual(
+    novContracts.map((m) => m.order.id),
+    ['o-4']
+  );
+
+  // Filtering by selectedMonth '2026-10' with monthMode 'contract' matches o-1, o-2, o-3
+  const octContracts = filterAndSortSmartSearchOrders({
+    enrichedOrders: enriched,
+    filters: {
+      ...DEFAULT_SMART_SEARCH_FILTERS,
+      selectedMonth: '2026-10',
+      monthMode: 'contract',
+    },
+    referenceDateIso: '2026-11-13',
+  });
+  assert.equal(octContracts.length, 3);
+});
+
 

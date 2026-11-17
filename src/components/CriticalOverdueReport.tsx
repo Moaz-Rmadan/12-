@@ -149,12 +149,12 @@ export const CriticalOverdueReport: React.FC<CriticalOverdueReportProps> = ({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/30">
-              <ShieldAlert className="w-6 h-6 animate-pulse" />
+              <ShieldAlert className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 text-[11px] font-mono font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 text-[11px] font-bold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Critical SLA & Overdue Executive Tracker</span>
+                <span>مؤشر الإنذار المبكر ومواعيد التسليم</span>
               </div>
               <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 font-serif">
                 تقرير الأوامر الحرجة والمتأخرة (جهاز الإنذار المبكر)

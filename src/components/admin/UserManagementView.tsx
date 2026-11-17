@@ -16,22 +16,36 @@ import {
   Search,
   Check,
   X,
+  Trash2,
+  Clock,
 } from 'lucide-react';
-import { collection, getDocs, doc, updateDoc, setDoc } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { collection, getDocs, doc, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFeedback } from '../../contexts/FeedbackContext';
 import { UserProfile, UserRole, PermissionKey, AuditLogEntry } from '../../types/auth';
 import {
   ROLE_DISPLAY_NAMES,
   ROLE_PERMISSIONS_BASE,
-  hasPermission,
 } from '../../lib/permissions';
 import { logAuditEvent, fetchRecentAuditLogs } from '../../lib/audit';
 
+interface PendingInvite {
+  email: string;
+  name: string;
+  role: UserRole;
+  isActive: boolean;
+  isDelegatedManager?: boolean;
+  createdAt?: string;
+  createdBy?: string;
+}
+
 export const UserManagementView: React.FC = () => {
-  const { userProfile: currentUserProfile, sendPasswordReset } = useAuth();
+  const { currentUser, userProfile: currentUserProfile, sendPasswordReset, isDemoMode } = useAuth();
+  const { showToast, confirmAction } = useFeedback();
   const [activeSubTab, setActiveSubTab] = useState<'users' | 'matrix' | 'audit'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,18 +69,34 @@ export const UserManagementView: React.FC = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'users'));
+      if (isDemoMode) {
+        setUsers(currentUserProfile ? [currentUserProfile] : []);
+        setPendingInvites([]);
+        return;
+      }
+
+      const [usersSnap, invitesSnap] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'user_invites')),
+      ]);
+
       const list: UserProfile[] = [];
-      snap.forEach((d) => list.push(d.data() as UserProfile));
+      usersSnap.forEach((d) => list.push(d.data() as UserProfile));
       setUsers(list);
+
+      const invites: PendingInvite[] = [];
+      invitesSnap.forEach((d) => invites.push(d.data() as PendingInvite));
+      setPendingInvites(invites);
     } catch (e) {
       console.error('Failed to load users:', e);
+      showToast('تعذر تحميل سجل المستخدمين من قاعدة البيانات.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const loadAudit = async () => {
+    if (isDemoMode) return;
     const logs = await fetchRecentAuditLogs(50);
     setAuditLogs(logs);
   };
@@ -74,48 +104,59 @@ export const UserManagementView: React.FC = () => {
   useEffect(() => {
     loadUsers();
     loadAudit();
-  }, []);
+  }, [isDemoMode]);
 
   // Handle Toggle Active/Inactive Status
   const handleToggleActive = async (targetUser: UserProfile) => {
     if (targetUser.uid === currentUserProfile?.uid) {
-      alert('لا يمكنك تعطيل حسابك الخاص.');
+      showToast('لا يمكنك تعطيل حسابك الخاص.', 'warning');
       return;
     }
 
     const nextState = !targetUser.isActive;
-    const confirmMsg = nextState
-      ? `هل تريد تنشيط حساب ${targetUser.name}؟`
-      : `هل تريد إيقاف وتجميد حساب ${targetUser.name} فوراً؟`;
+    const confirmed = await confirmAction({
+      title: nextState ? 'تنشيط حساب مستخدم' : 'إيقاف وتجميد حساب مستخدم',
+      message: nextState
+        ? `هل تريد تنشيط حساب ${targetUser.name}؟`
+        : `هل تريد إيقاف وتجميد حساب ${targetUser.name} فوراً؟`,
+      confirmLabel: nextState ? 'تنشيط' : 'تعطيل الحساب',
+      tone: nextState ? 'primary' : 'danger',
+    });
 
-    if (!window.confirm(confirmMsg)) return;
+    if (!confirmed) return;
 
     try {
-      const userRef = doc(db, 'users', targetUser.uid);
-      await updateDoc(userRef, {
-        isActive: nextState,
-        updatedAt: new Date().toISOString(),
-      });
+      if (!isDemoMode) {
+        const userRef = doc(db, 'users', targetUser.uid);
+        await updateDoc(userRef, {
+          isActive: nextState,
+          updatedAt: new Date().toISOString(),
+        });
 
-      await logAuditEvent({
-        user_uid: currentUserProfile?.uid || '',
-        user_email: currentUserProfile?.email || '',
-        user_role: currentUserProfile?.role || 'admin',
-        action: nextState ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
-        entity_type: 'user',
-        entity_id: targetUser.uid,
-        before: { isActive: targetUser.isActive },
-        after: { isActive: nextState },
-        reason: `Administrator status toggle to ${nextState ? 'active' : 'inactive'}`,
-      });
+        await logAuditEvent({
+          user_uid: currentUserProfile?.uid || '',
+          user_email: currentUserProfile?.email || '',
+          user_role: currentUserProfile?.role || 'admin',
+          action: nextState ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+          entity_type: 'user',
+          entity_id: targetUser.uid,
+          before: { isActive: targetUser.isActive },
+          after: { isActive: nextState },
+          reason: `Administrator status toggle to ${nextState ? 'active' : 'inactive'}`,
+        });
+      }
 
       setUsers((prev) =>
         prev.map((u) => (u.uid === targetUser.uid ? { ...u, isActive: nextState } : u))
       );
+      showToast(
+        nextState ? `تم تنشيط حساب ${targetUser.name}` : `تم تعطيل حساب ${targetUser.name}`,
+        'success'
+      );
       loadAudit();
     } catch (e) {
       console.error('Failed to update status:', e);
-      alert('حدث خطأ أثناء تعديل حالة الحساب.');
+      showToast('حدث خطأ أثناء تعديل حالة الحساب.', 'error');
     }
   };
 
@@ -123,98 +164,179 @@ export const UserManagementView: React.FC = () => {
   const handleSaveRole = async () => {
     if (!editingUser) return;
     if (editingUser.uid === currentUserProfile?.uid && selectedRole !== 'admin') {
-      alert('لا يمكنك تخفيض صلاحيات حسابك الخاص كمدير نظام.');
+      showToast('لا يمكنك تخفيض صلاحيات حسابك الخاص كمدير نظام.', 'warning');
       return;
     }
 
     setRoleChangeLoading(true);
     try {
-      const userRef = doc(db, 'users', editingUser.uid);
       const updates = {
         role: selectedRole,
         isDelegatedManager: selectedRole === 'operations' ? selectedDelegation : false,
         updatedAt: new Date().toISOString(),
       };
 
-      await updateDoc(userRef, updates);
+      if (!isDemoMode) {
+        const userRef = doc(db, 'users', editingUser.uid);
+        await updateDoc(userRef, updates);
 
-      await logAuditEvent({
-        user_uid: currentUserProfile?.uid || '',
-        user_email: currentUserProfile?.email || '',
-        user_role: currentUserProfile?.role || 'admin',
-        action: 'USER_ROLE_CHANGED',
-        entity_type: 'user',
-        entity_id: editingUser.uid,
-        before: { role: editingUser.role, isDelegatedManager: editingUser.isDelegatedManager },
-        after: updates,
-        reason: roleChangeReason || 'Administrative role assignment',
-      });
+        await logAuditEvent({
+          user_uid: currentUserProfile?.uid || '',
+          user_email: currentUserProfile?.email || '',
+          user_role: currentUserProfile?.role || 'admin',
+          action: 'USER_ROLE_CHANGED',
+          entity_type: 'user',
+          entity_id: editingUser.uid,
+          before: { role: editingUser.role, isDelegatedManager: editingUser.isDelegatedManager },
+          after: updates,
+          reason: roleChangeReason || 'Administrative role assignment',
+        });
+      }
 
       setUsers((prev) =>
         prev.map((u) => (u.uid === editingUser.uid ? { ...u, ...updates } : u))
       );
       setEditingUser(null);
       setRoleChangeReason('');
+      showToast('تم تحديث الدور الوظيفي وحفظه في سجل الحوكمة.', 'success');
       loadAudit();
     } catch (e) {
       console.error('Failed to update role:', e);
-      alert('حدث خطأ أثناء تعديل الدور.');
+      showToast('حدث خطأ أثناء تعديل الدور الوظيفي.', 'error');
     } finally {
       setRoleChangeLoading(false);
     }
   };
 
-  // Handle Provisioning New User Profile
+  // Handle Provisioning New User Profile (Admin SDK endpoint with Firestore Invite fallback)
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateMsg(null);
     setCreateLoading(true);
 
+    const emailLower = newEmail.trim().toLowerCase();
+    const trimmedName = newName.trim();
+    const delegated = newRole === 'operations' ? newIsDelegated : false;
+
     try {
-      // In Firebase Client without Admin SDK, we provision the user's authorization document
-      // and trigger password reset / invitation email so they securely set their own password
-      const newUid = `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      const profile: UserProfile = {
-        uid: newUid,
-        name: newName.trim(),
-        email: newEmail.trim().toLowerCase(),
+      if (!isDemoMode && currentUser) {
+        const token = await currentUser.getIdToken();
+        const apiRes = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: trimmedName,
+            email: emailLower,
+            role: newRole,
+            isDelegatedManager: delegated,
+          }),
+        });
+
+        if (apiRes.ok) {
+          const payload = await apiRes.json();
+          const provisionedUser = payload.user as UserProfile;
+          await sendPasswordReset(emailLower);
+
+          setUsers((prev) => [
+            provisionedUser,
+            ...prev.filter((u) => u.uid !== provisionedUser.uid),
+          ]);
+          setCreateMsg({
+            type: 'success',
+            text: `تم إنشاء حساب المصادقة وتعيين الدور بنجاح، وإرسال رابط تعيين كلمة المرور إلى ${emailLower}`,
+          });
+          showToast(`تم إنشاء حساب ${trimmedName} بنجاح`, 'success');
+          setNewName('');
+          setNewEmail('');
+          loadAudit();
+          return;
+        }
+
+        // Fall back cleanly to Firestore Invite when Admin SDK credentials aren't configured
+        if (apiRes.status !== 501) {
+          const errJson = await apiRes.json().catch(() => ({}));
+          throw new Error(errJson.message || 'فشل إنشاء المستخدم عبر الخادم');
+        }
+      }
+
+      const nowIso = new Date().toISOString();
+      const inviteRecord: PendingInvite = {
+        email: emailLower,
+        name: trimmedName,
         role: newRole,
         isActive: true,
-        isDelegatedManager: newRole === 'operations' ? newIsDelegated : false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: currentUserProfile?.email,
+        isDelegatedManager: delegated,
+        createdAt: nowIso,
+        createdBy: currentUserProfile?.email || '',
       };
 
-      await setDoc(doc(db, 'users', newUid), profile);
+      if (!isDemoMode) {
+        await setDoc(doc(db, 'user_invites', emailLower), inviteRecord);
+        await sendPasswordReset(emailLower);
 
-      // Attempt to send password reset / invitation email
-      await sendPasswordReset(newEmail.trim());
+        await logAuditEvent({
+          user_uid: currentUserProfile?.uid || '',
+          user_email: currentUserProfile?.email || '',
+          user_role: currentUserProfile?.role || 'admin',
+          action: 'USER_INVITE_CREATED',
+          entity_type: 'user_invite',
+          entity_id: emailLower,
+          after: inviteRecord,
+          reason: 'Admin provisioned invite awaiting first Firebase Auth sign-in',
+        });
+      }
 
-      await logAuditEvent({
-        user_uid: currentUserProfile?.uid || '',
-        user_email: currentUserProfile?.email || '',
-        user_role: currentUserProfile?.role || 'admin',
-        action: 'USER_PROVISIONED',
-        entity_type: 'user',
-        entity_id: newUid,
-        after: profile,
-        reason: 'New user provisioned by administrator',
-      });
-
-      setUsers((prev) => [profile, ...prev]);
+      setPendingInvites((prev) => [
+        inviteRecord,
+        ...prev.filter((inv) => inv.email !== emailLower),
+      ]);
       setCreateMsg({
         type: 'success',
-        text: `تم إنشاء الملف وإرسال رابط تعيين كلمة المرور إلى ${newEmail}`,
+        text: `تم تسجيل دعوة الصلاحيات للبريد (${emailLower}). بمجرد إنشاء المستخدم لكلمة مروره في Firebase Auth وتسجيل الدخول سيتم تفعيل دوره تلقائياً.`,
       });
+      showToast(`تم تسجيل دعوة ${trimmedName} بنجاح`, 'success');
       setNewName('');
       setNewEmail('');
       loadAudit();
     } catch (err: any) {
       console.error('Error provisioning user:', err);
-      setCreateMsg({ type: 'error', text: 'فشل إنشاء المستخدم: ' + err.message });
+      setCreateMsg({ type: 'error', text: 'فشل إنشاء المستخدم: ' + (err?.message || 'خطأ غير متوقع') });
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  const handleRevokeInvite = async (invite: PendingInvite) => {
+    const confirmed = await confirmAction({
+      title: 'إلغاء دعوة الصلاحيات',
+      message: `هل تريد إلغاء الدعوة المعلقة للمستخدم ${invite.name} (${invite.email})؟`,
+      confirmLabel: 'إلغاء الدعوة',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
+    try {
+      if (!isDemoMode) {
+        await deleteDoc(doc(db, 'user_invites', invite.email));
+        await logAuditEvent({
+          user_uid: currentUserProfile?.uid || '',
+          user_email: currentUserProfile?.email || '',
+          user_role: currentUserProfile?.role || 'admin',
+          action: 'USER_INVITE_REVOKED',
+          entity_type: 'user_invite',
+          entity_id: invite.email,
+          before: invite,
+        });
+      }
+      setPendingInvites((prev) => prev.filter((i) => i.email !== invite.email));
+      showToast(`تم إلغاء الدعوة لـ ${invite.email}`, 'success');
+      loadAudit();
+    } catch (err) {
+      console.error('Failed to revoke invite:', err);
+      showToast('تعذر إلغاء الدعوة. يرجى المحاولة مرة أخرى.', 'error');
     }
   };
 
@@ -449,12 +571,18 @@ export const UserManagementView: React.FC = () => {
                               {/* Reset Password */}
                               <button
                                 onClick={async () => {
-                                  if (window.confirm(`إرسال رابط إعادة تعيين كلمة المرور إلى ${u.email}؟`)) {
+                                  const ok = await confirmAction({
+                                    title: 'إرسال رابط استعادة كلمة المرور',
+                                    message: `هل تريد إرسال رابط إعادة تعيين كلمة المرور إلى ${u.email}؟`,
+                                    confirmLabel: 'إرسال الرابط',
+                                    tone: 'primary',
+                                  });
+                                  if (ok) {
                                     await sendPasswordReset(u.email);
-                                    alert(`تم إرسال رابط إعادة التعيين إلى ${u.email}`);
+                                    showToast(`تم إرسال رابط إعادة التعيين إلى ${u.email}`, 'success');
                                   }
                                 }}
-                                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
                                 title="إرسال رابط استعادة كلمة المرور"
                               >
                                 <Lock className="w-3.5 h-3.5" />
@@ -470,6 +598,60 @@ export const UserManagementView: React.FC = () => {
               </table>
             </div>
           </div>
+
+          {/* Pending Invites Table */}
+          {pendingInvites.length > 0 && (
+            <div className="bg-white dark:bg-[#16253B] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+              <div className="px-5 py-3.5 bg-slate-50 dark:bg-[#121E30] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-black text-slate-800 dark:text-slate-200">
+                  <Clock className="w-4 h-4 text-[#C6A355]" />
+                  <span>دعوات الصلاحيات المعلقة (بانتظار أول تسجيل دخول)</span>
+                </div>
+                <span className="text-[11px] font-bold text-slate-500">
+                  {pendingInvites.length} دعوة
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {pendingInvites.map((inv) => {
+                      const roleMeta = ROLE_DISPLAY_NAMES[inv.role] || { ar: inv.role, en: inv.role };
+                      return (
+                        <tr key={inv.email} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+                          <td className="py-3 px-4">
+                            <div className="font-black text-slate-900 dark:text-white">{inv.name}</div>
+                            <div className="text-[11px] text-slate-400 font-mono" dir="ltr">
+                              {inv.email}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="inline-block px-3 py-1 rounded-xl bg-[#233B5D] text-white font-black text-[11px]">
+                              {roleMeta.ar}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold text-[11px]">
+                              بانتظار التفعيل
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-left">
+                            <button
+                              type="button"
+                              onClick={() => handleRevokeInvite(inv)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>إلغاء الدعوة</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
         </div>
       )}

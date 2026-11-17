@@ -17,10 +17,10 @@ export const PWAInstallButton: React.FC = () => {
       <button
         type="button"
         onClick={install}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black text-amber-950 bg-gradient-to-r from-amber-300 via-amber-200 to-amber-400 hover:from-amber-200 hover:to-amber-300 shadow-md hover:shadow-lg transition-all cursor-pointer border border-amber-400/80 shrink-0 active:scale-95"
+        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black text-[#16253B] bg-[#C6A355] hover:bg-[#d4b366] shadow-sm hover:shadow-md transition-all cursor-pointer border border-[#b39042] shrink-0 active:scale-95"
         title="تثبيت التطبيق على جهاز الكمبيوتر أو الموبايل للعمل أوفلاين"
       >
-        <Download className="w-4 h-4 text-amber-900 animate-bounce" />
+        <Download className="w-4 h-4 text-[#16253B]" />
         <span className="hidden sm:inline">تثبيت التطبيق على الجهاز</span>
         <span className="sm:hidden">تثبيت التطبيق</span>
       </button>

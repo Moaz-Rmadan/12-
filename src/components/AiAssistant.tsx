@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { JobOrderPopulated } from '../types';
-import { Bot, Send, Sparkles, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Bot, Send, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AiAssistantProps {
@@ -19,6 +19,12 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
   ]);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!selectedOrderId && orders.length > 0) {
+      setSelectedOrderId(orders[0].id);
+    }
+  }, [orders, selectedOrderId]);
+
   const selectedOrder = orders.find((o) => o.id === selectedOrderId);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -32,7 +38,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
 
     try {
       let token = '';
-      
+
       if (!isDemoMode && currentUser) {
         token = await currentUser.getIdToken();
       } else if (isDemoMode) {
@@ -41,9 +47,9 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
 
       const response = await fetch('/api/ai-assistant', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           prompt: userMsg,
@@ -66,21 +72,21 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
         const errorText = data.message || data.error || 'عذراً، تعذر الاتصال بمساعد الورشة الذكي.';
         setMessages((prev) => [
           ...prev,
-          { role: 'assistant', text: `⚠️ ${errorText}` },
+          { role: 'assistant', text: errorText },
         ]);
         return;
       }
 
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', text: data.reply || 'تم استلام الاستفسارات وتدقيق البيانات.' },
+        { role: 'assistant', text: data.reply || 'تم استلام الاستفسار وتدقيق البيانات.' },
       ]);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          text: 'عذراً، تعذر الاتصال بالمساعد الذكي في الوقت الحالي. يرجى التحقق من اتصال الشبكة وإعداد المفتاح المخصص.',
+          text: 'عذراً، تعذر الاتصال بالمساعد الذكي في الوقت الحالي. يرجى التحقق من اتصال الشبكة وإعدادات الخادم.',
         },
       ]);
     } finally {
@@ -96,30 +102,30 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
 
   return (
     <div className="space-y-6">
-      
       {/* Intro Header */}
-      <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-amber-900 text-amber-50 p-6 rounded-2xl border border-amber-800/40 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-[#16253B] via-[#233B5D] to-[#1E3352] text-white p-6 rounded-2xl border border-[#4B83B8]/30 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-amber-400 text-xs font-mono font-bold uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-[#C6A355] text-xs font-bold mb-1">
             <Sparkles className="w-4 h-4" />
-            <span>AI Workshop Quality & Batch Assistant</span>
+            <span>الفحص الفني ومراجعة المواصفات</span>
           </div>
-          <h2 className="text-xl font-black font-serif text-amber-100">
+          <h2 className="text-xl font-black font-serif text-white">
             مساعد الورشة الذكي لمصنع النجار ديزاين
           </h2>
-          <p className="text-xs text-amber-200/80 mt-1 max-w-2xl">
-            استخدم نموذج الجيل الجديد للذكاء الاصطناعي لفحص مواصفات أمر الشغل، مطابقة أكواب القماش والـ Batch، وتقييم أبعاد الأثاث والدهانات.
+          <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+            استخدم المساعد الفني لفحص مواصفات أمر الشغل، مطابقة أكواد القماش والـ Batch، وتقييم أبعاد الأثاث والدهانات.
           </p>
         </div>
 
         {/* Order Context Selector */}
-        <div className="flex items-center gap-2 bg-amber-900/60 p-2 rounded-xl border border-amber-700/50">
-          <span className="text-xs text-amber-200 font-bold whitespace-nowrap">السياق المترابط:</span>
+        <div className="flex items-center gap-2 bg-[#121E30]/70 p-2 rounded-xl border border-[#4B83B8]/40">
+          <span className="text-xs text-slate-200 font-bold whitespace-nowrap">أمر الشغل المرتبط:</span>
           <select
             value={selectedOrderId}
             onChange={(e) => setSelectedOrderId(e.target.value)}
-            className="text-xs bg-slate-900 border border-amber-600/50 rounded-lg px-3 py-1.5 font-bold text-amber-100 cursor-pointer"
+            className="text-xs bg-slate-900 border border-[#4B83B8]/50 rounded-lg px-3 py-1.5 font-bold text-white cursor-pointer max-w-[240px]"
           >
+            {orders.length === 0 && <option value="">لا توجد أوامر متاحة</option>}
             {orders.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.order_number} - {o.general_specs.slice(0, 30)}...
@@ -131,9 +137,9 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
 
       {/* Selected Order Context Snapshot */}
       {selectedOrder && (
-        <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-slate-800/40 border border-amber-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
+        <div className="p-4 rounded-xl bg-[#EBF3FA]/60 dark:bg-slate-800/40 border border-[#4B83B8]/30 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
           <div>
-            <span className="font-bold text-amber-950 dark:text-amber-200">
+            <span className="font-bold text-[#16253B] dark:text-[#8CB4D9]">
               بيانات أمر الشغل النشط ({selectedOrder.order_number}):
             </span>
             <p className="text-slate-600 dark:text-slate-400 mt-0.5">
@@ -142,9 +148,9 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
           </div>
 
           <div className="flex items-center gap-4 font-mono font-bold text-slate-700 dark:text-slate-300">
-            <span>المقاسات: {selectedOrder.job_details?.dimensions_cm}</span>
-            <span className="text-amber-700 dark:text-amber-400">
-              Batch: {selectedOrder.job_details?.batch_number}
+            <span>المقاسات: {selectedOrder.job_details?.dimensions_cm || '—'}</span>
+            <span className="text-[#233B5D] dark:text-[#C6A355]">
+              Batch: {selectedOrder.job_details?.batch_number || '—'}
             </span>
           </div>
         </div>
@@ -160,7 +166,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
             }`}
           >
             {msg.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-lg bg-amber-800 text-amber-100 flex items-center justify-center shrink-0 mt-1">
+              <div className="w-8 h-8 rounded-lg bg-[#233B5D] text-[#C6A355] flex items-center justify-center shrink-0 mt-1 border border-[#4B83B8]/30">
                 <Bot className="w-4 h-4" />
               </div>
             )}
@@ -168,7 +174,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
             <div
               className={`max-w-[80%] p-4 rounded-2xl text-xs leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-amber-800 text-amber-50 font-semibold rounded-br-none'
+                  ? 'bg-[#233B5D] text-white font-semibold rounded-br-none'
                   : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-bl-none'
               }`}
             >
@@ -178,7 +184,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
         ))}
 
         {loading && (
-          <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-400 font-bold p-2">
+          <div className="flex items-center gap-2 text-xs text-[#233B5D] dark:text-[#8CB4D9] font-bold p-2">
             <RefreshCw className="w-4 h-4 animate-spin" />
             <span>جاري تحليل المواصفات ومطابقة درجات اللون...</span>
           </div>
@@ -191,8 +197,9 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
         {quickPrompts.map((q, idx) => (
           <button
             key={idx}
+            type="button"
             onClick={() => setPrompt(q)}
-            className="px-3 py-1 rounded-full text-xs bg-amber-50 dark:bg-slate-800 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-slate-700 hover:bg-amber-100 transition-colors whitespace-nowrap cursor-pointer shrink-0"
+            className="px-3 py-1.5 rounded-lg text-xs bg-slate-100 dark:bg-slate-800 text-[#233B5D] dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-[#4B83B8] hover:bg-[#EBF3FA]/50 transition-colors whitespace-nowrap cursor-pointer shrink-0 font-semibold"
           >
             {q}
           </button>
@@ -206,19 +213,18 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ orders }) => {
           placeholder="اكتب استفسارك لمهندس الجودة والورشة..."
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className="flex-1 px-4 py-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
+          className="flex-1 px-4 py-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#4B83B8] shadow-2xs"
         />
 
         <button
           type="submit"
           disabled={loading || !prompt.trim()}
-          className="px-5 py-3 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-800 to-amber-950 hover:from-amber-900 hover:to-slate-900 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer shadow-sm shrink-0"
+          className="px-5 py-3 rounded-xl text-xs font-bold text-white bg-[#233B5D] hover:bg-[#1E3352] disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer shadow-sm shrink-0 border border-[#4B83B8]/30"
         >
           <Send className="w-4 h-4" />
           <span>إرسال</span>
         </button>
       </form>
-
     </div>
   );
 };

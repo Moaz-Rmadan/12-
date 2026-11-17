@@ -6,6 +6,7 @@ import {
   persistentMultipleTabManager,
   doc,
   collection,
+  getDocFromServer,
   getDocs,
   setDoc,
   updateDoc,
@@ -26,7 +27,6 @@ import {
   DeliveryReceiptRecord,
 } from '../types';
 import { PlannedOrderReceiptUpdate } from '../utils/deliveryReceiptLink';
-import { initialCustomers, initialOrders, getPopulatedOrders } from '../data/mockData';
 import { initialTruckManifests } from '../data/truckManifestData';
 import {
   buildRepairedBaselineOrderUpdate,
@@ -35,10 +35,14 @@ import {
 
 // Initialize Firebase App & Firestore Database with persistent offline IndexedDB cache
 const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true,
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-}, firebaseConfig.firestoreDatabaseId);
+export const db = initializeFirestore(
+  app,
+  {
+    experimentalAutoDetectLongPolling: true,
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  },
+  firebaseConfig.firestoreDatabaseId
+);
 export const auth = getAuth(app);
 
 export enum OperationType {
@@ -60,7 +64,7 @@ export interface FirestoreErrorInfo {
   };
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): Error {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -70,86 +74,82 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path,
   };
-  console.error('[Firestore Error]:', JSON.stringify(errInfo));
+  const serialized = JSON.stringify(errInfo);
+  console.error('[Firestore Error]:', serialized);
+  return new Error(serialized);
+}
+
+/**
+ * Verifies live Firestore reachability after authentication.
+ */
+export async function testFirestoreConnection(): Promise<boolean> {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn('[Firebase] Firestore client appears offline or unreachable.');
+    }
+    return false;
+  }
 }
 
 // -----------------------------------------------------------------------------
-// FIRESTORE LIVE SYNC API SERVICES FOR EL-NAGGAR DESIGN
+// FIRESTORE LIVE SYNC API SERVICES FOR EL-NAGGAR FURNITURE
 // -----------------------------------------------------------------------------
 
-// Live Listener for Customers
 export function subscribeToCustomers(callback: (customers: Customer[]) => void) {
   const customersRef = collection(db, 'customers');
 
   return onSnapshot(
     customersRef,
     (snapshot) => {
-      if (snapshot.empty) {
-        // Seed default initial customers if empty
-        initialCustomers.forEach((c) => {
-          setDoc(doc(db, 'customers', c.id), c);
-        });
-        callback(initialCustomers);
-      } else {
-        const map = new Map<string, Customer>();
-        snapshot.docs.forEach((docSnap) => {
-          const data = docSnap.data() as Customer;
-          if (data && data.id) {
-            map.set(data.id, data);
-          }
-        });
-        callback(Array.from(map.values()));
-      }
+      const map = new Map<string, Customer>();
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data() as Customer;
+        if (data && data.id) {
+          map.set(data.id, data);
+        }
+      });
+      callback(Array.from(map.values()));
     },
     (err) => {
       handleFirestoreError(err, OperationType.LIST, 'customers');
-      callback(initialCustomers);
     }
   );
 }
 
-// Live Listener for Job Orders
 export function subscribeToJobOrders(callback: (orders: JobOrderPopulated[]) => void) {
   const ordersRef = collection(db, 'job_orders');
 
   return onSnapshot(
     ordersRef,
     (snapshot) => {
-      if (snapshot.empty) {
-        // Seed default initial orders if empty
-        const defaultOrders = getPopulatedOrders();
-        defaultOrders.forEach((o) => {
-          setDoc(doc(db, 'job_orders', o.id), o);
-        });
-        callback(defaultOrders);
-      } else {
-        const map = new Map<string, JobOrderPopulated>();
-        snapshot.docs.forEach((docSnap) => {
-          const data = docSnap.data() as JobOrderPopulated;
-          if (data && data.id) {
-            map.set(data.id, data);
-          }
-        });
-        callback(Array.from(map.values()));
-      }
+      const map = new Map<string, JobOrderPopulated>();
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data() as JobOrderPopulated;
+        if (data && data.id) {
+          map.set(data.id, data);
+        }
+      });
+      callback(Array.from(map.values()));
     },
     (err) => {
       handleFirestoreError(err, OperationType.LIST, 'job_orders');
-      callback(getPopulatedOrders());
     }
   );
 }
 
 // Save or Create Job Order in Firestore
 export async function saveJobOrderToFirestore(payload: CreateJobOrderPayload): Promise<JobOrderPopulated> {
-  const orderId = `ord-${Date.now()}`;
+  const orderId = `ord-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const normalizedPhone = (payload.customer.phone || '').trim();
+  const nowIso = new Date().toISOString();
 
-  let customerId = `cust-${Date.now()}`;
+  let customerId = `cust-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   let finalCustomer: Customer;
 
   try {
-    // 1. Check if customer already exists in Firestore by phone
     let existingCustomerDoc: Customer | null = null;
     if (normalizedPhone) {
       const custQuery = query(collection(db, 'customers'), where('phone', '==', normalizedPhone), limit(1));
@@ -161,7 +161,6 @@ export async function saveJobOrderToFirestore(payload: CreateJobOrderPayload): P
     }
 
     if (existingCustomerDoc) {
-      // Customer exists: preserve original ID & history, update latest address or name if provided
       finalCustomer = {
         ...existingCustomerDoc,
         name: payload.customer.name || existingCustomerDoc.name,
@@ -170,27 +169,20 @@ export async function saveJobOrderToFirestore(payload: CreateJobOrderPayload): P
       await updateDoc(doc(db, 'customers', customerId), {
         name: finalCustomer.name,
         address: finalCustomer.address,
+        updated_at: nowIso,
       });
     } else {
-      // New Customer: create new customer document
       finalCustomer = {
         id: customerId,
         name: payload.customer.name,
         phone: normalizedPhone || '01000000000',
         address: payload.customer.address || 'العنوان غير مدخل',
-        created_at: new Date().toISOString(),
+        created_at: nowIso,
       };
       await setDoc(doc(db, 'customers', customerId), finalCustomer);
     }
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `customers/${customerId}`);
-    finalCustomer = {
-      id: customerId,
-      name: payload.customer.name,
-      phone: normalizedPhone || '01000000000',
-      address: payload.customer.address || 'العنوان غير مدخل',
-      created_at: new Date().toISOString(),
-    };
+    throw handleFirestoreError(err, OperationType.WRITE, `customers/${customerId}`);
   }
 
   const newPopulatedOrder: JobOrderPopulated = {
@@ -205,8 +197,8 @@ export async function saveJobOrderToFirestore(payload: CreateJobOrderPayload): P
     current_stage: payload.job_order.current_stage || 'لم يبدأ',
     total_price: payload.job_order.total_price,
     deposit_paid: payload.job_order.deposit_paid,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: nowIso,
+    updated_at: nowIso,
     customer: finalCustomer,
     job_details: {
       id: `det-${Date.now()}`,
@@ -218,7 +210,7 @@ export async function saveJobOrderToFirestore(payload: CreateJobOrderPayload): P
       color_code: payload.job_details.color_code,
       batch_number: payload.job_details.batch_number,
       installation_notes: payload.job_details.installation_notes,
-      created_at: new Date().toISOString(),
+      created_at: nowIso,
     },
     attachments: payload.attachments.map((a, idx) => ({
       id: `att-${Date.now()}-${idx}`,
@@ -227,36 +219,44 @@ export async function saveJobOrderToFirestore(payload: CreateJobOrderPayload): P
       file_url: a.file_url,
       title: a.title,
       description: a.description || '',
-      uploaded_at: new Date().toISOString(),
+      uploaded_at: nowIso,
     })),
   };
 
   try {
-    // Write job order to Firestore
     await setDoc(doc(db, 'job_orders', orderId), newPopulatedOrder);
-    console.log('[Firebase] Order saved to Firestore:', orderId);
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `job_orders/${orderId}`);
+    throw handleFirestoreError(err, OperationType.WRITE, `job_orders/${orderId}`);
   }
 
   return newPopulatedOrder;
 }
 
-// Update Order Status in Firestore
-export async function updateOrderStatusInFirestore(orderId: string, newStatus: OrderStatus) {
+export async function updateOrderStatusInFirestore(
+  orderId: string,
+  newStatus: OrderStatus,
+  options?: { deliveredAt?: string }
+) {
   try {
     const orderDocRef = doc(db, 'job_orders', orderId);
-    await updateDoc(orderDocRef, {
+    const nowIso = new Date().toISOString();
+    const payload: Record<string, any> = {
       status: newStatus,
-      updated_at: new Date().toISOString(),
-    });
-    console.log('[Firebase] Order status updated:', orderId, newStatus);
+      updated_at: nowIso,
+    };
+
+    if (newStatus === 'تسليم') {
+      payload.delivered_at = options?.deliveredAt || nowIso.slice(0, 10);
+      payload.current_stage = 'جاهز للتسليم';
+      payload.stage_updated_at = nowIso;
+    }
+
+    await updateDoc(orderDocRef, payload);
   } catch (err) {
-    handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
+    throw handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
   }
 }
 
-// Update Order Production Stage in Firestore
 export async function updateOrderStageInFirestore(orderId: string, newStage: string) {
   try {
     const orderDocRef = doc(db, 'job_orders', orderId);
@@ -266,13 +266,11 @@ export async function updateOrderStageInFirestore(orderId: string, newStage: str
       stage_updated_at: nowIso,
       updated_at: nowIso,
     });
-    console.log('[Firebase] Order stage updated:', orderId, newStage, nowIso);
   } catch (err) {
-    handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
+    throw handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
   }
 }
 
-// Update Order Archive Status in Firestore
 export async function updateOrderArchiveStatusInFirestore(orderId: string, isArchived: boolean) {
   try {
     const orderDocRef = doc(db, 'job_orders', orderId);
@@ -280,13 +278,28 @@ export async function updateOrderArchiveStatusInFirestore(orderId: string, isArc
       is_archived: isArchived,
       updated_at: new Date().toISOString(),
     });
-    console.log('[Firebase] Order archive status updated:', orderId, isArchived);
   } catch (err) {
-    handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
+    throw handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
   }
 }
 
-// Update Complete Job Order in Firestore (for modifications / amendments)
+export async function archiveOrdersBatchInFirestore(orderIds: string[]) {
+  if (!orderIds || orderIds.length === 0) return;
+  try {
+    const batch = writeBatch(db);
+    const nowIso = new Date().toISOString();
+    for (const orderId of orderIds) {
+      batch.update(doc(db, 'job_orders', orderId), {
+        is_archived: true,
+        updated_at: nowIso,
+      });
+    }
+    await batch.commit();
+  } catch (err) {
+    throw handleFirestoreError(err, OperationType.UPDATE, 'job_orders/batch-archive');
+  }
+}
+
 export async function updateJobOrderInFirestore(
   orderId: string,
   payload: CreateJobOrderPayload
@@ -298,7 +311,6 @@ export async function updateJobOrderInFirestore(
   let finalCustomer: Customer;
 
   try {
-    // 1. Check or update customer in Firestore
     let existingCustomerDoc: Customer | null = null;
     if (normalizedPhone) {
       const custQuery = query(collection(db, 'customers'), where('phone', '==', normalizedPhone), limit(1));
@@ -333,14 +345,7 @@ export async function updateJobOrderInFirestore(
       await setDoc(doc(db, 'customers', customerId), finalCustomer);
     }
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `customers/${customerId}`);
-    finalCustomer = {
-      id: customerId,
-      name: payload.customer.name,
-      phone: normalizedPhone || '01000000000',
-      address: payload.customer.address || 'العنوان غير مدخل',
-      updated_at: nowIso,
-    };
+    throw handleFirestoreError(err, OperationType.WRITE, `customers/${customerId}`);
   }
 
   const updatedPopulatedOrder: JobOrderPopulated = {
@@ -389,6 +394,7 @@ export async function updateJobOrderInFirestore(
       delivery_date: updatedPopulatedOrder.delivery_date,
       general_specs: updatedPopulatedOrder.general_specs,
       status: updatedPopulatedOrder.status,
+      current_stage: updatedPopulatedOrder.current_stage,
       total_price: updatedPopulatedOrder.total_price,
       deposit_paid: updatedPopulatedOrder.deposit_paid,
       updated_at: nowIso,
@@ -396,37 +402,31 @@ export async function updateJobOrderInFirestore(
       job_details: updatedPopulatedOrder.job_details,
       attachments: updatedPopulatedOrder.attachments,
     });
-    console.log('[Firebase] Order updated in Firestore:', orderId);
   } catch (err) {
-    handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
+    throw handleFirestoreError(err, OperationType.UPDATE, `job_orders/${orderId}`);
   }
 
   return updatedPopulatedOrder;
 }
 
-// Delete Order from Firestore
 export async function deleteOrderFromFirestore(orderId: string) {
   try {
     const orderDocRef = doc(db, 'job_orders', orderId);
     await deleteDoc(orderDocRef);
-    console.log('[Firebase] Order deleted:', orderId);
   } catch (err) {
-    handleFirestoreError(err, OperationType.DELETE, `job_orders/${orderId}`);
+    throw handleFirestoreError(err, OperationType.DELETE, `job_orders/${orderId}`);
   }
 }
 
-// Delete Customer from Firestore
 export async function deleteCustomerFromFirestore(customerId: string) {
   try {
     const custDocRef = doc(db, 'customers', customerId);
     await deleteDoc(custDocRef);
-    console.log('[Firebase] Customer deleted:', customerId);
   } catch (err) {
-    handleFirestoreError(err, OperationType.DELETE, `customers/${customerId}`);
+    throw handleFirestoreError(err, OperationType.DELETE, `customers/${customerId}`);
   }
 }
 
-// Single Customer save to Firestore
 export async function saveCustomerToFirestore(cust: { name: string; phone: string; address?: string }): Promise<Customer> {
   const custId = `cust-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const custData: Customer = {
@@ -438,14 +438,12 @@ export async function saveCustomerToFirestore(cust: { name: string; phone: strin
   };
   try {
     await setDoc(doc(db, 'customers', custId), custData);
-    console.log('[Firebase] Customer saved:', custId);
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `customers/${custId}`);
+    throw handleFirestoreError(err, OperationType.WRITE, `customers/${custId}`);
   }
   return custData;
 }
 
-// Batch Customers Import to Firestore
 export async function saveBatchCustomersToFirestore(
   newCustomers: Array<{ name: string; phone: string; address?: string }>
 ): Promise<Customer[]> {
@@ -453,7 +451,6 @@ export async function saveBatchCustomersToFirestore(
   const batch = writeBatch(db);
   const nowIso = new Date().toISOString();
 
-  // Retrieve existing phone numbers to prevent duplicates
   const existingPhones = new Set<string>();
   try {
     const existingSnap = await getDocs(collection(db, 'customers'));
@@ -491,32 +488,26 @@ export async function saveBatchCustomersToFirestore(
   if (addedCustomers.length > 0) {
     try {
       await batch.commit();
-      console.log(`[Firebase] Batch imported ${addedCustomers.length} customers to Firestore`);
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'customers/batch');
+      throw handleFirestoreError(err, OperationType.WRITE, 'customers/batch');
     }
   }
 
   return addedCustomers;
 }
 
-// Batch Job Orders Import (with automatic customer separation & link)
 export async function saveBatchJobOrdersToFirestore(
   ordersList: CreateJobOrderPayload[]
 ): Promise<JobOrderPopulated[]> {
   const populatedResults: JobOrderPopulated[] = [];
   for (const payload of ordersList) {
-    try {
-      const saved = await saveJobOrderToFirestore(payload);
-      populatedResults.push(saved);
-    } catch (err) {
-      console.error('[Firebase] Error saving batch order:', payload.job_order.order_number, err);
-    }
+    const saved = await saveJobOrderToFirestore(payload);
+    populatedResults.push(saved);
   }
   return populatedResults;
 }
 
-// Ensure all workshop job orders & customers are stored in Firestore and baseline attachments stay valid
+// Ensure baseline workshop job orders & customers are stored in Firestore (Admin-only operation)
 export async function seedWorkshopDataIfMissing(
   customers: Customer[],
   populatedOrders: JobOrderPopulated[]
@@ -535,14 +526,13 @@ export async function seedWorkshopDataIfMissing(
     });
 
     type BatchOp =
-      | { type: 'set'; col: 'customers' | 'job_orders'; id: string; data: Record<string, unknown> }
+      | { type: 'set'; col: 'customers' | 'job_orders' | 'truck_manifests'; id: string; data: Record<string, unknown> }
       | { type: 'update'; col: 'customers' | 'job_orders'; id: string; data: Record<string, unknown> }
       | { type: 'delete'; col: 'job_orders'; id: string };
 
     const ops: BatchOp[] = [];
     const nowIso = new Date().toISOString();
 
-    // 1. Seed any missing customers or repair collided placeholder phones
     for (const cust of customers) {
       const existingCust = existingCustMap.get(cust.id);
       if (!existingCust) {
@@ -565,7 +555,6 @@ export async function seedWorkshopDataIfMissing(
       }
     }
 
-    // 2. Seed missing job orders OR repair broken/stale baseline attachments & details
     for (const ord of populatedOrders) {
       const existingDoc = existingOrdersMap.get(ord.id);
       if (!existingDoc) {
@@ -588,20 +577,18 @@ export async function seedWorkshopDataIfMissing(
       }
     }
 
-    // 3. Seed any missing truck manifests
     const manifestsSnap = await getDocs(collection(db, 'truck_manifests'));
     if (manifestsSnap.empty) {
       for (const manifest of initialTruckManifests) {
         ops.push({
           type: 'set',
-          col: 'truck_manifests' as any,
+          col: 'truck_manifests',
           id: manifest.id,
           data: JSON.parse(JSON.stringify(manifest)),
         });
       }
     }
 
-    // 4. Clean up legacy dummy orders if present
     const legacyIds = ['ord-1', 'ord-2', 'ord-3'];
     for (const legId of legacyIds) {
       if (existingOrdersMap.has(legId)) {
@@ -634,10 +621,9 @@ export async function seedWorkshopDataIfMissing(
       await batch.commit();
     }
 
-    console.log(`[Firebase] Successfully synchronized ${ops.length} workshop updates to Firestore.`);
     return true;
   } catch (err) {
-    console.error('[Firebase] Error syncing workshop orders to Firestore:', err);
+    console.warn('[Firebase] Workshop baseline sync skipped:', err);
     return false;
   }
 }
@@ -647,15 +633,13 @@ export async function seedWorkshopDataIfMissing(
 // -----------------------------------------------------------------------------
 
 export async function saveTruckManifestToFirestore(manifest: TruckManifest): Promise<TruckManifest> {
-  // Strip all undefined fields to prevent Firestore "Unsupported field value: undefined" error
   const cleanManifest = JSON.parse(JSON.stringify(manifest)) as TruckManifest;
 
   try {
     const docRef = doc(db, 'truck_manifests', cleanManifest.id);
     await setDoc(docRef, cleanManifest, { merge: true });
-    console.log('[Firebase] Saved truck manifest to Firestore:', cleanManifest.id);
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `truck_manifests/${cleanManifest.id}`);
+    throw handleFirestoreError(err, OperationType.WRITE, `truck_manifests/${cleanManifest.id}`);
   }
 
   return cleanManifest;
@@ -688,9 +672,8 @@ export async function deleteTruckManifestFromFirestore(manifestId: string): Prom
   try {
     const docRef = doc(db, 'truck_manifests', manifestId);
     await deleteDoc(docRef);
-    console.log('[Firebase] Deleted truck manifest from Firestore:', manifestId);
   } catch (err) {
-    handleFirestoreError(err, OperationType.DELETE, `truck_manifests/${manifestId}`);
+    throw handleFirestoreError(err, OperationType.DELETE, `truck_manifests/${manifestId}`);
   }
 }
 
@@ -736,11 +719,8 @@ export async function issueDeliveryReceiptToFirestore(params: {
     }
 
     await batch.commit();
-    console.log(
-      `[Firebase] Issued delivery receipt ${cleanReceipt.receipt_number} linked to ${params.orderUpdates.length} orders.`
-    );
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `delivery_receipts/${cleanReceipt.id}`);
+    throw handleFirestoreError(err, OperationType.WRITE, `delivery_receipts/${cleanReceipt.id}`);
   }
 
   return cleanReceipt;
@@ -765,11 +745,7 @@ export async function deleteDeliveryReceiptFromFirestore(
     }
 
     await batch.commit();
-    console.log('[Firebase] Deleted delivery receipt and unlinked orders:', receiptId);
   } catch (err) {
-    handleFirestoreError(err, OperationType.DELETE, `delivery_receipts/${receiptId}`);
+    throw handleFirestoreError(err, OperationType.DELETE, `delivery_receipts/${receiptId}`);
   }
 }
-
-
-

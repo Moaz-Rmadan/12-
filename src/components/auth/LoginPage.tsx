@@ -3,7 +3,7 @@ import { Hammer, Lock, Mail, Eye, EyeOff, AlertCircle, ShieldAlert, CheckCircle2
 import { useAuth } from '../../contexts/AuthContext';
 
 export const LoginPage: React.FC = () => {
-  const { login, sendPasswordReset, enterDemoMode, authError, isDeactivated } = useAuth();
+  const { login, sendPasswordReset, enterDemoMode, canUseDevDemo, authError, isDeactivated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -15,8 +15,6 @@ export const LoginPage: React.FC = () => {
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
-
-  const isAdminEmail = email.trim().toLowerCase() === 'cfo.moaz@gmail.com';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,8 +68,8 @@ export const LoginPage: React.FC = () => {
             <h1 className="text-xl sm:text-2xl font-black text-[#16253B] dark:text-white tracking-tight">
               النجار فيرنتشر
             </h1>
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5">
-              EL-NAGGAR ERP SYSTEM
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">
+              نظام إدارة أوامر الشغل ومراحل الإنتاج
             </p>
           </div>
           <div className="inline-block px-3 py-1 rounded-full bg-slate-100 dark:bg-[#1E3352] text-[#233B5D] dark:text-[#8CB4D9] text-[11px] font-bold border border-slate-200 dark:border-[#2E4B75]">
@@ -92,7 +90,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Error Alert */}
         {(localError || authError) && !isDeactivated && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-rose-800 dark:text-rose-200 flex items-center gap-2.5 text-xs font-bold animate-shake">
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-rose-800 dark:text-rose-200 flex items-center gap-2.5 text-xs font-bold">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>{localError || authError}</span>
           </div>
@@ -176,27 +174,24 @@ export const LoginPage: React.FC = () => {
               )}
             </button>
 
-            {/* Emergency Bypass for Admin */}
-            {isAdminEmail && (
+            {/* Dev-only Preview Entry */}
+            {canUseDevDemo && (
               <button
                 type="button"
                 onClick={handleDemoLogin}
                 className="w-full h-11 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/40"
               >
                 <ShieldAlert className="w-4 h-4" />
-                <span>الدخول الطارئ (تجاوز السحابة)</span>
+                <span>دخول معاينة التطوير (بيئة محلية)</span>
               </button>
             )}
           </div>
         </form>
 
         {/* Security Notice */}
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-center space-y-1">
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-center">
           <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
             النظام مغلق وغير متاح للتسجيل العام. يتم إنشاء الحسابات عبر مدير النظام فقط.
-          </p>
-          <p className="text-[10px] text-slate-400 font-mono">
-            AL-NAJJAR ENTERPRISE SECURITY RBAC v2.0
           </p>
         </div>
 

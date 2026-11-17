@@ -132,19 +132,19 @@ export const MonthlyDeliveredReport: React.FC<MonthlyDeliveredReportProps> = ({ 
     <div className="space-y-6 sm:space-y-10">
       
       {/* TOP CONTROLS & PREMIUM HEADER */}
-      <div className="no-print bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white p-5 sm:p-8 rounded-3xl border border-slate-800 shadow-xl space-y-6 relative overflow-hidden">
+      <div className="no-print bg-gradient-to-br from-[#16253B] via-[#233B5D] to-[#1E3352] text-white p-5 sm:p-8 rounded-3xl border border-[#4B83B8]/30 shadow-xl space-y-6 relative overflow-hidden">
         {/* Background Glow */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px] -mr-32 -mt-32 rounded-full" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#4B83B8]/15 blur-[100px] -mr-32 -mt-32 rounded-full" />
         
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30 shadow-inner">
+            <div className="w-14 h-14 rounded-2xl bg-[#C6A355]/15 text-[#C6A355] flex items-center justify-center shrink-0 border border-[#C6A355]/30 shadow-inner">
               <FileText className="w-8 h-8" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-amber-400 text-[10px] sm:text-xs font-mono font-black uppercase tracking-[0.2em] mb-1">
-                <Sparkles className="w-4 h-4 animate-pulse" />
-                <span>Financial & Logistic Executive Audit</span>
+              <div className="flex items-center gap-2 text-[#C6A355] text-[10px] sm:text-xs font-bold mb-1">
+                <Sparkles className="w-4 h-4" />
+                <span>المراجعة المالية واللوجستية</span>
               </div>
               <h2 className="text-xl sm:text-3xl font-black font-serif text-white leading-tight">
                 تقرير التسليمات والإيرادات الشهرية

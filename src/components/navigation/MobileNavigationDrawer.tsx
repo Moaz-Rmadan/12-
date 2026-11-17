@@ -10,6 +10,7 @@ interface MobileNavigationDrawerProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   urgentOrdersCount?: number;
+  deliveredOrdersCount?: number;
 }
 
 export const MobileNavigationDrawer: React.FC<MobileNavigationDrawerProps> = ({
@@ -18,6 +19,7 @@ export const MobileNavigationDrawer: React.FC<MobileNavigationDrawerProps> = ({
   activeTab,
   setActiveTab,
   urgentOrdersCount = 0,
+  deliveredOrdersCount = 0,
 }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
   const currentParentGroup = getNavGroupForTab(activeTab);
@@ -152,7 +154,12 @@ export const MobileNavigationDrawer: React.FC<MobileNavigationDrawerProps> = ({
                     {group.items.map((item: NavItemConfig) => {
                       const ItemIcon = item.icon;
                       const isActive = activeTab === item.id;
-                      const badgeVal = item.badgeKey === 'urgentOrders' ? urgentOrdersCount : 0;
+                      const badgeVal =
+                        item.badgeKey === 'urgentOrders'
+                          ? urgentOrdersCount
+                          : item.badgeKey === 'deliveredCount'
+                          ? deliveredOrdersCount
+                          : 0;
 
                       return (
                         <button
@@ -170,7 +177,13 @@ export const MobileNavigationDrawer: React.FC<MobileNavigationDrawerProps> = ({
                           <ItemIcon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                           <span className="flex-1 truncate">{item.label}</span>
                           {badgeVal > 0 && (
-                            <span className="px-1.5 py-0.5 text-[9px] font-black font-mono rounded-full bg-rose-600 text-white shrink-0">
+                            <span
+                              className={`px-1.5 py-0.5 text-[9px] font-black font-mono rounded-full shrink-0 ${
+                                item.badgeKey === 'urgentOrders'
+                                  ? 'bg-rose-600 text-white'
+                                  : 'bg-[#C6A355] text-[#16253B]'
+                              }`}
+                            >
                               {badgeVal}
                             </span>
                           )}
@@ -193,7 +206,7 @@ export const MobileNavigationDrawer: React.FC<MobileNavigationDrawerProps> = ({
                 نظام إدارة مصنع النجار
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 font-mono">v2.5</span>
+            <span className="text-[10px] text-[#8CB4D9] font-bold">متصل</span>
           </div>
         </div>
       </div>

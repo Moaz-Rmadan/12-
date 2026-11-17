@@ -22,8 +22,9 @@ import {
   Activity,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { canApproveDraft, canCancelOrder, isValidStatusTransition } from '../lib/permissions';
-import { Check, ShieldCheck, FileCheck } from 'lucide-react';
+import { useFeedback } from '../contexts/FeedbackContext';
+import { canApproveDraft, hasPermission, isValidStatusTransition } from '../lib/permissions';
+import { Check, FileCheck } from 'lucide-react';
 
 interface WorkshopCardModalProps {
   order: JobOrderPopulated | null;
@@ -45,6 +46,14 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
   onOpenDeliveryReceipt,
 }) => {
   const { userProfile } = useAuth();
+  const { showToast, confirmAction } = useFeedback();
+
+  const canEditThisOrder =
+    userProfile?.role === 'admin' ||
+    userProfile?.role === 'operations' ||
+    (userProfile?.role === 'sales' && order?.status === 'Draft');
+  const canChangeStage = hasPermission(userProfile, 'order:update_stage');
+  const canArchiveOrder = hasPermission(userProfile, 'order:update_production_fields');
 
   const imageAttachments = order?.attachments?.filter(
     (a) => /\.(jpe?g|png|webp)$/i.test(a.file_url || '')
@@ -215,28 +224,39 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
                   <div className="relative group">
                     <select
                       value={order.status}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const targetStatus = e.target.value as OrderStatus;
+                        if (targetStatus === order.status) return;
                         const transition = isValidStatusTransition(order.status, targetStatus, userProfile);
                         if (!transition.allowed) {
-                          alert(transition.error);
+                          showToast(transition.error || 'انتقال الحالة غير مصرح به لهذا الدور', 'error');
                           return;
+                        }
+                        if (targetStatus === 'تسليم' && order.status !== 'تسليم') {
+                          const confirmed = await confirmAction({
+                            title: 'تأكيد تسليم أمر الشغل',
+                            message: `سيتم نقل أمر الشغل (${order.order_number}) من «أوامر الشغل الجارية» إلى شاشة «التسليمات ومتابعة التحصيل». هل تم تسليم القطع فعلياً؟`,
+                            confirmLabel: 'تأكيد التسليم ونقله للتسليمات',
+                            cancelLabel: 'تراجع',
+                            tone: 'primary',
+                          });
+                          if (!confirmed) return;
                         }
                         onUpdateStatus(order.id, targetStatus);
                       }}
                       className="w-full sm:w-auto appearance-none text-[11px] font-black bg-slate-800 text-amber-400 border border-slate-700 rounded-xl pl-8 pr-3 py-2.5 cursor-pointer hover:border-amber-500 transition-all focus:ring-2 focus:ring-amber-500/40"
                     >
-                      <option value="Draft">📝 مسودة</option>
-                      <option value="قيد التشغيل">🔨 قيد التشغيل</option>
-                      <option value="تم التنفيذ">✅ تم التنفيذ</option>
-                      <option value="تسليم">🚚 تسليم</option>
+                      <option value="Draft">مسودة</option>
+                      <option value="قيد التشغيل">قيد التشغيل</option>
+                      <option value="تم التنفيذ">تم التنفيذ</option>
+                      <option value="تسليم">تسليم</option>
                     </select>
                     <Activity className="w-3.5 h-3.5 text-amber-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 )
               )}
 
-              {onUpdateStage && (
+              {onUpdateStage && canChangeStage && (
                 <div className="relative group">
                   <select
                     value={order.current_stage || 'لم يبدأ'}
@@ -260,7 +280,7 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
 
             {/* Row 3: Action Buttons (Horizontal Scroll on Mobile) */}
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1">
-              {onEditOrder && (
+              {onEditOrder && canEditThisOrder && (
                 <button
                   onClick={() => {
                     onEditOrder(order);
@@ -289,7 +309,7 @@ export const WorkshopCardModal: React.FC<WorkshopCardModalProps> = ({
                 <span>طباعة بالعرض</span>
               </button>
 
-              {onUpdateArchiveStatus && (
+              {onUpdateArchiveStatus && canArchiveOrder && (
                 <button
                   onClick={() => onUpdateArchiveStatus(order.id, !order.is_archived)}
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-black transition-all cursor-pointer shrink-0 whitespace-nowrap ${

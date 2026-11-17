@@ -1,579 +1,401 @@
 /**
- * Utility to reliably trigger printing inside iframe preview sandboxes and popups
- * Supports A4 portrait and A4 landscape for optimal fitting of single-page work orders,
- * including 100% full-bleed high-res original work order sheets and delivery receipts.
+ * Bulletproof A4 print utility for El-Naggar Furniture Factory.
+ * Uses synchronous DOM portal isolation + native window.print() so printing works
+ * reliably across desktop browsers, mobile/PWA offline mode, and nested iframe
+ * preview sandboxes (zero window.open, zero 0x0 iframe blocking, zero CDN Tailwind race).
  */
-export function printElementById(elementId: string, orientation: 'portrait' | 'landscape' = 'portrait') {
+
+export const PRINT_PORTAL_ID = 'print-portal-root';
+export const DYNAMIC_PRINT_STYLE_ID = 'dynamic-print-style';
+export const PRINTING_BODY_ATTR = 'data-printing-target';
+
+let activeCleanupTimer: ReturnType<typeof setTimeout> | null = null;
+let activeAfterPrintHandler: (() => void) | null = null;
+
+/**
+ * Copies live runtime values from form elements in `source` to `clone`
+ * because DOM `cloneNode(true)` does not preserve edited `.value`, `.checked`,
+ * or `.selectedIndex` states that were not reflected back to HTML attributes.
+ */
+export function syncFormValuesToClone(source: HTMLElement, clone: HTMLElement): void {
+  const srcInputs = source.querySelectorAll('input');
+  const dstInputs = clone.querySelectorAll('input');
+  srcInputs.forEach((srcEl, idx) => {
+    const dstEl = dstInputs[idx];
+    if (!dstEl) return;
+    if (srcEl.type === 'checkbox' || srcEl.type === 'radio') {
+      dstEl.checked = srcEl.checked;
+      if (srcEl.checked) {
+        dstEl.setAttribute('checked', 'checked');
+      } else {
+        dstEl.removeAttribute('checked');
+      }
+    } else {
+      dstEl.value = srcEl.value;
+      dstEl.setAttribute('value', srcEl.value);
+    }
+  });
+
+  const srcTextareas = source.querySelectorAll('textarea');
+  const dstTextareas = clone.querySelectorAll('textarea');
+  srcTextareas.forEach((srcEl, idx) => {
+    const dstEl = dstTextareas[idx];
+    if (!dstEl) return;
+    dstEl.value = srcEl.value;
+    dstEl.textContent = srcEl.value;
+  });
+
+  const srcSelects = source.querySelectorAll('select');
+  const dstSelects = clone.querySelectorAll('select');
+  srcSelects.forEach((srcEl, idx) => {
+    const dstEl = dstSelects[idx];
+    if (!dstEl) return;
+    dstEl.selectedIndex = srcEl.selectedIndex;
+    Array.from(dstEl.options).forEach((opt, optIdx) => {
+      if (optIdx === srcEl.selectedIndex) {
+        opt.setAttribute('selected', 'selected');
+      } else {
+        opt.removeAttribute('selected');
+      }
+    });
+  });
+}
+
+export function buildPrintIsolationCss(orientation: 'portrait' | 'landscape' = 'portrait'): string {
+  const maxWidth = orientation === 'landscape' ? '285mm' : '210mm';
+  const fullSheetMinHeight = orientation === 'landscape' ? '190mm' : '268mm';
+  const fullSheetMaxHeight = orientation === 'landscape' ? '198mm' : '285mm';
+
+  return `
+    @media screen {
+      #${PRINT_PORTAL_ID} {
+        display: none !important;
+      }
+    }
+
+    @media print {
+      @page {
+        size: A4 ${orientation};
+        margin: 4mm 6mm;
+      }
+
+      html, body {
+        font-family: 'Cairo', 'Tajawal', sans-serif !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        direction: rtl !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        color-scheme: light !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      body[${PRINTING_BODY_ATTR}="true"] > *:not(#${PRINT_PORTAL_ID}) {
+        display: none !important;
+      }
+
+      #${PRINT_PORTAL_ID} {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: ${maxWidth} !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+
+      #${PRINT_PORTAL_ID} .no-print {
+        display: none !important;
+      }
+
+      #${PRINT_PORTAL_ID} .text-blue-900,
+      #${PRINT_PORTAL_ID} .text-blue-950 {
+        color: #002266 !important;
+      }
+
+      #${PRINT_PORTAL_ID} .text-emerald-800,
+      #${PRINT_PORTAL_ID} .text-emerald-950 {
+        color: #064e3b !important;
+      }
+
+      #${PRINT_PORTAL_ID} .text-red-600 {
+        color: #cc0000 !important;
+      }
+
+      #${PRINT_PORTAL_ID} .text-amber-800 {
+        color: #884400 !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-workshop-card,
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt,
+      #${PRINT_PORTAL_ID} #printable-job-order-sheet {
+        box-shadow: none !important;
+        page-break-after: avoid !important;
+        page-break-before: avoid !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-report,
+      #${PRINT_PORTAL_ID} #printable-top-models-report,
+      #${PRINT_PORTAL_ID} #printable-bottleneck-report,
+      #${PRINT_PORTAL_ID} #printable-isolated-stage-report,
+      #${PRINT_PORTAL_ID} #printable-overdue-report,
+      #${PRINT_PORTAL_ID} #printable-smart-search-report {
+        box-shadow: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-report table,
+      #${PRINT_PORTAL_ID} #printable-smart-search-report table,
+      #${PRINT_PORTAL_ID} #printable-top-models-report table,
+      #${PRINT_PORTAL_ID} #printable-bottleneck-report table,
+      #${PRINT_PORTAL_ID} #printable-isolated-stage-report table,
+      #${PRINT_PORTAL_ID} #printable-overdue-report table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-report th {
+        background-color: #fef08a !important;
+        color: #000000 !important;
+        font-weight: 900 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-report td,
+      #${PRINT_PORTAL_ID} #printable-report th {
+        border: 1px solid #94a3b8 !important;
+        padding: 6px 8px !important;
+        font-size: 11px !important;
+      }
+
+      /* Truck Manifest Single-Page A4 Layout */
+      #${PRINT_PORTAL_ID} #printable-truck-manifest {
+        border: 2px solid #000000 !important;
+        box-shadow: none !important;
+        box-sizing: border-box !important;
+        page-break-after: avoid !important;
+        page-break-before: avoid !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        min-height: ${fullSheetMinHeight} !important;
+        max-height: ${fullSheetMaxHeight} !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-truck-manifest .manifest-content-wrapper,
+      #${PRINT_PORTAL_ID} #printable-truck-manifest .manifest-table-wrapper {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-truck-manifest table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        height: 100% !important;
+        flex: 1 1 auto !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-truck-manifest th {
+        background-color: #fff200 !important;
+        color: #000000 !important;
+        font-weight: 900 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-truck-manifest td {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-spacious { padding: 6mm 7mm !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-spacious th { font-size: 15px !important; padding: 10px 8px !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-spacious td { font-size: 14px !important; padding: 12px 8px !important; line-height: 1.4 !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-spacious .manifest-brand-title { font-size: 22px !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-spacious .manifest-footer { padding-top: 14px !important; font-size: 13px !important; }
+
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-comfortable { padding: 4mm 6mm !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-comfortable th { font-size: 12.5px !important; padding: 6px 6px !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-comfortable td { font-size: 12px !important; padding: 7px 6px !important; line-height: 1.3 !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-comfortable .manifest-brand-title { font-size: 18px !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-comfortable .manifest-footer { padding-top: 8px !important; font-size: 11.5px !important; }
+
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-balanced { padding: 3mm 4mm !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-balanced th { font-size: 11px !important; padding: 3.5px 4px !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-balanced td { font-size: 10.5px !important; padding: 3.5px 4px !important; line-height: 1.2 !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-balanced .manifest-brand-title { font-size: 16px !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-balanced .manifest-footer { padding-top: 4px !important; font-size: 10px !important; }
+
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-compact { padding: 2.5mm 3.5mm !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-compact th { font-size: 9.5px !important; padding: 2px 3px !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-compact td { font-size: 9px !important; padding: 2px 3px !important; line-height: 1.15 !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-compact .manifest-brand-title { font-size: 14px !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-compact .manifest-footer { padding-top: 2px !important; font-size: 9px !important; }
+
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-micro { padding: 2mm 3mm !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-micro th { font-size: 8.5px !important; padding: 1.5px 2px !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-micro td { font-size: 8px !important; padding: 1.5px 2px !important; line-height: 1.1 !important; }
+      #${PRINT_PORTAL_ID} #printable-truck-manifest.density-micro .manifest-brand-title { font-size: 13px !important; }
+
+      /* Customer Delivery Receipt Single-Page A4 Layout (overrides .print-card padding) */
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt {
+        border: 2px solid #000000 !important;
+        box-shadow: none !important;
+        box-sizing: border-box !important;
+        page-break-after: avoid !important;
+        page-break-before: avoid !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        min-height: ${fullSheetMinHeight} !important;
+        max-height: ${fullSheetMaxHeight} !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-spacious { padding: 7mm 8mm !important; font-size: 13.5px !important; line-height: 1.4 !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-spacious .receipt-brand-title { font-size: 24px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-spacious .receipt-product-title { font-size: 15px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-spacious .receipt-specs-grid { font-size: 13px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-spacious .receipt-notes-lines { min-height: 28px !important; }
+
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-comfortable { padding: 5mm 6mm !important; font-size: 12.5px !important; line-height: 1.35 !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-comfortable .receipt-brand-title { font-size: 21px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-comfortable .receipt-product-title { font-size: 13.5px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-comfortable .receipt-specs-grid { font-size: 12px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-comfortable .receipt-notes-lines { min-height: 22px !important; }
+
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-balanced { padding: 4mm 5mm !important; font-size: 11.5px !important; line-height: 1.25 !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-balanced .receipt-brand-title { font-size: 19px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-balanced .receipt-product-title { font-size: 12.5px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-balanced .receipt-specs-grid { font-size: 11px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-balanced .receipt-notes-lines { min-height: 16px !important; }
+
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-compact { padding: 3mm 4mm !important; font-size: 10px !important; line-height: 1.2 !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-compact .receipt-brand-title { font-size: 16px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-compact .receipt-product-title { font-size: 11px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-compact .receipt-specs-grid { font-size: 10px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-compact .receipt-notes-lines { min-height: 12px !important; }
+
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-micro { padding: 2mm 3mm !important; font-size: 9px !important; line-height: 1.15 !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-micro .receipt-brand-title { font-size: 14px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-micro .receipt-product-title { font-size: 9.5px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-micro .receipt-specs-grid { font-size: 8.5px !important; }
+      #${PRINT_PORTAL_ID} #printable-delivery-receipt.density-micro .receipt-notes-lines { min-height: 8px !important; }
+
+      #${PRINT_PORTAL_ID} img {
+        max-height: 180px;
+        object-fit: contain;
+      }
+
+      #${PRINT_PORTAL_ID} img.full-sheet-img {
+        max-height: none !important;
+        width: 100% !important;
+        height: auto !important;
+        object-fit: contain !important;
+      }
+    }
+  `;
+}
+
+export function cleanupPrintPortal(): void {
+  if (activeCleanupTimer) {
+    clearTimeout(activeCleanupTimer);
+    activeCleanupTimer = null;
+  }
+  if (activeAfterPrintHandler && typeof window !== 'undefined') {
+    window.removeEventListener('afterprint', activeAfterPrintHandler);
+    activeAfterPrintHandler = null;
+  }
+  if (typeof document === 'undefined') return;
+  document.body?.removeAttribute(PRINTING_BODY_ATTR);
+  document.getElementById(PRINT_PORTAL_ID)?.remove();
+  document.getElementById(DYNAMIC_PRINT_STYLE_ID)?.remove();
+}
+
+export function printElementById(
+  elementId: string,
+  orientation: 'portrait' | 'landscape' = 'portrait',
+  options?: { title?: string }
+): boolean {
   try {
     const el = document.getElementById(elementId);
     if (!el) {
       console.warn('Element for printing not found:', elementId);
       window.print();
-      return;
+      return false;
     }
 
-    const htmlContent = el.outerHTML;
+    cleanupPrintPortal();
 
-    // Strategy 1: Open isolated print popup window (works cleanly across browsers)
-    try {
-      const printWin = window.open('', '_blank', 'width=1100,height=900,scrollbars=yes');
-      if (printWin) {
-        printWin.document.write(`
-          <!DOCTYPE html>
-          <html lang="ar" dir="rtl">
-            <head>
-              <meta charset="utf-8">
-              <title>مصنع النجار فيرنتشر</title>
-              <link rel="preconnect" href="https://fonts.googleapis.com">
-              <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-              <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
-              <script src="https://cdn.tailwindcss.com"></script>
-              <style>
-                @page {
-                  size: A4 ${orientation};
-                  margin: ${orientation === 'landscape' ? '3mm 5mm' : '4mm 6mm'};
-                }
-                * {
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
-                  box-sizing: border-box !important;
-                }
-                html, body {
-                  font-family: 'Cairo', 'Tajawal', sans-serif !important;
-                  background: #ffffff !important;
-                  color: #000000 !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  direction: rtl !important;
-                  width: 100% !important;
-                  height: 100% !important;
-                  overflow: hidden !important;
-                }
-                .print-container {
-                  width: 100% !important;
-                  max-width: 100% !important;
-                  margin: 0 auto !important;
-                  page-break-after: avoid !important;
-                  page-break-before: avoid !important;
-                  page-break-inside: avoid !important;
-                  break-inside: avoid !important;
-                  font-size: ${orientation === 'landscape' ? '12px' : '13px'} !important;
-                  line-height: 1.3 !important;
-                }
-                /* Ensure single page fit for digital card, delivery receipts, and truck manifest */
-                #printable-workshop-card, #printable-delivery-receipt, #printable-job-order-sheet {
-                  border: 2px solid #000 !important;
-                  box-shadow: none !important;
-                  max-width: 100% !important;
-                  margin: 0 auto !important;
-                  padding: ${orientation === 'landscape' ? '6px 10px' : '10px 14px'} !important;
-                  page-break-after: avoid !important;
-                  page-break-before: avoid !important;
-                  page-break-inside: avoid !important;
-                  break-inside: avoid !important;
-                }
+    const previousTitle = document.title;
+    if (options?.title) {
+      document.title = options.title;
+    }
 
-                /* Dedicated single-page fit for Truck Manifest with Adaptive Full-Height Auto-Scale */
-                #printable-truck-manifest {
-                  border: 2px solid #000 !important;
-                  box-shadow: none !important;
-                  max-width: 100% !important;
-                  width: 100% !important;
-                  margin: 0 auto !important;
-                  box-sizing: border-box !important;
-                  page-break-after: avoid !important;
-                  page-break-before: avoid !important;
-                  page-break-inside: avoid !important;
-                  break-inside: avoid !important;
-                  display: flex !important;
-                  flex-direction: column !important;
-                  justify-content: space-between !important;
-                  min-height: ${orientation === 'landscape' ? '195mm' : '272mm'} !important;
-                  height: 100% !important;
-                }
-                #printable-truck-manifest .manifest-content-wrapper {
-                  flex: 1 1 auto !important;
-                  display: flex !important;
-                  flex-direction: column !important;
-                }
-                #printable-truck-manifest .manifest-table-wrapper {
-                  flex: 1 1 auto !important;
-                  display: flex !important;
-                  flex-direction: column !important;
-                }
-                #printable-truck-manifest table {
-                  width: 100% !important;
-                  border-collapse: collapse !important;
-                  page-break-inside: avoid !important;
-                  break-inside: avoid !important;
-                  height: 100% !important;
-                  flex: 1 1 auto !important;
-                }
-                #printable-truck-manifest tbody {
-                  height: 100% !important;
-                }
-                #printable-truck-manifest th {
-                  background-color: #fff200 !important;
-                  color: #000000 !important;
-                  font-weight: 900 !important;
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
-                }
-                #printable-truck-manifest td {
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
-                }
-                #printable-truck-manifest .manifest-footer {
-                  margin-top: auto !important;
-                  page-break-inside: avoid !important;
-                  break-inside: avoid !important;
-                }
+    const styleEl = document.createElement('style');
+    styleEl.id = DYNAMIC_PRINT_STYLE_ID;
+    styleEl.textContent = buildPrintIsolationCss(orientation);
+    document.head.appendChild(styleEl);
 
-                #printable-report {
-                  background: #ffffff !important;
-                  color: #000000 !important;
-                  padding: 10mm !important;
-                  width: 100% !important;
-                  box-sizing: border-box !important;
-                }
-                #printable-report table {
-                  width: 100% !important;
-                  border-collapse: collapse !important;
-                }
-                #printable-report th {
-                  background-color: #fef08a !important;
-                  color: #000000 !important;
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
-                  font-weight: 900 !important;
-                }
-                #printable-report td, #printable-report th {
-                  border: 1px solid #94a3b8 !important;
-                  padding: 6px 8px !important;
-                  font-size: 11px !important;
-                }
+    const clone = el.cloneNode(true) as HTMLElement;
+    syncFormValuesToClone(el, clone);
+    clone.querySelectorAll('.no-print').forEach((node) => node.remove());
 
-                /* 1. Spacious Density (1-4 items): Large font, tall rows, fills the entire page */
-                #printable-truck-manifest.density-spacious {
-                  padding: 6mm 7mm !important;
-                }
-                #printable-truck-manifest.density-spacious th {
-                  font-size: 15px !important;
-                  padding: 10px 8px !important;
-                }
-                #printable-truck-manifest.density-spacious td {
-                  font-size: 14px !important;
-                  padding: 12px 8px !important;
-                  line-height: 1.4 !important;
-                }
-                #printable-truck-manifest.density-spacious .manifest-header-block div {
-                  padding: 6px 8px !important;
-                  font-size: 14px !important;
-                }
-                #printable-truck-manifest.density-spacious .manifest-brand-title {
-                  font-size: 22px !important;
-                }
-                #printable-truck-manifest.density-spacious .manifest-footer {
-                  padding-top: 14px !important;
-                  font-size: 13px !important;
-                }
+    const portal = document.createElement('div');
+    portal.id = PRINT_PORTAL_ID;
+    portal.setAttribute('dir', 'rtl');
+    portal.appendChild(clone);
+    document.body.appendChild(portal);
 
-                /* 2. Comfortable Density (5-8 items): Medium-large fonts and balanced filling */
-                #printable-truck-manifest.density-comfortable {
-                  padding: 4mm 6mm !important;
-                }
-                #printable-truck-manifest.density-comfortable th {
-                  font-size: 12.5px !important;
-                  padding: 6px 6px !important;
-                }
-                #printable-truck-manifest.density-comfortable td {
-                  font-size: 12px !important;
-                  padding: 7px 6px !important;
-                  line-height: 1.3 !important;
-                }
-                #printable-truck-manifest.density-comfortable .manifest-header-block div {
-                  padding: 4px 6px !important;
-                  font-size: 12px !important;
-                }
-                #printable-truck-manifest.density-comfortable .manifest-brand-title {
-                  font-size: 18px !important;
-                }
-                #printable-truck-manifest.density-comfortable .manifest-footer {
-                  padding-top: 8px !important;
-                  font-size: 11.5px !important;
-                }
+    document.body.setAttribute(PRINTING_BODY_ATTR, 'true');
 
-                /* 3. Balanced Density (9-13 items): Standard Factory Sheet */
-                #printable-truck-manifest.density-balanced {
-                  padding: 3mm 4mm !important;
-                }
-                #printable-truck-manifest.density-balanced th {
-                  font-size: 11px !important;
-                  padding: 3.5px 4px !important;
-                }
-                #printable-truck-manifest.density-balanced td {
-                  font-size: 10.5px !important;
-                  padding: 3.5px 4px !important;
-                  line-height: 1.2 !important;
-                }
-                #printable-truck-manifest.density-balanced .manifest-header-block div {
-                  padding: 2.5px 4px !important;
-                  font-size: 11px !important;
-                }
-                #printable-truck-manifest.density-balanced .manifest-brand-title {
-                  font-size: 16px !important;
-                }
-                #printable-truck-manifest.density-balanced .manifest-footer {
-                  padding-top: 4px !important;
-                  font-size: 10px !important;
-                }
-
-                /* 4. Compact Density (14-17 items or heavy text) */
-                #printable-truck-manifest.density-compact {
-                  padding: 2.5mm 3.5mm !important;
-                }
-                #printable-truck-manifest.density-compact th {
-                  font-size: 9.5px !important;
-                  padding: 2px 3px !important;
-                }
-                #printable-truck-manifest.density-compact td {
-                  font-size: 9px !important;
-                  padding: 2px 3px !important;
-                  line-height: 1.15 !important;
-                }
-                #printable-truck-manifest.density-compact .manifest-header-block div {
-                  padding: 1.5px 3px !important;
-                  font-size: 9.5px !important;
-                }
-                #printable-truck-manifest.density-compact .manifest-brand-title {
-                  font-size: 14px !important;
-                }
-                #printable-truck-manifest.density-compact .manifest-footer {
-                  padding-top: 2px !important;
-                  font-size: 9px !important;
-                }
-
-                /* 5. Micro Density (18+ items or extreme text) */
-                #printable-truck-manifest.density-micro {
-                  padding: 2mm 3mm !important;
-                }
-                #printable-truck-manifest.density-micro th {
-                  font-size: 8.5px !important;
-                  padding: 1.5px 2px !important;
-                }
-                #printable-truck-manifest.density-micro td {
-                  font-size: 8px !important;
-                  padding: 1.5px 2px !important;
-                  line-height: 1.1 !important;
-                }
-                #printable-truck-manifest.density-micro .manifest-header-block div {
-                  padding: 1px 2px !important;
-                  font-size: 8.5px !important;
-                }
-                #printable-truck-manifest.density-micro .manifest-brand-title {
-                  font-size: 13px !important;
-                }
-                #printable-truck-manifest.density-micro .manifest-footer {
-                  padding-top: 1.5px !important;
-                  font-size: 8px !important;
-                }
-
-                /* Dedicated single-page fit for Customer Delivery Receipt with Adaptive Full-Height Auto-Scale */
-                #printable-delivery-receipt {
-                  border: 2px solid #000 !important;
-                  box-sizing: border-box !important;
-                  page-break-after: avoid !important;
-                  page-break-before: avoid !important;
-                  page-break-inside: avoid !important;
-                  break-inside: avoid !important;
-                  display: flex !important;
-                  flex-direction: column !important;
-                  justify-content: space-between !important;
-                  min-height: ${orientation === 'landscape' ? '195mm' : '272mm'} !important;
-                  height: 100% !important;
-                }
-                #printable-delivery-receipt.density-spacious {
-                  padding: 7mm 8mm !important;
-                  font-size: 13.5px !important;
-                  line-height: 1.4 !important;
-                }
-                #printable-delivery-receipt.density-spacious .receipt-brand-title { font-size: 24px !important; }
-                #printable-delivery-receipt.density-spacious .receipt-product-title { font-size: 15px !important; }
-                #printable-delivery-receipt.density-spacious .receipt-specs-grid { font-size: 13px !important; }
-                #printable-delivery-receipt.density-spacious .receipt-notes-lines { min-height: 28px !important; }
-
-                #printable-delivery-receipt.density-comfortable {
-                  padding: 5mm 6mm !important;
-                  font-size: 12.5px !important;
-                  line-height: 1.35 !important;
-                }
-                #printable-delivery-receipt.density-comfortable .receipt-brand-title { font-size: 21px !important; }
-                #printable-delivery-receipt.density-comfortable .receipt-product-title { font-size: 13.5px !important; }
-                #printable-delivery-receipt.density-comfortable .receipt-specs-grid { font-size: 12px !important; }
-                #printable-delivery-receipt.density-comfortable .receipt-notes-lines { min-height: 22px !important; }
-
-                #printable-delivery-receipt.density-balanced {
-                  padding: 4mm 5mm !important;
-                  font-size: 11.5px !important;
-                  line-height: 1.25 !important;
-                }
-                #printable-delivery-receipt.density-balanced .receipt-brand-title { font-size: 19px !important; }
-                #printable-delivery-receipt.density-balanced .receipt-product-title { font-size: 12.5px !important; }
-                #printable-delivery-receipt.density-balanced .receipt-specs-grid { font-size: 11px !important; }
-                #printable-delivery-receipt.density-balanced .receipt-notes-lines { min-height: 16px !important; }
-
-                #printable-delivery-receipt.density-compact {
-                  padding: 3mm 4mm !important;
-                  font-size: 10px !important;
-                  line-height: 1.2 !important;
-                }
-                #printable-delivery-receipt.density-compact .receipt-brand-title { font-size: 16px !important; }
-                #printable-delivery-receipt.density-compact .receipt-product-title { font-size: 11px !important; }
-                #printable-delivery-receipt.density-compact .receipt-specs-grid { font-size: 10px !important; }
-                #printable-delivery-receipt.density-compact .receipt-notes-lines { min-height: 12px !important; }
-
-                #printable-delivery-receipt.density-micro {
-                  padding: 2mm 3mm !important;
-                  font-size: 9px !important;
-                  line-height: 1.15 !important;
-                }
-                #printable-delivery-receipt.density-micro .receipt-brand-title { font-size: 14px !important; }
-                #printable-delivery-receipt.density-micro .receipt-product-title { font-size: 9.5px !important; }
-                #printable-delivery-receipt.density-micro .receipt-specs-grid { font-size: 8.5px !important; }
-                #printable-delivery-receipt.density-micro .receipt-notes-lines { min-height: 8px !important; }
-
-                .text-blue-900, .text-blue-950 { color: #002266 !important; }
-                .text-emerald-800, .text-emerald-950 { color: #064e3b !important; }
-                .text-red-600 { color: #cc0000 !important; }
-                .text-amber-800 { color: #884400 !important; }
-                .no-print { display: none !important; }
-                
-                /* Standard embedded thumbnails vs 100% Full Sheet Images */
-                img {
-                  max-height: ${orientation === 'landscape' ? '120px' : '180px'} !important;
-                  object-fit: contain !important;
-                  page-break-inside: avoid !important;
-                }
-                img.full-sheet-img {
-                  max-height: none !important;
-                  height: auto !important;
-                  width: 100% !important;
-                  max-width: 100% !important;
-                  object-fit: contain !important;
-                  display: block !important;
-                  margin: 0 auto !important;
-                  page-break-inside: avoid !important;
-                  break-inside: avoid !important;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="print-container">
-                ${htmlContent}
-              </div>
-              <script>
-                window.onload = function() {
-                  setTimeout(function() {
-                    window.focus();
-                    window.print();
-                  }, 400);
-                };
-              </script>
-            </body>
-          </html>
-        `);
-        printWin.document.close();
-        return;
+    const cleanup = () => {
+      if (options?.title) {
+        document.title = previousTitle;
       }
-    } catch (popupErr) {
-      console.warn('Popup print blocked or not supported, falling back to iframe', popupErr);
-    }
+      cleanupPrintPortal();
+    };
 
-    // Strategy 2: Create or reuse hidden print iframe inside current window
-    let iframe = document.getElementById('print-iframe-sandbox') as HTMLIFrameElement;
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'print-iframe-sandbox';
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0px';
-      iframe.style.height = '0px';
-      iframe.style.border = '0px';
-      iframe.style.zIndex = '-9999';
-      document.body.appendChild(iframe);
-    }
+    activeAfterPrintHandler = cleanup;
+    window.addEventListener('afterprint', cleanup, { once: true });
+    activeCleanupTimer = setTimeout(cleanup, 60_000);
 
-    const doc = iframe.contentWindow?.document || iframe.contentDocument;
-    if (doc) {
-      doc.open();
-      doc.write(`
-        <!DOCTYPE html>
-        <html lang="ar" dir="rtl">
-          <head>
-            <meta charset="utf-8">
-            <title>مصنع النجار فيرنتشر</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-              @page { size: A4 ${orientation}; margin: 4mm 6mm; }
-              body { font-family: 'Cairo', sans-serif !important; background: #fff !important; color: #000 !important; direction: rtl !important; overflow: hidden !important; }
-              .text-blue-900, .text-blue-950 { color: #002266 !important; }
-              .text-emerald-800, .text-emerald-950 { color: #064e3b !important; }
-              .text-red-600 { color: #cc0000 !important; }
-              .text-amber-800 { color: #884400 !important; }
-              .no-print { display: none !important; }
-              #printable-workshop-card, #printable-delivery-receipt, #printable-job-order-sheet, #printable-report {
-                page-break-after: avoid !important;
-                page-break-before: avoid !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-              }
-              #printable-report table { width: 100% !important; border-collapse: collapse !important; }
-              #printable-report th { background-color: #fef08a !important; color: #000 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-              #printable-report td, #printable-report th { border: 1px solid #94a3b8 !important; padding: 6px 8px !important; font-size: 11px !important; }
-              #printable-truck-manifest {
-                border: 2px solid #000 !important;
-                box-sizing: border-box !important;
-                page-break-after: avoid !important;
-                page-break-before: avoid !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: space-between !important;
-                min-height: ${orientation === 'landscape' ? '195mm' : '272mm'} !important;
-                height: 100% !important;
-              }
-              #printable-truck-manifest .manifest-content-wrapper {
-                flex: 1 1 auto !important;
-                display: flex !important;
-                flex-direction: column !important;
-              }
-              #printable-truck-manifest .manifest-table-wrapper {
-                flex: 1 1 auto !important;
-                display: flex !important;
-                flex-direction: column !important;
-              }
-              #printable-truck-manifest table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-                height: 100% !important;
-                flex: 1 1 auto !important;
-              }
-              #printable-truck-manifest th {
-                background-color: #fff200 !important;
-                color: #000 !important;
-                font-weight: 900 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              #printable-truck-manifest td {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              #printable-truck-manifest.density-spacious { padding: 6mm 7mm !important; }
-              #printable-truck-manifest.density-spacious th { font-size: 15px !important; padding: 10px 8px !important; }
-              #printable-truck-manifest.density-spacious td { font-size: 14px !important; padding: 12px 8px !important; line-height: 1.4 !important; }
-              #printable-truck-manifest.density-spacious .manifest-brand-title { font-size: 22px !important; }
-              #printable-truck-manifest.density-spacious .manifest-footer { padding-top: 14px !important; font-size: 13px !important; }
-
-              #printable-truck-manifest.density-comfortable { padding: 4mm 6mm !important; }
-              #printable-truck-manifest.density-comfortable th { font-size: 12.5px !important; padding: 6px 6px !important; }
-              #printable-truck-manifest.density-comfortable td { font-size: 12px !important; padding: 7px 6px !important; line-height: 1.3 !important; }
-              #printable-truck-manifest.density-comfortable .manifest-brand-title { font-size: 18px !important; }
-              #printable-truck-manifest.density-comfortable .manifest-footer { padding-top: 8px !important; font-size: 11.5px !important; }
-
-              #printable-truck-manifest.density-balanced { padding: 3mm 4mm !important; }
-              #printable-truck-manifest.density-balanced th { font-size: 11px !important; padding: 3.5px 4px !important; }
-              #printable-truck-manifest.density-balanced td { font-size: 10.5px !important; padding: 3.5px 4px !important; line-height: 1.2 !important; }
-              #printable-truck-manifest.density-balanced .manifest-brand-title { font-size: 16px !important; }
-              #printable-truck-manifest.density-balanced .manifest-footer { padding-top: 4px !important; font-size: 10px !important; }
-
-              #printable-truck-manifest.density-compact { padding: 2.5mm 3.5mm !important; }
-              #printable-truck-manifest.density-compact th { font-size: 9.5px !important; padding: 2px 3px !important; }
-              #printable-truck-manifest.density-compact td { font-size: 9px !important; padding: 2px 3px !important; line-height: 1.15 !important; }
-              #printable-truck-manifest.density-compact .manifest-brand-title { font-size: 14px !important; }
-              #printable-truck-manifest.density-compact .manifest-footer { padding-top: 2px !important; font-size: 9px !important; }
-
-              #printable-truck-manifest.density-micro { padding: 2mm 3mm !important; }
-              #printable-truck-manifest.density-micro th { font-size: 8.5px !important; padding: 1.5px 2px !important; }
-              #printable-truck-manifest.density-micro td { font-size: 8px !important; padding: 1.5px 2px !important; line-height: 1.1 !important; }
-              #printable-truck-manifest.density-micro .manifest-brand-title { font-size: 13px !important; }
-              #printable-delivery-receipt {
-                border: 2px solid #000 !important;
-                box-sizing: border-box !important;
-                page-break-after: avoid !important;
-                page-break-before: avoid !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: space-between !important;
-                min-height: ${orientation === 'landscape' ? '195mm' : '272mm'} !important;
-                height: 100% !important;
-              }
-              #printable-delivery-receipt.density-spacious { padding: 7mm 8mm !important; font-size: 13.5px !important; line-height: 1.4 !important; }
-              #printable-delivery-receipt.density-spacious .receipt-brand-title { font-size: 24px !important; }
-              #printable-delivery-receipt.density-spacious .receipt-product-title { font-size: 15px !important; }
-              #printable-delivery-receipt.density-spacious .receipt-specs-grid { font-size: 13px !important; }
-              #printable-delivery-receipt.density-spacious .receipt-notes-lines { min-height: 28px !important; }
-
-              #printable-delivery-receipt.density-comfortable { padding: 5mm 6mm !important; font-size: 12.5px !important; line-height: 1.35 !important; }
-              #printable-delivery-receipt.density-comfortable .receipt-brand-title { font-size: 21px !important; }
-              #printable-delivery-receipt.density-comfortable .receipt-product-title { font-size: 13.5px !important; }
-              #printable-delivery-receipt.density-comfortable .receipt-specs-grid { font-size: 12px !important; }
-              #printable-delivery-receipt.density-comfortable .receipt-notes-lines { min-height: 22px !important; }
-
-              #printable-delivery-receipt.density-balanced { padding: 4mm 5mm !important; font-size: 11.5px !important; line-height: 1.25 !important; }
-              #printable-delivery-receipt.density-balanced .receipt-brand-title { font-size: 19px !important; }
-              #printable-delivery-receipt.density-balanced .receipt-product-title { font-size: 12.5px !important; }
-              #printable-delivery-receipt.density-balanced .receipt-specs-grid { font-size: 11px !important; }
-              #printable-delivery-receipt.density-balanced .receipt-notes-lines { min-height: 16px !important; }
-
-              #printable-delivery-receipt.density-compact { padding: 3mm 4mm !important; font-size: 10px !important; line-height: 1.2 !important; }
-              #printable-delivery-receipt.density-compact .receipt-brand-title { font-size: 16px !important; }
-              #printable-delivery-receipt.density-compact .receipt-product-title { font-size: 11px !important; }
-              #printable-delivery-receipt.density-compact .receipt-specs-grid { font-size: 10px !important; }
-              #printable-delivery-receipt.density-compact .receipt-notes-lines { min-height: 12px !important; }
-
-              #printable-delivery-receipt.density-micro { padding: 2mm 3mm !important; font-size: 9px !important; line-height: 1.15 !important; }
-              #printable-delivery-receipt.density-micro .receipt-brand-title { font-size: 14px !important; }
-              #printable-delivery-receipt.density-micro .receipt-product-title { font-size: 9.5px !important; }
-              #printable-delivery-receipt.density-micro .receipt-specs-grid { font-size: 8.5px !important; }
-              #printable-delivery-receipt.density-micro .receipt-notes-lines { min-height: 8px !important; }
-
-              img { max-height: 180px; object-fit: contain; }
-              img.full-sheet-img { max-height: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; }
-            </style>
-          </head>
-          <body>
-            <div style="width: 100%; max-width: 210mm; margin: 0 auto; page-break-inside: avoid;">
-              ${htmlContent}
-            </div>
-          </body>
-        </html>
-      `);
-      doc.close();
-
-      setTimeout(() => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch (e) {
-          window.print();
-        }
-      }, 500);
-      return;
-    }
-
-    // Strategy 3: Direct window print fallback
+    // Trigger print synchronously inside the user's click event so browser
+    // transient user activation is preserved in embedded iframes & mobile browsers.
     window.print();
-
+    return true;
   } catch (error) {
     console.error('Print helper error:', error);
-    window.print();
+    cleanupPrintPortal();
+    try {
+      window.print();
+    } catch {
+      // Ignore if host blocks window.print
+    }
+    return false;
   }
 }

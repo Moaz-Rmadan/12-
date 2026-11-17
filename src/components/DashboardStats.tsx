@@ -17,26 +17,34 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
+import { isActiveWorkshopOrder, isDeliveredActiveOrder } from '../utils/orderLifecycle';
 
 interface DashboardStatsProps {
   orders: JobOrderPopulated[];
   onFilterByStatus?: (status: string) => void;
+  onOpenDeliveriesTab?: () => void;
   activeFilter?: string;
 }
 
 export const DashboardStats: React.FC<DashboardStatsProps> = ({
   orders,
   onFilterByStatus,
+  onOpenDeliveriesTab,
   activeFilter = 'الكل',
 }) => {
   const { hasPerm } = useAuth();
   const [showDetailedKpis, setShowDetailedKpis] = useState(false);
 
+  // Active factory floor orders vs delivered & non-archived
+  const activeWorkshopOrders = orders.filter(isActiveWorkshopOrder);
+  const deliveredQueueOrders = orders.filter(isDeliveredActiveOrder);
+
   // Key Totals
   const totalOrders = orders.length;
-  const inProgress = orders.filter((o) => o.status === 'قيد التشغيل').length;
-  const completed = orders.filter((o) => o.status === 'تم التنفيذ').length;
-  const delivered = orders.filter((o) => o.status === 'تسليم').length;
+  const activeTotal = activeWorkshopOrders.length;
+  const inProgress = activeWorkshopOrders.filter((o) => o.status === 'قيد التشغيل').length;
+  const completed = activeWorkshopOrders.filter((o) => o.status === 'تم التنفيذ').length;
+  const delivered = deliveredQueueOrders.length;
 
   // Financial KPIs
   const totalRevenue = orders.reduce((sum, o) => sum + (o.total_price || 0), 0);
@@ -44,13 +52,13 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
   const remainingBalance = totalRevenue - totalDeposits;
 
   const collectionRate = totalRevenue > 0 ? Math.round((totalDeposits / totalRevenue) * 100) : 0;
-  const completionRate = totalOrders > 0 ? Math.round(((completed + delivered) / totalOrders) * 100) : 0;
+  const completionRate = totalOrders > 0 ? Math.round(((completed + orders.filter((o) => o.status === 'تسليم').length) / totalOrders) * 100) : 0;
 
   // Urgent Orders Count (due within 48 hours or past due, not delivered)
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  const urgentCount = orders.filter((o) => {
-    if (o.is_archived || o.status === 'تسليم' || !o.delivery_date) return false;
+  const urgentCount = activeWorkshopOrders.filter((o) => {
+    if (!o.delivery_date) return false;
     const parts = o.delivery_date.split('-');
     if (parts.length !== 3) return false;
     const target = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -62,9 +70,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
   const stats = [
     {
       id: 'الكل',
-      title: 'إجمالي الأوامر',
-      value: totalOrders,
-      subtext: `${totalOrders} أمر شغل مسجل`,
+      title: 'أوامر الشغل الجارية',
+      value: activeTotal,
+      subtext: `داخل المصنع الآن (${totalOrders} إجمالي)`,
       icon: ClipboardList,
       color: 'from-[#233B5D] to-[#1E3352] text-[#233B5D] bg-[#EBF3FA] dark:bg-slate-800 dark:text-[#4B83B8]',
     },
@@ -72,7 +80,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
       id: 'قيد التشغيل',
       title: 'قيد التشغيل بالورشة',
       value: inProgress,
-      subtext: 'مرحلة النجار والدهان والتنجيد',
+      subtext: 'مرحلة النجارة والدهان والتنجيد',
       icon: Clock,
       color: 'from-[#4B83B8] to-[#3A6E9F] text-[#4B83B8] bg-[#EBF3FA] dark:bg-slate-800 dark:text-[#4B83B8]',
     },
@@ -80,15 +88,15 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
       id: 'تم التنفيذ',
       title: 'تم التنفيذ والمطابقة',
       value: completed,
-      subtext: 'جاهز للتسليم والتركيب',
+      subtext: 'جاهز للخروج والتسليم للعميل',
       icon: CheckCircle2,
       color: 'from-emerald-600 to-teal-700 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400',
     },
     {
-      id: 'تسليم',
-      title: 'تم التسليم والتركيب',
+      id: 'التسليمات',
+      title: 'في سجل التسليمات',
       value: delivered,
-      subtext: 'تم التسليم في موقع العميل',
+      subtext: 'خرجت من التشغيل وبانتظار التقفيل',
       icon: PackageCheck,
       color: 'from-blue-600 to-indigo-700 text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 dark:text-indigo-400',
     },
@@ -105,7 +113,13 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
           return (
             <div
               key={stat.id}
-              onClick={() => onFilterByStatus && onFilterByStatus(stat.id)}
+              onClick={() => {
+                if (stat.id === 'التسليمات' && onOpenDeliveriesTab) {
+                  onOpenDeliveriesTab();
+                } else if (onFilterByStatus) {
+                  onFilterByStatus(stat.id);
+                }
+              }}
               className={`p-3.5 sm:p-4.5 rounded-2xl border card-motion cursor-pointer select-none relative overflow-hidden group ${
                 isSelected
                   ? 'bg-white dark:bg-slate-900 border-[#4B83B8] dark:border-[#4B83B8] shadow-md ring-2 ring-[#4B83B8]/20'
@@ -251,7 +265,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 card-motion hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700">
               <div className="flex items-center justify-between">
                 <span className="font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5 tracking-tight">
-                  <AlertTriangle className={`w-4 h-4 ${urgentCount > 0 ? 'text-amber-600 animate-pulse' : 'text-slate-400'}`} />
+                  <AlertTriangle className={`w-4 h-4 ${urgentCount > 0 ? 'text-amber-600' : 'text-slate-400'}`} />
                   <span>التنبيهات الحرجة (خلال 48 س)</span>
                 </span>
                 <span className={`font-mono font-black text-sm px-2.5 py-0.5 rounded-full tabular-nums ${
