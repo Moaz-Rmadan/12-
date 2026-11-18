@@ -7,6 +7,10 @@ import {
   ChevronLeft,
   User,
   LogOut,
+  Cloud,
+  HardDrive,
+  RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import { JobOrderPopulated } from '../../types';
 import { NotificationsDropdown } from '../NotificationsDropdown';
@@ -14,6 +18,8 @@ import { PWAInstallButton } from '../PWAInstallButton';
 import { getNavItemById, getNavGroupForTab } from './navConfig';
 import { useAuth } from '../../contexts/AuthContext';
 import { ROLE_DISPLAY_NAMES } from '../../lib/permissions';
+
+export type SyncStatus = 'connecting' | 'seeding' | 'synced' | 'error' | 'demo';
 
 interface TopBarProps {
   activeTab: string;
@@ -24,6 +30,7 @@ interface TopBarProps {
   setDarkMode: (val: boolean) => void;
   orders: JobOrderPopulated[];
   onSelectOrder: (order: JobOrderPopulated) => void;
+  syncStatus?: SyncStatus;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -35,6 +42,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   setDarkMode,
   orders,
   onSelectOrder,
+  syncStatus = 'connecting',
 }) => {
   const { userProfile, hasPerm, logout } = useAuth();
   const currentItem = getNavItemById(activeTab);
@@ -42,6 +50,43 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   const canCreateOrder = hasPerm('order:create');
   const roleName = userProfile?.role ? ROLE_DISPLAY_NAMES[userProfile.role]?.ar : 'غير محدد';
+
+  const syncBadge = (() => {
+    switch (syncStatus) {
+      case 'synced':
+        return {
+          label: 'متصل بالسحابة',
+          title: 'جميع التعديلات محفوظة لحظياً في قاعدة البيانات السحابية Firestore',
+          className:
+            'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
+          icon: <Cloud className="w-3.5 h-3.5 shrink-0" />,
+        };
+      case 'demo':
+        return {
+          label: 'حفظ محلي (معاينة)',
+          title: 'وضع معاينة التطوير: يتم حفظ جميع التعديلات محلياً في المتصفح وتبقى بعد التحديث',
+          className:
+            'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
+          icon: <HardDrive className="w-3.5 h-3.5 shrink-0" />,
+        };
+      case 'error':
+        return {
+          label: 'تعذر المزامنة',
+          title: 'حدث خطأ أثناء الاتصال أو الكتابة في قاعدة البيانات السحابية',
+          className:
+            'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60',
+          icon: <AlertTriangle className="w-3.5 h-3.5 shrink-0" />,
+        };
+      default:
+        return {
+          label: 'جاري المزامنة...',
+          title: 'جاري تهيئة ومزامنة البيانات مع قاعدة البيانات السحابية',
+          className:
+            'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800/60',
+          icon: <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" />,
+        };
+    }
+  })();
 
   return (
     <header className="no-print sticky top-0 z-20 h-16 sm:h-20 bg-white/95 dark:bg-[#16253B]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-xs">
@@ -77,7 +122,17 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Zone 2: Utilities, Notifications, User Badge & Primary Action */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          
+
+          {/* Sync Status Badge */}
+          <div
+            data-testid="sync-status-badge"
+            title={syncBadge.title}
+            className={`hidden lg:flex items-center gap-1.5 px-2.5 h-9 rounded-xl border text-[11px] font-extrabold ${syncBadge.className}`}
+          >
+            {syncBadge.icon}
+            <span>{syncBadge.label}</span>
+          </div>
+
           {/* User Profile Pill */}
           {userProfile && (
             <button

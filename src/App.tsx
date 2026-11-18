@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from './components/navigation/Sidebar';
-import { TopBar } from './components/navigation/TopBar';
+import { TopBar, SyncStatus } from './components/navigation/TopBar';
 import { MobileNavigationDrawer } from './components/navigation/MobileNavigationDrawer';
 import { DashboardStats } from './components/DashboardStats';
 import { OrderList } from './components/OrderList';
@@ -55,6 +55,8 @@ import {
   subscribeToDeliveryReceipts,
   issueDeliveryReceiptToFirestore,
   deleteDeliveryReceiptFromFirestore,
+  subscribeToFactorySettings,
+  saveFactorySettingsToFirestore,
 } from './lib/firebase';
 
 import {
@@ -76,6 +78,15 @@ import {
   generateNextDeliveryReceiptNumber,
   planOrderReceiptLinksAndDeliveryTransitions,
 } from './utils/deliveryReceiptLink';
+import {
+  loadLocalWorkspaceState,
+  saveLocalWorkspaceState,
+} from './utils/persistenceHelpers';
+import {
+  FactorySettings,
+  getStoredFactorySettings,
+  saveStoredFactorySettings,
+} from './utils/settingsStore';
 
 function MainApp() {
   const { currentUser, userProfile, loading, isDeactivated, isDemoMode } = useAuth();
@@ -100,10 +111,53 @@ function MainApp() {
   });
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
 
-  const [orders, setOrders] = useState<JobOrderPopulated[]>(() => getPopulatedOrders());
-  const [customers, setCustomers] = useState<Customer[]>(() => initialCustomers);
-  const [truckManifests, setTruckManifests] = useState<TruckManifest[]>(() => initialTruckManifests);
-  const [deliveryReceipts, setDeliveryReceipts] = useState<DeliveryReceiptRecord[]>([]);
+  const [orders, setOrders] = useState<JobOrderPopulated[]>(() => {
+    const defaults = getPopulatedOrders();
+    return isDemoMode
+      ? loadLocalWorkspaceState({
+          orders: defaults,
+          customers: initialCustomers,
+          truckManifests: initialTruckManifests,
+          deliveryReceipts: [],
+        }).orders
+      : defaults;
+  });
+  const [customers, setCustomers] = useState<Customer[]>(() =>
+    isDemoMode
+      ? loadLocalWorkspaceState({
+          orders: [],
+          customers: initialCustomers,
+          truckManifests: initialTruckManifests,
+          deliveryReceipts: [],
+        }).customers
+      : initialCustomers
+  );
+  const [truckManifests, setTruckManifests] = useState<TruckManifest[]>(() =>
+    isDemoMode
+      ? loadLocalWorkspaceState({
+          orders: [],
+          customers: initialCustomers,
+          truckManifests: initialTruckManifests,
+          deliveryReceipts: [],
+        }).truckManifests
+      : initialTruckManifests
+  );
+  const [deliveryReceipts, setDeliveryReceipts] = useState<DeliveryReceiptRecord[]>(() =>
+    isDemoMode
+      ? loadLocalWorkspaceState({
+          orders: [],
+          customers: initialCustomers,
+          truckManifests: initialTruckManifests,
+          deliveryReceipts: [],
+        }).deliveryReceipts
+      : []
+  );
+
+  const [isDemoHydrated, setIsDemoHydrated] = useState<boolean>(isDemoMode);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(isDemoMode ? 'demo' : 'connecting');
+  const [syncedSettings, setSyncedSettings] = useState<FactorySettings>(() =>
+    getStoredFactorySettings()
+  );
 
   const [selectedOrderForCard, setSelectedOrderForCard] = useState<JobOrderPopulated | null>(null);
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState<boolean>(false);
@@ -176,47 +230,114 @@ function MainApp() {
     }
   }, [userProfile, activeTab]);
 
-  // Admin-only baseline workshop data seed
+  // Dev Demo Mode hydration (reads local persisted workspace before enabling auto-save)
   useEffect(() => {
-    if (isDemoMode || !currentUser || userProfile?.role !== 'admin') return;
-    seedWorkshopDataIfMissing(initialCustomers, getPopulatedOrders()).catch((e) =>
-      console.warn('Initial workshop seed check:', e)
-    );
-  }, [isDemoMode, currentUser?.uid, userProfile?.role]);
+    if (!isDemoMode) {
+      setIsDemoHydrated(false);
+      return;
+    }
 
-  // Firebase Real-time Firestore Sync Listeners
+    const snapshot = loadLocalWorkspaceState({
+      orders: getPopulatedOrders(),
+      customers: initialCustomers,
+      truckManifests: initialTruckManifests,
+      deliveryReceipts: [],
+    });
+    setOrders(snapshot.orders);
+    setCustomers(snapshot.customers);
+    setTruckManifests(snapshot.truckManifests);
+    setDeliveryReceipts(snapshot.deliveryReceipts);
+    setSyncedSettings(getStoredFactorySettings());
+    setSyncStatus('demo');
+    setIsDemoHydrated(true);
+  }, [isDemoMode]);
+
+  // Auto-persist workspace mutations in Dev Demo Mode across page refreshes
+  useEffect(() => {
+    if (!isDemoMode || !isDemoHydrated) return;
+    saveLocalWorkspaceState({
+      orders,
+      customers,
+      truckManifests,
+      deliveryReceipts,
+    });
+  }, [isDemoMode, isDemoHydrated, orders, customers, truckManifests, deliveryReceipts]);
+
+  // Live Cloud Mode: Seed baseline workshop data FIRST, then attach Firestore real-time listeners
   useEffect(() => {
     if (isDemoMode || !currentUser || !userProfile?.isActive) return;
 
-    const unsubscribeOrders = subscribeToJobOrders((firestoreOrders) => {
-      if (firestoreOrders && firestoreOrders.length > 0) {
-        setOrders(firestoreOrders);
-      }
-    });
+    let cancelled = false;
+    const unsubscribers: Array<() => void> = [];
 
-    const unsubscribeCustomers = subscribeToCustomers((firestoreCustomers) => {
-      if (firestoreCustomers && firestoreCustomers.length > 0) {
-        setCustomers(firestoreCustomers);
-      }
-    });
+    const setupCloudSync = async () => {
+      setSyncStatus('seeding');
+      const seedResult = await seedWorkshopDataIfMissing(initialCustomers, getPopulatedOrders());
+      if (cancelled) return;
 
-    const unsubscribeManifests = subscribeToTruckManifests((firestoreManifests) => {
-      if (firestoreManifests && firestoreManifests.length > 0) {
-        setTruckManifests(firestoreManifests);
+      if (!seedResult.synced) {
+        setSyncStatus('error');
+        showToast(
+          'تعذر إتمام مزامنة البيانات الأساسية مع قاعدة البيانات السحابية. سيتم الاعتماد على البيانات المتاحة.',
+          'error'
+        );
       }
-    });
 
-    const unsubscribeReceipts = subscribeToDeliveryReceipts((firestoreReceipts) => {
-      setDeliveryReceipts(firestoreReceipts);
-    });
+      const handleListenerError = (label: string) => () => {
+        if (cancelled) return;
+        setSyncStatus('error');
+        showToast(`تعذر تحديث ${label} من قاعدة البيانات السحابية.`, 'error');
+      };
+
+      unsubscribers.push(
+        subscribeToJobOrders((firestoreOrders) => {
+          if (cancelled) return;
+          if (firestoreOrders.length > 0 || seedResult.synced) {
+            setOrders(firestoreOrders);
+          }
+        }, handleListenerError('أوامر الشغل')),
+        subscribeToCustomers((firestoreCustomers) => {
+          if (cancelled) return;
+          if (firestoreCustomers.length > 0 || seedResult.synced) {
+            setCustomers(firestoreCustomers);
+          }
+        }, handleListenerError('بيانات العملاء')),
+        subscribeToTruckManifests((firestoreManifests) => {
+          if (cancelled) return;
+          if (firestoreManifests.length > 0 || seedResult.synced) {
+            setTruckManifests(firestoreManifests);
+          }
+        }, handleListenerError('حمولات السيارات')),
+        subscribeToDeliveryReceipts((firestoreReceipts) => {
+          if (cancelled) return;
+          setDeliveryReceipts(firestoreReceipts || []);
+        }, handleListenerError('إقرارات الاستلام')),
+        subscribeToFactorySettings((cloudSettings) => {
+          if (cancelled) return;
+          const merged = { ...getStoredFactorySettings(), ...cloudSettings };
+          setSyncedSettings(merged);
+          saveStoredFactorySettings(merged);
+        }, handleListenerError('إعدادات المصنع'))
+      );
+
+      if (!cancelled && seedResult.synced) {
+        setSyncStatus('synced');
+      }
+    };
+
+    setupCloudSync();
 
     return () => {
-      unsubscribeOrders();
-      unsubscribeCustomers();
-      unsubscribeManifests();
-      unsubscribeReceipts();
+      cancelled = true;
+      unsubscribers.forEach((unsub) => {
+        try {
+          unsub();
+        } catch {
+          // ignore
+        }
+      });
     };
-  }, [isDemoMode, currentUser?.uid, userProfile?.isActive]);
+  }, [isDemoMode, currentUser?.uid, userProfile?.isActive, showToast]);
 
   // Handle Order Create or Edit
   const handleSaveOrder = async (payload: CreateJobOrderPayload, orderId?: string) => {
@@ -333,6 +454,7 @@ function MainApp() {
       if (!isDemoMode) {
         await updateOrderStatusInFirestore(id, newStatus, {
           deliveredAt: targetOrder?.delivered_at || todayDate,
+          fallbackOrder: targetOrder,
         });
       }
 
@@ -391,10 +513,11 @@ function MainApp() {
 
   // Handle Production Stage Update
   const handleUpdateOrderStage = async (id: string, newStage: ProductionStage) => {
+    const targetOrder = orders.find((o) => o.id === id);
     const nowIso = new Date().toISOString();
     try {
       if (!isDemoMode) {
-        await updateOrderStageInFirestore(id, newStage);
+        await updateOrderStageInFirestore(id, newStage, targetOrder);
       }
 
       setOrders((prev) =>
@@ -414,17 +537,18 @@ function MainApp() {
   // Handle Archive Status Update
   const handleUpdateArchiveStatus = async (id: string, isArchived: boolean) => {
     const targetOrder = orders.find((o) => o.id === id);
+    const nowIso = new Date().toISOString();
     try {
       if (!isDemoMode) {
-        await updateOrderArchiveStatusInFirestore(id, isArchived);
+        await updateOrderArchiveStatusInFirestore(id, isArchived, targetOrder);
       }
 
       setOrders((prev) =>
-        prev.map((ord) => (ord.id === id ? { ...ord, is_archived: isArchived } : ord))
+        prev.map((ord) => (ord.id === id ? { ...ord, is_archived: isArchived, updated_at: nowIso } : ord))
       );
 
       if (selectedOrderForCard && selectedOrderForCard.id === id) {
-        setSelectedOrderForCard((prev) => (prev ? { ...prev, is_archived: isArchived } : null));
+        setSelectedOrderForCard((prev) => (prev ? { ...prev, is_archived: isArchived, updated_at: nowIso } : null));
       }
       showToast(
         isArchived
@@ -445,9 +569,10 @@ function MainApp() {
     if (!orderIds || orderIds.length === 0) return;
     const nowIso = new Date().toISOString();
     const idSet = new Set(orderIds);
+    const fallbackOrdersById = new Map(orders.map((o) => [o.id, o]));
     try {
       if (!isDemoMode) {
-        await archiveOrdersBatchInFirestore(orderIds);
+        await archiveOrdersBatchInFirestore(orderIds, fallbackOrdersById);
         if (userProfile) {
           await logAuditEvent({
             user_uid: userProfile.uid,
@@ -561,6 +686,49 @@ function MainApp() {
   // Handle Batch Job Orders Import
   const handleAddBatchOrders = async (ordersList: CreateJobOrderPayload[]): Promise<number> => {
     try {
+      if (isDemoMode) {
+        const nowIso = new Date().toISOString();
+        const createdOrders: JobOrderPopulated[] = ordersList.map((payload, idx) => {
+          const orderId = `ord-demo-${Date.now()}-${idx}`;
+          const custId = `cust-demo-${Date.now()}-${idx}`;
+          const demoCust: Customer = {
+            id: custId,
+            name: payload.customer.name,
+            phone: payload.customer.phone || '01000000000',
+            address: payload.customer.address || '',
+            created_at: nowIso,
+          };
+          return {
+            id: orderId,
+            order_number: payload.job_order.order_number,
+            customer_id: custId,
+            room_model_code: payload.job_order.room_model_code,
+            contract_date: payload.job_order.contract_date,
+            delivery_date: payload.job_order.delivery_date,
+            general_specs: payload.job_order.general_specs,
+            status: payload.job_order.status,
+            current_stage: payload.job_order.current_stage || 'لم يبدأ',
+            total_price: payload.job_order.total_price,
+            deposit_paid: payload.job_order.deposit_paid,
+            created_at: nowIso,
+            updated_at: nowIso,
+            customer: demoCust,
+            job_details: {
+              id: `det-demo-${Date.now()}-${idx}`,
+              job_order_id: orderId,
+              ...payload.job_details,
+            },
+            attachments: [],
+          };
+        });
+        setOrders((prev) => [...createdOrders, ...prev]);
+        setCustomers((prev) => [
+          ...createdOrders.map((o) => o.customer!).filter(Boolean),
+          ...prev,
+        ]);
+        return createdOrders.length;
+      }
+
       const savedOrders = await saveBatchJobOrdersToFirestore(ordersList);
       if (savedOrders.length > 0) {
         setOrders((prev) => {
@@ -626,10 +794,13 @@ function MainApp() {
       nowIso,
     });
 
+    const fallbackOrdersById = new Map(orders.map((o) => [o.id, o]));
+
     if (!isDemoMode) {
       await issueDeliveryReceiptToFirestore({
         receiptRecord,
         orderUpdates,
+        fallbackOrdersById,
       });
 
       if (userProfile) {
@@ -709,7 +880,7 @@ function MainApp() {
     );
   }
 
-  if ((!currentUser && !isDemoMode) || isDeactivated) {
+  if ((!currentUser && !isDemoMode) || (!isDemoMode && !userProfile) || isDeactivated) {
     return <LoginPage />;
   }
 
@@ -745,6 +916,7 @@ function MainApp() {
           setDarkMode={setDarkMode}
           orders={orders}
           onSelectOrder={(ord) => setSelectedOrderForCard(ord)}
+          syncStatus={syncStatus}
         />
 
         {/* Main Content Area */}
@@ -905,13 +1077,20 @@ function MainApp() {
             orders={orders}
             manifests={truckManifests}
             onSaveManifestToDb={async (manifest) => {
-              const saved = await saveTruckManifestToFirestore(manifest);
+              const saved = isDemoMode
+                ? manifest
+                : await saveTruckManifestToFirestore(manifest);
               if (saved && saved.id) {
-                setTruckManifests((prev) => [saved, ...(prev || []).filter((m) => m && m.id && m.id !== saved.id)]);
+                setTruckManifests((prev) => [
+                  saved,
+                  ...(prev || []).filter((m) => m && m.id && m.id !== saved.id),
+                ]);
               }
             }}
             onDeleteManifestFromDb={async (manifestId) => {
-              await deleteTruckManifestFromFirestore(manifestId);
+              if (!isDemoMode) {
+                await deleteTruckManifestFromFirestore(manifestId);
+              }
               setTruckManifests((prev) => (prev || []).filter((m) => m.id !== manifestId));
             }}
           />
@@ -946,6 +1125,13 @@ function MainApp() {
         {activeTab === 'settings' && (
           <SettingsView
             userProfile={userProfile}
+            syncedSettings={syncedSettings}
+            onSaveSettingsToCloud={async (nextSettings) => {
+              setSyncedSettings(nextSettings);
+              if (!isDemoMode) {
+                await saveFactorySettingsToFirestore(nextSettings);
+              }
+            }}
             onExportBackup={() => {
               const data = {
                 orders,

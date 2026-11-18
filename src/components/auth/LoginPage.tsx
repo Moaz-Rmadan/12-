@@ -1,14 +1,68 @@
 import React, { useState } from 'react';
-import { Hammer, Lock, Mail, Eye, EyeOff, AlertCircle, ShieldAlert, CheckCircle2, ArrowRight } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import {
+  Hammer,
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  ShieldAlert,
+  CheckCircle2,
+  ArrowRight,
+  MonitorCheck,
+  RefreshCw,
+  LogOut,
+  ExternalLink,
+} from 'lucide-react';
+import { useAuth, BOOTSTRAP_ADMIN_EMAIL } from '../../contexts/AuthContext';
+
+const GoogleLogoIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+    <path
+      fill="#4285F4"
+      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"
+    />
+  </svg>
+);
 
 export const LoginPage: React.FC = () => {
-  const { login, sendPasswordReset, enterDemoMode, canUseDevDemo, authError, isDeactivated } = useAuth();
+  const {
+    currentUser,
+    userProfile,
+    login,
+    loginWithGoogle,
+    loginWithGoogleRedirect,
+    logout,
+    refreshProfile,
+    sendPasswordReset,
+    enterDemoMode,
+    canUseDevDemo,
+    authError,
+    authErrorHint,
+    canRetryWithRedirect,
+    isDeactivated,
+    isStandalonePwa,
+  } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [localHint, setLocalHint] = useState<string | null>(null);
 
   // Password reset modal state
   const [isResetOpen, setIsResetOpen] = useState(false);
@@ -16,9 +70,23 @@ export const LoginPage: React.FC = () => {
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
 
+  const handleGoogleSignIn = async () => {
+    setLocalError(null);
+    setLocalHint(null);
+    setGoogleLoading(true);
+    const res = await loginWithGoogle();
+    setGoogleLoading(false);
+
+    if (!res.success && res.error) {
+      setLocalError(res.error);
+      setLocalHint(res.hint || null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
+    setLocalHint(null);
 
     if (!email.trim() || !password) {
       setLocalError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
@@ -31,6 +99,7 @@ export const LoginPage: React.FC = () => {
 
     if (!result.success && result.error) {
       setLocalError(result.error);
+      setLocalHint(result.hint || null);
     }
   };
 
@@ -48,17 +117,22 @@ export const LoginPage: React.FC = () => {
     setResetMessage(res.message);
   };
 
+  const activeError = localError || authError;
+  const activeHint = localHint || authErrorHint;
+  const isSignedInWithoutProfile = Boolean(currentUser && !userProfile && !isDeactivated);
+
   return (
-    <div className="min-h-screen bg-[#F1F5F9] dark:bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 transition-colors font-sans" dir="rtl">
-      
+    <div
+      className="min-h-screen bg-[#F1F5F9] dark:bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 transition-colors font-sans"
+      dir="rtl"
+    >
       {/* Background Corporate Glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-32 right-1/4 w-96 h-96 bg-[#4B83B8]/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-32 left-1/4 w-96 h-96 bg-[#233B5D]/15 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md bg-white dark:bg-[#16253B] rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 space-y-6">
-        
+      <div className="relative z-10 w-full max-w-md bg-white dark:bg-[#16253B] rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 space-y-5">
         {/* Header & Logo */}
         <div className="text-center space-y-2">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-[#4B83B8] via-[#335C8A] to-[#1E3A61] flex items-center justify-center text-white shadow-lg shadow-[#4B83B8]/25 border border-[#4B83B8]/30">
@@ -72,33 +146,139 @@ export const LoginPage: React.FC = () => {
               نظام إدارة أوامر الشغل ومراحل الإنتاج
             </p>
           </div>
-          <div className="inline-block px-3 py-1 rounded-full bg-slate-100 dark:bg-[#1E3352] text-[#233B5D] dark:text-[#8CB4D9] text-[11px] font-bold border border-slate-200 dark:border-[#2E4B75]">
-            تسجيل الدخول للنظام المركزي
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-0.5">
+            <span className="inline-block px-3 py-1 rounded-full bg-slate-100 dark:bg-[#1E3352] text-[#233B5D] dark:text-[#8CB4D9] text-[11px] font-bold border border-slate-200 dark:border-[#2E4B75]">
+              تسجيل الدخول للنظام المركزي
+            </span>
+            {isStandalonePwa && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold border border-emerald-200 dark:border-emerald-800/70">
+                <MonitorCheck className="w-3.5 h-3.5" />
+                <span>نسخة سطح المكتب المثبتة</span>
+              </span>
+            )}
           </div>
         </div>
 
         {/* Deactivated Notice */}
         {isDeactivated && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-rose-800 dark:text-rose-200 flex items-start gap-2.5 text-xs font-bold">
-            <ShieldAlert className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
-            <div>
-              <p className="font-black">تم تعطيل الحساب</p>
-              <p className="text-[11px] mt-0.5 opacity-90">هذا الحساب تم إيقافه من قبل مدير النظام. يرجى مراجعة الإدارة.</p>
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-rose-800 dark:text-rose-200 space-y-3 text-xs font-bold">
+            <div className="flex items-start gap-2.5">
+              <ShieldAlert className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+              <div>
+                <p className="font-black">تم تعطيل الحساب</p>
+                <p className="text-[11px] mt-0.5 opacity-90">
+                  هذا الحساب تم إيقافه من قبل مدير النظام. يرجى مراجعة الإدارة.
+                </p>
+              </div>
+            </div>
+            {currentUser && (
+              <button
+                type="button"
+                onClick={logout}
+                className="w-full h-9 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>تسجيل الخروج وتبديل الحساب</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Signed in via Firebase Auth but profile missing / uninvited / offline */}
+        {isSignedInWithoutProfile && (
+          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/70 text-amber-950 dark:text-amber-100 space-y-3 text-xs">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-black">
+                  أنت مسجل حالياً بالبريد: <span dir="ltr" className="font-mono">{currentUser?.email || currentUser?.uid}</span>
+                </p>
+                {activeError && <p className="font-bold text-rose-700 dark:text-rose-300">{activeError}</p>}
+                {activeHint && <p className="text-[11px] text-amber-800 dark:text-amber-300 font-medium leading-relaxed">{activeHint}</p>}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={refreshProfile}
+                className="flex-1 h-9 rounded-xl bg-[#233B5D] hover:bg-[#1E3352] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>إعادة التحقق من الصلاحيات</span>
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="h-9 px-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>تبديل الحساب</span>
+              </button>
             </div>
           </div>
         )}
 
-        {/* Error Alert */}
-        {(localError || authError) && !isDeactivated && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-rose-800 dark:text-rose-200 flex items-center gap-2.5 text-xs font-bold">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
-            <span>{localError || authError}</span>
+        {/* General Error Alert (when not already displayed inside signed-in panel) */}
+        {activeError && !isDeactivated && !isSignedInWithoutProfile && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-rose-800 dark:text-rose-200 space-y-2 text-xs">
+            <div className="flex items-start gap-2.5 font-bold">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+              <div className="space-y-1">
+                <p>{activeError}</p>
+                {activeHint && (
+                  <p className="text-[11px] font-medium text-rose-700/90 dark:text-rose-300/90 leading-relaxed">
+                    {activeHint}
+                  </p>
+                )}
+              </div>
+            </div>
+            {canRetryWithRedirect && (
+              <button
+                type="button"
+                onClick={loginWithGoogleRedirect}
+                className="w-full h-9 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>المتابعة عبر التوجيه المباشر (بدون نافذة منبثقة)</span>
+              </button>
+            )}
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
+        {/* Primary CTA: Google Sign-In */}
+        <div className="space-y-2">
+          <button
+            type="button"
+            data-testid="google-signin-btn"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading || loading}
+            className="w-full h-12 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-white border-2 border-slate-200 dark:border-slate-700 hover:border-[#4B83B8] text-sm font-black transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
+          >
+            {googleLoading ? (
+              <div className="w-5 h-5 border-2 border-[#4B83B8]/30 border-t-[#4B83B8] rounded-full animate-spin" />
+            ) : (
+              <>
+                <GoogleLogoIcon className="w-5 h-5 shrink-0" />
+                <span>تسجيل الدخول بحساب جوجل (Google)</span>
+              </>
+            )}
+          </button>
+          <p className="text-[11px] text-center text-slate-500 dark:text-slate-400 font-semibold">
+            الدخول السريع والمعتمد لحساب الإدارة (<span dir="ltr" className="font-mono">{BOOTSTRAP_ADMIN_EMAIL}</span>) والموظفين المدعوين
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div className="relative flex items-center py-0.5">
+          <div className="flex-grow border-t border-slate-200 dark:border-slate-800" />
+          <span className="shrink-0 mx-3 text-[11px] font-bold text-slate-400 dark:text-slate-500">
+            أو الدخول بالبريد الإلكتروني وكلمة المرور
+          </span>
+          <div className="flex-grow border-t border-slate-200 dark:border-slate-800" />
+        </div>
+
+        {/* Email & Password Form */}
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           {/* Email / Username Input */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -158,17 +338,17 @@ export const LoginPage: React.FC = () => {
           </div>
 
           {/* Submit Button */}
-          <div className="space-y-3 mt-2">
+          <div className="space-y-3 pt-1">
             <button
               type="submit"
-              disabled={loading}
-              className="w-full h-12 rounded-xl bg-[#233B5D] hover:bg-[#1E3352] active:bg-[#16253B] text-white text-sm font-black transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              disabled={loading || googleLoading}
+              className="w-full h-11 rounded-xl bg-[#233B5D] hover:bg-[#1E3352] active:bg-[#16253B] text-white text-sm font-black transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>دخول النظام</span>
+                  <span>دخول بالبريد وكلمة المرور</span>
                   <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                 </>
               )}
@@ -191,10 +371,9 @@ export const LoginPage: React.FC = () => {
         {/* Security Notice */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-center">
           <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            النظام مغلق وغير متاح للتسجيل العام. يتم إنشاء الحسابات عبر مدير النظام فقط.
+            النظام مغلق وغير متاح للتسجيل العام. يتم تفعيل الحسابات عبر مدير النظام أو الدخول بحساب المالك المعتمد.
           </p>
         </div>
-
       </div>
 
       {/* Password Reset Modal */}
@@ -205,7 +384,7 @@ export const LoginPage: React.FC = () => {
               استعادة كلمة المرور
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              أدخل البريد الإلكتروني المسجل لإرسال رابط إعادة التعيين الآمن.
+              أدخل البريد الإلكتروني المسجل بكلمة مرور لإرسال رابط إعادة التعيين.
             </p>
 
             {resetMessage ? (
@@ -261,7 +440,7 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
+

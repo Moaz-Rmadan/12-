@@ -181,6 +181,23 @@
         "updated_at": { "type": "string" }
       },
       "required": ["year", "last_sequence"]
+    },
+    "FactorySettings": {
+      "title": "FactorySettings",
+      "description": "Central factory configuration, branches, and numbering prefixes",
+      "type": "object",
+      "properties": {
+        "factoryName": { "type": "string" },
+        "factorySubtitle": { "type": "string" },
+        "defaultBranch": { "type": "string" },
+        "branchesList": { "type": "array" },
+        "orderNumberPrefix": { "type": "string" },
+        "receiptNumberPrefix": { "type": "string" },
+        "enableUrgentAlerts": { "type": "boolean" },
+        "defaultTaxRate": { "type": "number" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["factoryName", "orderNumberPrefix", "receiptNumberPrefix"]
     }
   },
   "firestore": {
@@ -223,6 +240,10 @@
     "/order_counters/{counterId}": {
       "schema": { "$ref": "#/entities/OrderCounter" },
       "description": "Transactional sequence counters for job order numbers"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/FactorySettings" },
+      "description": "Central factory configuration documents"
     }
   }
 }

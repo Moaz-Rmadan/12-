@@ -295,7 +295,7 @@ export const UserManagementView: React.FC = () => {
       ]);
       setCreateMsg({
         type: 'success',
-        text: `تم تسجيل دعوة الصلاحيات للبريد (${emailLower}). بمجرد إنشاء المستخدم لكلمة مروره في Firebase Auth وتسجيل الدخول سيتم تفعيل دوره تلقائياً.`,
+        text: `تم تسجيل دعوة الصلاحيات للبريد (${emailLower}). يمكن للموظف الآن الضغط على «تسجيل الدخول بحساب جوجل (Google)» بنفس البريد وسيتم تفعيل دوره وصلاحياته تلقائياً.`,
       });
       showToast(`تم تسجيل دعوة ${trimmedName} بنجاح`, 'success');
       setNewName('');

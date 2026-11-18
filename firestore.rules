@@ -132,41 +132,19 @@ service cloud.firestore {
     match /job_orders/{orderId} {
       allow read: if isActiveUser();
 
-      allow create: if isValidOrderStatus(request.resource.data.status)
-        && request.resource.data.order_number is string
-        && request.resource.data.customer_id is string
-        && (
-          isAdmin()
-          || (hasRole('sales')
-              && request.resource.data.status == 'Draft'
-              && request.resource.data.get('total_price', 0) == 0
-              && request.resource.data.get('deposit_paid', 0) == 0)
-        );
-
-      allow update: if isValidOrderStatus(request.resource.data.status)
-        && (
-          isAdmin()
-          || hasRole('accounting')
-          || (hasRole('operations')
-              && request.resource.data.get('total_price', 0) == resource.data.get('total_price', 0)
-              && request.resource.data.get('deposit_paid', 0) == resource.data.get('deposit_paid', 0))
-          || (hasRole('sales')
-              && resource.data.status == 'Draft'
-              && request.resource.data.status == 'Draft'
-              && request.resource.data.get('total_price', 0) == resource.data.get('total_price', 0)
-              && request.resource.data.get('deposit_paid', 0) == resource.data.get('deposit_paid', 0))
-        );
+      allow create, update: if isActiveUser()
+        && isValidOrderStatus(request.resource.data.status);
 
       allow delete: if isAdmin();
 
       match /job_details/{detailId} {
         allow read: if isActiveUser();
-        allow write: if hasAnyRole(['admin', 'operations', 'sales']);
+        allow write: if isActiveUser();
       }
 
       match /attachments/{attachmentId} {
         allow read: if isActiveUser();
-        allow write: if hasAnyRole(['admin', 'operations', 'sales']);
+        allow write: if isActiveUser();
       }
     }
 
@@ -175,7 +153,7 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
     match /customers/{customerId} {
       allow read: if isActiveUser();
-      allow create, update: if hasAnyRole(['admin', 'sales']);
+      allow create, update: if isActiveUser();
       allow delete: if isAdmin();
     }
 
@@ -183,16 +161,14 @@ service cloud.firestore {
     // Truck Manifests Collection ("حمولة العربية")
     // -------------------------------------------------------------------------
     match /truck_manifests/{manifestId} {
-      allow read: if isActiveUser();
-      allow create, update, delete: if hasAnyRole(['admin', 'operations']);
+      allow read, create, update, delete: if isActiveUser();
     }
 
     // -------------------------------------------------------------------------
     // Delivery Receipts Collection ("إقرار استلام العميل")
     // -------------------------------------------------------------------------
     match /delivery_receipts/{receiptId} {
-      allow read: if isActiveUser();
-      allow create, update: if hasAnyRole(['admin', 'accounting', 'operations', 'sales']);
+      allow read, create, update: if isActiveUser();
       allow delete: if isAdmin();
     }
 
@@ -220,6 +196,14 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
     match /smart_queries/{queryId} {
       allow read, create, update, delete: if isActiveUser();
+    }
+
+    // -------------------------------------------------------------------------
+    // Factory Settings Collection
+    // -------------------------------------------------------------------------
+    match /settings/{settingId} {
+      allow read, create, update: if isActiveUser();
+      allow delete: if isAdmin();
     }
   }
 }

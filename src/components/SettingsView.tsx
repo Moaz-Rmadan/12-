@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+  DEFAULT_FACTORY_SETTINGS,
   FactorySettings,
   getStoredFactorySettings,
   saveStoredFactorySettings,
 } from '../utils/settingsStore';
 import { UserProfile } from '../types/auth';
+import { useFeedback } from '../contexts/FeedbackContext';
 import {
   Settings,
   Building2,
   Sliders,
-  Shield,
   Database,
   Save,
   CheckCircle2,
@@ -17,31 +18,46 @@ import {
   Trash2,
   RotateCcw,
   Download,
-  Upload,
 } from 'lucide-react';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
+  syncedSettings?: FactorySettings | null;
+  onSaveSettingsToCloud?: (settings: FactorySettings) => Promise<void>;
   onExportBackup?: () => void;
   onImportBackup?: (jsonData: string) => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   userProfile,
+  syncedSettings,
+  onSaveSettingsToCloud,
   onExportBackup,
 }) => {
-  const [settings, setSettings] = useState<FactorySettings>(getStoredFactorySettings);
+  const { confirmAction } = useFeedback();
+  const [settings, setSettings] = useState<FactorySettings>(() =>
+    syncedSettings || getStoredFactorySettings()
+  );
   const [newBranchInput, setNewBranchInput] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(
     null
   );
 
-  const isAdmin = userProfile?.role === 'admin';
+  useEffect(() => {
+    if (syncedSettings) {
+      setSettings(syncedSettings);
+    }
+  }, [syncedSettings]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       saveStoredFactorySettings(settings);
+      if (onSaveSettingsToCloud) {
+        await onSaveSettingsToCloud(settings);
+      }
       setFeedback({
         type: 'success',
         message: 'تم حفظ إعدادات المصنع والتطبيق بنجاح وتحديث النظام.',
@@ -52,6 +68,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         type: 'error',
         message: err instanceof Error ? err.message : 'تعذر حفظ الإعدادات.',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -73,16 +91,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }));
   };
 
-  const handleResetToDefault = () => {
-    if (window.confirm('هل أنت متأكد من استعادة إعدادات المصنع الافتراضية؟')) {
-      saveStoredFactorySettings(getStoredFactorySettings());
-      setSettings(getStoredFactorySettings());
-      setFeedback({
-        type: 'success',
-        message: 'تمت استعادة الإعدادات الافتراضية بنجاح.',
-      });
-      setTimeout(() => setFeedback(null), 4000);
+  const handleResetToDefault = async () => {
+    const confirmed = await confirmAction({
+      title: 'استعادة الإعدادات الافتراضية',
+      message: 'هل أنت متأكد من استعادة إعدادات المصنع الافتراضية؟',
+      confirmLabel: 'استعادة الافتراضي',
+      tone: 'warning',
+    });
+    if (!confirmed) return;
+
+    saveStoredFactorySettings(DEFAULT_FACTORY_SETTINGS);
+    if (onSaveSettingsToCloud) {
+      await onSaveSettingsToCloud(DEFAULT_FACTORY_SETTINGS).catch(() => {});
     }
+    setSettings(DEFAULT_FACTORY_SETTINGS);
+    setFeedback({
+      type: 'success',
+      message: 'تمت استعادة الإعدادات الافتراضية بنجاح.',
+    });
+    setTimeout(() => setFeedback(null), 4000);
   };
 
   return (
@@ -295,10 +322,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <button
             type="submit"
-            className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-xl shadow-emerald-950/40 transition-all cursor-pointer active:scale-95"
+            disabled={isSaving}
+            className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-xl shadow-emerald-950/40 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            <span>حفظ واعتماد التغييرات</span>
+            <span>{isSaving ? 'جاري الحفظ...' : 'حفظ واعتماد التغييرات'}</span>
           </button>
         </div>
       </form>

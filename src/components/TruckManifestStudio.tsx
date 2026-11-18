@@ -57,7 +57,9 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
   }, [manifests]);
 
   // Active Selected Manifest
-  const [selectedManifestId, setSelectedManifestId] = useState<string>(initialTruckManifests[0].id);
+  const [selectedManifestId, setSelectedManifestId] = useState<string>(
+    () => manifests?.[0]?.id || initialTruckManifests[0].id
+  );
 
   const activeManifest = useMemo(() => {
     return manifestsList.find((m) => m.id === selectedManifestId) || manifestsList[0] || initialTruckManifests[0];
@@ -122,7 +124,7 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
     });
   };
 
-  // Keep form in sync when changing selected manifest
+  // Keep form in sync when changing selected manifest or external update
   useEffect(() => {
     if (activeManifest) {
       setTruckNumber(activeManifest.truckNumber || '');
@@ -130,11 +132,29 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
       setTripDate(activeManifest.tripDate || '');
       setTripDay(activeManifest.tripDay || '');
       setItems(ensureUniqueItemIds(activeManifest.items || []));
-      setSavedSuccess(false);
       setDeleteConfirmOpen(false);
       setEditingItemId(null);
     }
-  }, [selectedManifestId, activeManifest]);
+  }, [activeManifest?.id, activeManifest?.updatedAt]);
+
+  const persistManifestSnapshot = async (nextManifest: TruckManifest) => {
+    setManifestsList((prev) => {
+      const exists = prev.some((m) => m.id === nextManifest.id);
+      return exists
+        ? prev.map((m) => (m.id === nextManifest.id ? nextManifest : m))
+        : [nextManifest, ...prev];
+    });
+    if (onSaveManifestToDb) {
+      try {
+        await onSaveManifestToDb(nextManifest);
+        setSavedSuccess(true);
+        setTimeout(() => setSavedSuccess(false), 2500);
+      } catch (err) {
+        console.error('Manifest auto-persist error:', err);
+        showToast('تعذر حفظ التعديل في بيان الحمولة بقاعدة البيانات.', 'error');
+      }
+    }
+  };
 
   // New Item Input State
   const [newItemCustomer, setNewItemCustomer] = useState<string>('');
@@ -209,16 +229,37 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
       returnReason: newItemType === 'return' ? newItemReturnReason.trim() : undefined,
     };
 
-    setItems((prev) => [...prev, newItem]);
+    const nextItems = [...items, newItem];
+    setItems(nextItems);
 
     // Reset inputs
     setNewItemName('');
     setNewItemDetails('');
+
+    void persistManifestSnapshot({
+      id: activeManifest.id,
+      tripDate,
+      tripDay,
+      truckNumber,
+      driverName,
+      items: nextItems,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   // Remove Item
   const handleRemoveItem = (itemId: string) => {
-    setItems((prev) => prev.filter((it) => it.id !== itemId));
+    const nextItems = items.filter((it) => it.id !== itemId);
+    setItems(nextItems);
+    void persistManifestSnapshot({
+      id: activeManifest.id,
+      tripDate,
+      tripDay,
+      truckNumber,
+      driverName,
+      items: nextItems,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   // Move item up / down for ordering in truck
@@ -230,11 +271,30 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
     newItems[index] = newItems[targetIndex];
     newItems[targetIndex] = temp;
     setItems(newItems);
+    void persistManifestSnapshot({
+      id: activeManifest.id,
+      tripDate,
+      tripDay,
+      truckNumber,
+      driverName,
+      items: newItems,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   // Item field change inside active manifest
   const handleItemFieldChange = (id: string, field: keyof TruckManifestItem, val: any) => {
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, [field]: val } : it)));
+    const nextItems = items.map((it) => (it.id === id ? { ...it, [field]: val } : it));
+    setItems(nextItems);
+    void persistManifestSnapshot({
+      id: activeManifest.id,
+      tripDate,
+      tripDay,
+      truckNumber,
+      driverName,
+      items: nextItems,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   // Duplicate an item
@@ -243,7 +303,17 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
       ...item,
       id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     };
-    setItems((prev) => [...prev, duplicated]);
+    const nextItems = [...items, duplicated];
+    setItems(nextItems);
+    void persistManifestSnapshot({
+      id: activeManifest.id,
+      tripDate,
+      tripDay,
+      truckNumber,
+      driverName,
+      items: nextItems,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   // Create Brand New Empty Trip Manifest
@@ -252,6 +322,7 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
     const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const todayDayName = days[d.getDay()];
     const todayStr = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    const nowIso = new Date().toISOString();
 
     const newManifest: TruckManifest = {
       id: `manifest-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -270,17 +341,19 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
           salesperson: 'إدارة الورشة',
         },
       ],
-      createdAt: new Date().toISOString(),
+      createdAt: nowIso,
+      updatedAt: nowIso,
     };
 
-    setManifestsList((prev) => [newManifest, ...prev]);
     setSelectedManifestId(newManifest.id);
+    void persistManifestSnapshot(newManifest);
   };
 
   // Duplicate Active Manifest to a new trip
   const handleDuplicateManifest = () => {
     const d = new Date();
     const todayStr = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    const nowIso = new Date().toISOString();
 
     const duplicated: TruckManifest = {
       ...activeManifest,
@@ -290,11 +363,12 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
         ...it,
         id: `item-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 9)}`,
       })),
-      createdAt: new Date().toISOString(),
+      createdAt: nowIso,
+      updatedAt: nowIso,
     };
 
-    setManifestsList((prev) => [duplicated, ...prev]);
     setSelectedManifestId(duplicated.id);
+    void persistManifestSnapshot(duplicated);
   };
 
   // Save Active Manifest
@@ -309,14 +383,7 @@ export const TruckManifestStudio: React.FC<TruckManifestStudioProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    setManifestsList((prev) => prev.map((m) => (m.id === activeManifest.id ? updatedManifest : m)));
-
-    if (onSaveManifestToDb) {
-      await onSaveManifestToDb(updatedManifest);
-    }
-
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    await persistManifestSnapshot(updatedManifest);
   };
 
   // Delete Manifest
