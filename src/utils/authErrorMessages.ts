@@ -12,6 +12,7 @@ export interface ParsedAuthError {
   canRetryWithRedirect: boolean;
   detailHint?: string;
   unauthorizedHostname?: string;
+  isOperationNotAllowed?: boolean;
 }
 
 export function extractFirebaseErrorCode(err: unknown): string {
@@ -71,10 +72,11 @@ export function parseFirebaseAuthError(
             ? 'تسجيل الدخول عبر Google غير مفعّل حالياً في إعدادات Firebase.'
             : 'الدخول بالبريد وكلمة المرور غير مفعّل في مشروع Firebase. استخدم زر «تسجيل الدخول بحساب جوجل (Google)» للدخول الفوري.',
         canRetryWithRedirect: false,
+        isOperationNotAllowed: true,
         detailHint:
           provider === 'google'
             ? 'فعّل مزود Google من Firebase Console ← Authentication ← Sign-in method.'
-            : 'فعّل مزود Email/Password في Firebase Console إذا كنت ترغب بالدخول بكلمة مرور.',
+            : 'لتفعيل الدخول بكلمة مرور: افتح Firebase Console ← Authentication ← Sign-in method وفعّل Email/Password، ثم اربط كلمة مرور لحسابك من «ملف المستخدم».',
       };
 
     case 'auth/user-disabled':

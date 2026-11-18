@@ -56,6 +56,7 @@ export const LoginPage: React.FC = () => {
     authErrorHint,
     canRetryWithRedirect,
     unauthorizedHostname,
+    isOperationNotAllowed,
     isDeactivated,
     isStandalonePwa,
   } = useAuth();
@@ -68,6 +69,7 @@ export const LoginPage: React.FC = () => {
   const [localError, setLocalError] = useState<string | null>(null);
   const [localHint, setLocalHint] = useState<string | null>(null);
   const [localUnauthHost, setLocalUnauthHost] = useState<string | null>(null);
+  const [localOpNotAllowed, setLocalOpNotAllowed] = useState(false);
   const [copiedDomain, setCopiedDomain] = useState(false);
 
   // Password reset modal state
@@ -80,6 +82,7 @@ export const LoginPage: React.FC = () => {
     setLocalError(null);
     setLocalHint(null);
     setLocalUnauthHost(null);
+    setLocalOpNotAllowed(false);
     setGoogleLoading(true);
     const res = await loginWithGoogle();
     setGoogleLoading(false);
@@ -88,6 +91,7 @@ export const LoginPage: React.FC = () => {
       setLocalError(res.error);
       setLocalHint(res.hint || null);
       setLocalUnauthHost(res.unauthorizedHostname || null);
+      setLocalOpNotAllowed(Boolean(res.isOperationNotAllowed));
     }
   };
 
@@ -96,6 +100,7 @@ export const LoginPage: React.FC = () => {
     setLocalError(null);
     setLocalHint(null);
     setLocalUnauthHost(null);
+    setLocalOpNotAllowed(false);
 
     if (!email.trim() || !password) {
       setLocalError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
@@ -109,6 +114,7 @@ export const LoginPage: React.FC = () => {
     if (!result.success && result.error) {
       setLocalError(result.error);
       setLocalHint(result.hint || null);
+      setLocalOpNotAllowed(Boolean(result.isOperationNotAllowed));
     }
   };
 
@@ -129,8 +135,10 @@ export const LoginPage: React.FC = () => {
   const activeError = localError || authError;
   const activeHint = localHint || authErrorHint;
   const activeUnauthHost = localUnauthHost || unauthorizedHostname;
+  const activeOpNotAllowed = localOpNotAllowed || isOperationNotAllowed;
   const isSignedInWithoutProfile = Boolean(currentUser && !userProfile && !isDeactivated);
   const firebaseAuthSettingsUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`;
+  const firebaseAuthProvidersUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`;
 
   const handleCopyDomain = async () => {
     if (!activeUnauthHost) return;
@@ -291,6 +299,19 @@ export const LoginPage: React.FC = () => {
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>فتح إعدادات Firebase Auth</span>
+                </a>
+              </div>
+            )}
+            {activeOpNotAllowed && !activeUnauthHost && (
+              <div className="pt-1">
+                <a
+                  href={firebaseAuthProvidersUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full h-9 px-3 rounded-xl bg-[#233B5D] hover:bg-[#1E3352] text-white text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>تفعيل مزود Email/Password في Firebase Console</span>
                 </a>
               </div>
             )}

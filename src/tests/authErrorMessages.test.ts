@@ -31,6 +31,7 @@ test('parseFirebaseAuthError distinguishes disabled provider and unauthorized do
     { code: 'auth/operation-not-allowed' },
     { provider: 'password' }
   );
+  assert.equal(disabledPass.isOperationNotAllowed, true);
   assert.match(disabledPass.message, /جوجل/);
   assert.doesNotMatch(disabledPass.message, /كلمة المرور غير صحيحة/);
 

@@ -18,9 +18,16 @@ import {
   X,
   Trash2,
   Clock,
+  Eye,
+  EyeOff,
+  ExternalLink,
 } from 'lucide-react';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { collection, getDocs, doc, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import firebaseConfig from '../../../firebase-applet-config.json';
+import { extractFirebaseErrorCode } from '../../utils/authErrorMessages';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFeedback } from '../../contexts/FeedbackContext';
 import { UserProfile, UserRole, PermissionKey, AuditLogEntry } from '../../types/auth';
@@ -54,10 +61,16 @@ export const UserManagementView: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [newRole, setNewRole] = useState<UserRole>('sales');
   const [newIsDelegated, setNewIsDelegated] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
-  const [createMsg, setCreateMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [createMsg, setCreateMsg] = useState<{
+    type: 'success' | 'error';
+    text: string;
+    showProvidersLink?: boolean;
+  } | null>(null);
 
   // Modal State for Changing Role
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -208,7 +221,7 @@ export const UserManagementView: React.FC = () => {
     }
   };
 
-  // Handle Provisioning New User Profile (Admin SDK endpoint with Firestore Invite fallback)
+  // Handle Provisioning New User Profile (Admin SDK endpoint, Secondary Firebase Auth w/ password, or Firestore Invite)
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateMsg(null);
@@ -216,7 +229,17 @@ export const UserManagementView: React.FC = () => {
 
     const emailLower = newEmail.trim().toLowerCase();
     const trimmedName = newName.trim();
+    const trimmedPassword = newPassword.trim();
     const delegated = newRole === 'operations' ? newIsDelegated : false;
+
+    if (trimmedPassword && trimmedPassword.length < 6) {
+      setCreateMsg({
+        type: 'error',
+        text: 'كلمة المرور الابتدائية يجب أن تتكون من 6 أحرف على الأقل (أو اترك الحقل فارغاً للدعوة عبر جوجل).',
+      });
+      setCreateLoading(false);
+      return;
+    }
 
     try {
       if (!isDemoMode && currentUser) {
@@ -232,13 +255,16 @@ export const UserManagementView: React.FC = () => {
             email: emailLower,
             role: newRole,
             isDelegatedManager: delegated,
+            ...(trimmedPassword ? { password: trimmedPassword } : {}),
           }),
         });
 
         if (apiRes.ok) {
           const payload = await apiRes.json();
           const provisionedUser = payload.user as UserProfile;
-          await sendPasswordReset(emailLower);
+          if (!trimmedPassword) {
+            await sendPasswordReset(emailLower);
+          }
 
           setUsers((prev) => [
             provisionedUser,
@@ -246,16 +272,19 @@ export const UserManagementView: React.FC = () => {
           ]);
           setCreateMsg({
             type: 'success',
-            text: `تم إنشاء حساب المصادقة وتعيين الدور بنجاح، وإرسال رابط تعيين كلمة المرور إلى ${emailLower}`,
+            text: trimmedPassword
+              ? `تم إنشاء حساب المصادقة بكلمة المرور وتعيين الدور بنجاح لـ ${emailLower}.`
+              : `تم إنشاء حساب المصادقة وتعيين الدور بنجاح، وإرسال رابط تعيين كلمة المرور إلى ${emailLower}.`,
           });
           showToast(`تم إنشاء حساب ${trimmedName} بنجاح`, 'success');
           setNewName('');
           setNewEmail('');
+          setNewPassword('');
           loadAudit();
           return;
         }
 
-        // Fall back cleanly to Firestore Invite when Admin SDK credentials or Express API route aren't configured (e.g. static hosting)
+        // Fall back cleanly when Admin SDK credentials or Express API route aren't configured (e.g. static hosting)
         if (![404, 405, 501, 502, 503].includes(apiRes.status)) {
           const errJson = await apiRes.json().catch(() => ({}));
           throw new Error(errJson.message || 'فشل إنشاء المستخدم عبر الخادم');
@@ -263,6 +292,83 @@ export const UserManagementView: React.FC = () => {
       }
 
       const nowIso = new Date().toISOString();
+
+      // Path A: Admin supplied an initial password -> provision Auth user using an isolated secondary Firebase App
+      // so the Admin stays logged in on the primary Firebase Auth instance, then save users/{uid} under Admin rules.
+      if (trimmedPassword && !isDemoMode) {
+        const secondaryApp = initializeApp(firebaseConfig, `provision-${Date.now()}`);
+        const secondaryAuth = getAuth(secondaryApp);
+        try {
+          const cred = await createUserWithEmailAndPassword(
+            secondaryAuth,
+            emailLower,
+            trimmedPassword
+          );
+          await firebaseSignOut(secondaryAuth).catch(() => {});
+
+          const createdProfile: UserProfile = {
+            uid: cred.user.uid,
+            email: emailLower,
+            name: trimmedName,
+            role: newRole,
+            isActive: true,
+            isDelegatedManager: delegated,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            createdBy: currentUserProfile?.email || '',
+          };
+
+          await setDoc(doc(db, 'users', cred.user.uid), createdProfile);
+
+          await logAuditEvent({
+            user_uid: currentUserProfile?.uid || '',
+            user_email: currentUserProfile?.email || '',
+            user_role: currentUserProfile?.role || 'admin',
+            action: 'USER_CREATED_WITH_PASSWORD',
+            entity_type: 'user',
+            entity_id: cred.user.uid,
+            after: createdProfile,
+            reason: 'Admin provisioned new Email/Password user account via secondary auth session',
+          }).catch(() => {});
+
+          setUsers((prev) => [
+            createdProfile,
+            ...prev.filter((u) => u.uid !== createdProfile.uid),
+          ]);
+          setCreateMsg({
+            type: 'success',
+            text: `تم إنشاء حساب (${emailLower}) بكلمة المرور وتفعيله فوراً! يمكن للموظف الآن الدخول بالبريد وكلمة المرور أو بحساب جوجل.`,
+          });
+          showToast(`تم إنشاء حساب ${trimmedName} بكلمة مرور بنجاح`, 'success');
+          setNewName('');
+          setNewEmail('');
+          setNewPassword('');
+          loadAudit();
+          return;
+        } catch (provisionErr: unknown) {
+          const code = extractFirebaseErrorCode(provisionErr);
+          if (code === 'auth/operation-not-allowed') {
+            setCreateMsg({
+              type: 'error',
+              showProvidersLink: true,
+              text: 'مزود Email/Password غير مفعّل في Firebase Console بعد. فعّله أولاً لإنشاء حساب بكلمة مرور، أو اترك حقل كلمة المرور فارغاً لتسجيل دعوة دخول عبر جوجل.',
+            });
+            return;
+          }
+          if (code === 'auth/email-already-in-use') {
+            setCreateMsg({
+              type: 'error',
+              text: `البريد (${emailLower}) مسجل مسبقاً في Firebase Auth. اترك حقل كلمة المرور فارغاً لإرسال دعوة صلاحيات، أو يدخل الموظف بجوجل ويربط كلمة مرور من ملفه الشخصي.`,
+            });
+            return;
+          }
+          throw provisionErr;
+        } finally {
+          await deleteApp(secondaryApp).catch(() => {});
+        }
+      }
+
+      // Path B: Invite flow (for Google Sign-In or Demo Mode)
       const inviteRecord: PendingInvite = {
         email: emailLower,
         name: trimmedName,
@@ -275,7 +381,6 @@ export const UserManagementView: React.FC = () => {
 
       if (!isDemoMode) {
         await setDoc(doc(db, 'user_invites', emailLower), inviteRecord);
-        await sendPasswordReset(emailLower);
 
         await logAuditEvent({
           user_uid: currentUserProfile?.uid || '',
@@ -295,15 +400,19 @@ export const UserManagementView: React.FC = () => {
       ]);
       setCreateMsg({
         type: 'success',
-        text: `تم تسجيل دعوة الصلاحيات للبريد (${emailLower}). يمكن للموظف الآن الضغط على «تسجيل الدخول بحساب جوجل (Google)» بنفس البريد وسيتم تفعيل دوره وصلاحياته تلقائياً.`,
+        text: trimmedPassword
+          ? `تم إنشاء سجل معاينة الحساب (${emailLower}) في الوضع المحلي بنجاح.`
+          : `تم تسجيل دعوة الصلاحيات للبريد (${emailLower}). يمكن للموظف الآن الضغط على «تسجيل الدخول بحساب جوجل (Google)» بنفس البريد وسيتم تفعيل دوره وصلاحياته تلقائياً.`,
       });
       showToast(`تم تسجيل دعوة ${trimmedName} بنجاح`, 'success');
       setNewName('');
       setNewEmail('');
+      setNewPassword('');
       loadAudit();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error provisioning user:', err);
-      setCreateMsg({ type: 'error', text: 'فشل إنشاء المستخدم: ' + (err?.message || 'خطأ غير متوقع') });
+      const msg = err instanceof Error ? err.message : 'خطأ غير متوقع';
+      setCreateMsg({ type: 'error', text: 'فشل إنشاء المستخدم: ' + msg });
     } finally {
       setCreateLoading(false);
     }
@@ -839,13 +948,24 @@ export const UserManagementView: React.FC = () => {
 
             {createMsg && (
               <div
-                className={`p-3 rounded-xl text-xs font-bold ${
+                className={`p-3 rounded-xl text-xs font-bold space-y-2 ${
                   createMsg.type === 'success'
                     ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                     : 'bg-rose-50 text-rose-800 border border-rose-200'
                 }`}
               >
-                {createMsg.text}
+                <p>{createMsg.text}</p>
+                {createMsg.showProvidersLink && (
+                  <a
+                    href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#233B5D] text-white font-black text-[11px]"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>تفعيل Email/Password في Firebase Console</span>
+                  </a>
+                )}
               </div>
             )}
 
@@ -877,6 +997,34 @@ export const UserManagementView: React.FC = () => {
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold"
                   dir="ltr"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  كلمة مرور ابتدائية (اختياري للدخول بالإيميل)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="اتركه فارغاً للدخول بحساب جوجل فقط"
+                    className="w-full h-10 pr-3 pl-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold"
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((v) => !v)}
+                    className="absolute left-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    title={showNewPassword ? 'إخفاء' : 'إظهار'}
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                  للدخول بالبريد وكلمة السر: أدخل 6 أحرف فأكثر (يتطلب تفعيل Email/Password في Firebase).
+                </p>
               </div>
 
               <div>
@@ -920,7 +1068,11 @@ export const UserManagementView: React.FC = () => {
                   disabled={createLoading}
                   className="flex-1 h-10 rounded-xl bg-[#233B5D] text-white text-xs font-bold cursor-pointer disabled:opacity-50"
                 >
-                  {createLoading ? 'جاري الإنشاء...' : 'إنشاء الحساب وإرسال الدعوة'}
+                  {createLoading
+                    ? 'جاري الإنشاء...'
+                    : newPassword.trim()
+                    ? 'إنشاء الحساب بكلمة المرور'
+                    : 'إنشاء الحساب وإرسال الدعوة'}
                 </button>
                 <button
                   type="button"

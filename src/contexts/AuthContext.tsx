@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   User,
+  EmailAuthProvider,
+  linkWithCredential,
+  updatePassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -20,7 +23,7 @@ import {
   loadPersistedDemoSessionFlag,
   savePersistedDemoSessionFlag,
 } from '../utils/persistenceHelpers';
-import { parseFirebaseAuthError } from '../utils/authErrorMessages';
+import { extractFirebaseErrorCode, parseFirebaseAuthError } from '../utils/authErrorMessages';
 
 export interface LoginAttemptResult {
   success: boolean;
@@ -28,6 +31,13 @@ export interface LoginAttemptResult {
   hint?: string;
   canRetryWithRedirect?: boolean;
   unauthorizedHostname?: string;
+  isOperationNotAllowed?: boolean;
+}
+
+export interface LinkPasswordResult {
+  success: boolean;
+  message: string;
+  code?: string;
 }
 
 interface AuthContextType {
@@ -38,6 +48,8 @@ interface AuthContextType {
   authErrorHint: string | null;
   canRetryWithRedirect: boolean;
   unauthorizedHostname: string | null;
+  isOperationNotAllowed: boolean;
+  linkedProviders: string[];
   isDeactivated: boolean;
   isDemoMode: boolean;
   canUseDevDemo: boolean;
@@ -48,6 +60,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   enterDemoMode: () => void;
   sendPasswordReset: (email: string) => Promise<{ success: boolean; message: string }>;
+  linkOrUpdatePassword: (newPassword: string) => Promise<LinkPasswordResult>;
   refreshProfile: () => Promise<void>;
   clearAuthError: () => void;
   hasPerm: (permission: PermissionKey) => boolean;
@@ -99,6 +112,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authErrorHint, setAuthErrorHint] = useState<string | null>(null);
   const [canRetryWithRedirect, setCanRetryWithRedirect] = useState(false);
   const [unauthorizedHostname, setUnauthorizedHostname] = useState<string | null>(null);
+  const [isOperationNotAllowed, setIsOperationNotAllowed] = useState(false);
+  const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
   const [isDeactivated, setIsDeactivated] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(initialDemoActive);
   const [isStandalonePwa, setIsStandalonePwa] = useState(detectStandalonePwa);
@@ -117,6 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthErrorHint(null);
     setCanRetryWithRedirect(false);
     setUnauthorizedHostname(null);
+    setIsOperationNotAllowed(false);
   }, []);
 
   const resolveOrBootstrapProfile = useCallback(async (user: User): Promise<boolean> => {
@@ -294,6 +310,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setLoading(true);
       setCurrentUser(user);
+      setLinkedProviders(user ? user.providerData.map((p) => p.providerId) : []);
 
       if (unsubscribeProfile) {
         unsubscribeProfile();
@@ -303,6 +320,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!user) {
         setUserProfile(null);
         setIsDeactivated(false);
+        setLinkedProviders([]);
         setLoading(false);
         return;
       }
@@ -476,7 +494,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthError(parsed.message);
       setAuthErrorHint(parsed.detailHint || null);
       setCanRetryWithRedirect(false);
-      return { success: false, error: parsed.message, hint: parsed.detailHint };
+      setIsOperationNotAllowed(Boolean(parsed.isOperationNotAllowed));
+      return {
+        success: false,
+        error: parsed.message,
+        hint: parsed.detailHint,
+        isOperationNotAllowed: Boolean(parsed.isOperationNotAllowed),
+      };
     }
   };
 
@@ -536,6 +560,121 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const linkOrUpdatePassword = async (newPassword: string): Promise<LinkPasswordResult> => {
+    if (isDemoMode) {
+      return {
+        success: false,
+        message: 'في وضع المعاينة المحلية لا يتم ربط كلمة مرور بحساب Firebase السحابي.',
+      };
+    }
+
+    if (!currentUser || !currentUser.email) {
+      return {
+        success: false,
+        message: 'يجب تسجيل الدخول ببريد إلكتروني فعال أولاً.',
+      };
+    }
+
+    const trimmed = newPassword.trim();
+    if (trimmed.length < 6) {
+      return {
+        success: false,
+        message: 'يجب أن تتكون كلمة المرور من 6 أحرف أو أرقام على الأقل.',
+      };
+    }
+
+    const alreadyHasPassword = currentUser.providerData.some((p) => p.providerId === 'password');
+
+    try {
+      if (alreadyHasPassword) {
+        await updatePassword(currentUser, trimmed);
+      } else {
+        const credential = EmailAuthProvider.credential(currentUser.email, trimmed);
+        await linkWithCredential(currentUser, credential);
+      }
+
+      await currentUser.reload().catch(() => {});
+      const updatedProviders = (auth.currentUser || currentUser).providerData.map((p) => p.providerId);
+      setLinkedProviders(updatedProviders);
+
+      if (userProfile) {
+        logAuditEvent({
+          user_uid: currentUser.uid,
+          user_email: currentUser.email,
+          user_role: userProfile.role,
+          action: alreadyHasPassword ? 'AUTH_PASSWORD_UPDATED' : 'AUTH_PASSWORD_LINKED',
+          entity_type: 'auth',
+          entity_id: currentUser.uid,
+          reason: alreadyHasPassword
+            ? 'User updated linked Email/Password credential'
+            : 'User linked Email/Password credential to existing Google account',
+        }).catch(() => {});
+      }
+
+      return {
+        success: true,
+        message: alreadyHasPassword
+          ? 'تم تحديث كلمة المرور بنجاح.'
+          : 'تم ربط كلمة المرور بهذا الحساب بنجاح! يمكنك الآن تسجيل الدخول عبر جوجل أو عبر البريد وكلمة المرور معاً.',
+      };
+    } catch (err: unknown) {
+      const code = extractFirebaseErrorCode(err);
+      if (code === 'auth/provider-already-linked') {
+        try {
+          await updatePassword(currentUser, trimmed);
+          await currentUser.reload().catch(() => {});
+          setLinkedProviders((auth.currentUser || currentUser).providerData.map((p) => p.providerId));
+          return {
+            success: true,
+            message: 'تم تحديث كلمة المرور المرتبطة بهذا الحساب بنجاح.',
+          };
+        } catch (updateErr) {
+          const updateCode = extractFirebaseErrorCode(updateErr);
+          return {
+            success: false,
+            code: updateCode,
+            message:
+              updateCode === 'auth/requires-recent-login'
+                ? 'لدواعي الأمان، سجل الخروج ثم ادخل بحساب جوجل مجدداً وحاول تحديث كلمة المرور فوراً.'
+                : 'تعذر تحديث كلمة المرور الحالية.',
+          };
+        }
+      }
+
+      if (code === 'auth/operation-not-allowed') {
+        return {
+          success: false,
+          code,
+          message:
+            'مزود Email/Password غير مفعّل بعد في مشروع Firebase. فعّله أولاً من Firebase Console ← Authentication ← Sign-in method ثم أعد الضغط على الحفظ.',
+        };
+      }
+
+      if (code === 'auth/requires-recent-login') {
+        return {
+          success: false,
+          code,
+          message:
+            'لدواعي الأمان، يرجى تسجيل الخروج والدخول بحساب جوجل مجدداً ثم تعيين كلمة المرور فوراً.',
+        };
+      }
+
+      if (code === 'auth/weak-password') {
+        return {
+          success: false,
+          code,
+          message: 'كلمة المرور ضعيفة جداً. اختر 6 أحرف أو أرقام على الأقل.',
+        };
+      }
+
+      return {
+        success: false,
+        code,
+        message: 'تعذر حفظ كلمة المرور (' + code + '). تأكد من الاتصال وحاول مجدداً.',
+      };
+    }
+  };
+
   const refreshProfile = async () => {
     if (isDemoMode || !currentUser) return;
     setLoading(true);
@@ -557,6 +696,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authErrorHint,
         canRetryWithRedirect,
         unauthorizedHostname,
+        isOperationNotAllowed,
+        linkedProviders,
         isDeactivated,
         isDemoMode,
         canUseDevDemo: CAN_USE_DEV_DEMO,
@@ -567,6 +708,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         enterDemoMode,
         sendPasswordReset,
+        linkOrUpdatePassword,
         refreshProfile,
         clearAuthError,
         hasPerm,
