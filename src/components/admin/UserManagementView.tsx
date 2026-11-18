@@ -70,6 +70,7 @@ export const UserManagementView: React.FC = () => {
     type: 'success' | 'error';
     text: string;
     showProvidersLink?: boolean;
+    showUsersLink?: boolean;
   } | null>(null);
 
   // Modal State for Changing Role
@@ -242,56 +243,65 @@ export const UserManagementView: React.FC = () => {
     }
 
     try {
-      if (!isDemoMode && currentUser) {
-        const token = await currentUser.getIdToken();
-        const apiRes = await fetch('/api/admin/users', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: trimmedName,
-            email: emailLower,
-            role: newRole,
-            isDelegatedManager: delegated,
-            ...(trimmedPassword ? { password: trimmedPassword } : {}),
-          }),
-        });
+      if (!isDemoMode && currentUser && trimmedPassword) {
+        try {
+          const token = await currentUser.getIdToken();
+          const apiRes = await fetch('/api/admin/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              name: trimmedName,
+              email: emailLower,
+              role: newRole,
+              isDelegatedManager: delegated,
+              temporaryPassword: trimmedPassword,
+            }),
+          });
 
-        if (apiRes.ok) {
-          const payload = await apiRes.json();
-          const provisionedUser = payload.user as UserProfile;
-          if (!trimmedPassword) {
-            await sendPasswordReset(emailLower);
+          if (apiRes.ok) {
+            const payload = await apiRes.json();
+            const provisionedUser = (payload.user || payload.profile) as UserProfile;
+
+            setUsers((prev) => [
+              provisionedUser,
+              ...prev.filter((u) => u.uid !== provisionedUser.uid),
+            ]);
+            setCreateMsg({
+              type: 'success',
+              text: `تم إنشاء حساب المصادقة بكلمة المرور وتعيين الدور بنجاح لـ ${emailLower}.`,
+            });
+            showToast(`تم إنشاء حساب ${trimmedName} بنجاح`, 'success');
+            setNewName('');
+            setNewEmail('');
+            setNewPassword('');
+            loadAudit();
+            return;
           }
 
-          setUsers((prev) => [
-            provisionedUser,
-            ...prev.filter((u) => u.uid !== provisionedUser.uid),
-          ]);
-          setCreateMsg({
-            type: 'success',
-            text: trimmedPassword
-              ? `تم إنشاء حساب المصادقة بكلمة المرور وتعيين الدور بنجاح لـ ${emailLower}.`
-              : `تم إنشاء حساب المصادقة وتعيين الدور بنجاح، وإرسال رابط تعيين كلمة المرور إلى ${emailLower}.`,
-          });
-          showToast(`تم إنشاء حساب ${trimmedName} بنجاح`, 'success');
-          setNewName('');
-          setNewEmail('');
-          setNewPassword('');
-          loadAudit();
-          return;
-        }
-
-        // Fall back cleanly when Admin SDK credentials or Express API route aren't configured (e.g. static hosting)
-        if (![404, 405, 501, 502, 503].includes(apiRes.status)) {
-          const errJson = await apiRes.json().catch(() => ({}));
-          throw new Error(errJson.message || 'فشل إنشاء المستخدم عبر الخادم');
+          // Only abort on explicit 400 validation errors; fall back cleanly to client SDK when Admin SDK / IAM isn't configured
+          if (apiRes.status === 400) {
+            const errJson = await apiRes.json().catch(() => ({}));
+            throw new Error(errJson.message || 'بيانات المستخدم غير صالحة');
+          }
+        } catch (apiErr: unknown) {
+          // Re-throw explicit validation errors; otherwise fall through to client-side provisioning
+          if (apiErr instanceof Error && apiErr.message && !apiErr.message.includes('fetch')) {
+            // Only abort if it was an explicit 400 validation error thrown above
+            if (
+              apiErr.message.includes('غير صالح') ||
+              apiErr.message.includes('يرجى إدخال')
+            ) {
+              throw apiErr;
+            }
+          }
         }
       }
 
       const nowIso = new Date().toISOString();
+      let restrictedToConsoleUsers = false;
 
       // Path A: Admin supplied an initial password -> provision Auth user using an isolated secondary Firebase App
       // so the Admin stays logged in on the primary Firebase Auth instance, then save users/{uid} under Admin rules.
@@ -355,20 +365,25 @@ export const UserManagementView: React.FC = () => {
             });
             return;
           }
-          if (code === 'auth/email-already-in-use') {
+          if (code === 'auth/admin-restricted-operation') {
+            // Client-side self-signup is locked down on this Firebase project; automatically save the Firestore invite
+            // so the Admin only needs to add the email+password once in Firebase Console -> Authentication -> Users.
+            restrictedToConsoleUsers = true;
+          } else if (code === 'auth/email-already-in-use') {
             setCreateMsg({
               type: 'error',
               text: `البريد (${emailLower}) مسجل مسبقاً في Firebase Auth. اترك حقل كلمة المرور فارغاً لإرسال دعوة صلاحيات، أو يدخل الموظف بجوجل ويربط كلمة مرور من ملفه الشخصي.`,
             });
             return;
+          } else {
+            throw provisionErr;
           }
-          throw provisionErr;
         } finally {
           await deleteApp(secondaryApp).catch(() => {});
         }
       }
 
-      // Path B: Invite flow (for Google Sign-In or Demo Mode)
+      // Path B: Invite flow (for Google Sign-In, Console-added Email/Password users, or Demo Mode)
       const inviteRecord: PendingInvite = {
         email: emailLower,
         name: trimmedName,
@@ -390,7 +405,9 @@ export const UserManagementView: React.FC = () => {
           entity_type: 'user_invite',
           entity_id: emailLower,
           after: inviteRecord,
-          reason: 'Admin provisioned invite awaiting first Firebase Auth sign-in',
+          reason: restrictedToConsoleUsers
+            ? 'Admin provisioned invite (client signup restricted; add Email/Password user in Firebase Console Users)'
+            : 'Admin provisioned invite awaiting first Firebase Auth sign-in',
         });
       }
 
@@ -400,7 +417,10 @@ export const UserManagementView: React.FC = () => {
       ]);
       setCreateMsg({
         type: 'success',
-        text: trimmedPassword
+        showUsersLink: restrictedToConsoleUsers,
+        text: restrictedToConsoleUsers
+          ? `تم حفظ صلاحيات (${trimmedName}) للبريد (${emailLower}) في قاعدة البيانات! لأن إنشاء الحسابات من المتصفح مقيّد أمنياً في Firebase، أضف هذا البريد وكلمة المرور من Firebase Console ← Authentication ← Users ← Add user وسيفتح فوراً من أي جهاز.`
+          : trimmedPassword
           ? `تم إنشاء سجل معاينة الحساب (${emailLower}) في الوضع المحلي بنجاح.`
           : `تم تسجيل دعوة الصلاحيات للبريد (${emailLower}). يمكن للموظف الآن الضغط على «تسجيل الدخول بحساب جوجل (Google)» بنفس البريد وسيتم تفعيل دوره وصلاحياته تلقائياً.`,
       });
@@ -964,6 +984,17 @@ export const UserManagementView: React.FC = () => {
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>تفعيل Email/Password في Firebase Console</span>
+                  </a>
+                )}
+                {createMsg.showUsersLink && (
+                  <a
+                    href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#233B5D] text-white font-black text-[11px]"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>إضافة المستخدم في Firebase Console (Users)</span>
                   </a>
                 )}
               </div>

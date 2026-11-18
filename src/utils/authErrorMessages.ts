@@ -79,6 +79,15 @@ export function parseFirebaseAuthError(
             : 'لتفعيل الدخول بكلمة مرور: افتح Firebase Console ← Authentication ← Sign-in method وفعّل Email/Password، ثم اربط كلمة مرور لحسابك من «ملف المستخدم».',
       };
 
+    case 'auth/admin-restricted-operation':
+      return {
+        code,
+        message: 'إنشاء الحسابات الجديدة من المتصفح مقيّد في إعدادات أمان Firebase.',
+        canRetryWithRedirect: false,
+        detailHint:
+          'أضف البريد وكلمة المرور من Firebase Console ← Authentication ← Users ← Add user، وسجّل دعوة الصلاحيات من إدارة المستخدمين.',
+      };
+
     case 'auth/user-disabled':
       return {
         code,

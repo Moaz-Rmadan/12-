@@ -200,7 +200,13 @@ async function startServer() {
 
   // Admin User Provisioning (creates real Firebase Auth user + Firestore profile when Admin credentials exist)
   app.post('/api/admin/users', authenticate, requireAdmin, async (req: Request, res: Response) => {
-    const { name, email, role, isDelegatedManager, temporaryPassword } = req.body || {};
+    const { name, email, role, isDelegatedManager, temporaryPassword, password } = req.body || {};
+    const effectivePassword =
+      typeof temporaryPassword === 'string' && temporaryPassword.trim().length >= 6
+        ? temporaryPassword.trim()
+        : typeof password === 'string' && password.trim().length >= 6
+        ? password.trim()
+        : null;
 
     if (!name || typeof name !== 'string' || name.trim().length < 2) {
       return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'يرجى إدخال اسم المستخدم كاملاً.' });
@@ -234,9 +240,7 @@ async function startServer() {
         authUser = await fbAuth.createUser({
           email: emailLower,
           displayName: name.trim(),
-          password: typeof temporaryPassword === 'string' && temporaryPassword.length >= 6
-            ? temporaryPassword
-            : `ElNaggar#${Math.random().toString(36).slice(2, 10)}`,
+          password: effectivePassword || `ElNaggar#${Math.random().toString(36).slice(2, 10)}`,
           emailVerified: false,
         });
       }

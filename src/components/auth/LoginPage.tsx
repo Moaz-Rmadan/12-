@@ -227,23 +227,34 @@ export const LoginPage: React.FC = () => {
                 {activeHint && <p className="text-[11px] text-amber-800 dark:text-amber-300 font-medium leading-relaxed">{activeHint}</p>}
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <button
                 type="button"
-                onClick={refreshProfile}
-                className="flex-1 h-9 rounded-xl bg-[#233B5D] hover:bg-[#1E3352] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading || loading}
+                className="w-full h-9 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-colors"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>إعادة التحقق من الصلاحيات</span>
+                <GoogleLogoIcon className="w-4 h-4 shrink-0 bg-white rounded-full p-0.5" />
+                <span>الدخول بحساب المالك ({BOOTSTRAP_ADMIN_EMAIL}) عبر Google</span>
               </button>
-              <button
-                type="button"
-                onClick={logout}
-                className="h-9 px-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>تبديل الحساب</span>
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={refreshProfile}
+                  className="flex-1 h-9 rounded-xl bg-[#233B5D] hover:bg-[#1E3352] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>إعادة التحقق من الصلاحيات</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="h-9 px-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>تسجيل الخروج</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

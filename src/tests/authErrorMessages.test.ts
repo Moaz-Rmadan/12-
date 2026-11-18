@@ -52,3 +52,12 @@ test('parseFirebaseAuthError provides Google guidance when invalid-credential oc
   assert.match(res.detailHint || '', /cfo\.moaz@gmail\.com/);
   assert.match(res.detailHint || '', /تسجيل الدخول بحساب جوجل/);
 });
+
+test('parseFirebaseAuthError explains auth/admin-restricted-operation clearly', () => {
+  const res = parseFirebaseAuthError(
+    { code: 'auth/admin-restricted-operation' },
+    { provider: 'password' }
+  );
+  assert.match(res.message, /مقيّد/);
+  assert.match(res.detailHint || '', /Users/);
+});
