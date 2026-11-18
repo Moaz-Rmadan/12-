@@ -27,6 +27,7 @@ export interface LoginAttemptResult {
   error?: string;
   hint?: string;
   canRetryWithRedirect?: boolean;
+  unauthorizedHostname?: string;
 }
 
 interface AuthContextType {
@@ -36,6 +37,7 @@ interface AuthContextType {
   authError: string | null;
   authErrorHint: string | null;
   canRetryWithRedirect: boolean;
+  unauthorizedHostname: string | null;
   isDeactivated: boolean;
   isDemoMode: boolean;
   canUseDevDemo: boolean;
@@ -96,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authError, setAuthError] = useState<string | null>(null);
   const [authErrorHint, setAuthErrorHint] = useState<string | null>(null);
   const [canRetryWithRedirect, setCanRetryWithRedirect] = useState(false);
+  const [unauthorizedHostname, setUnauthorizedHostname] = useState<string | null>(null);
   const [isDeactivated, setIsDeactivated] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(initialDemoActive);
   const [isStandalonePwa, setIsStandalonePwa] = useState(detectStandalonePwa);
@@ -113,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
     setAuthErrorHint(null);
     setCanRetryWithRedirect(false);
+    setUnauthorizedHostname(null);
   }, []);
 
   const resolveOrBootstrapProfile = useCallback(async (user: User): Promise<boolean> => {
@@ -282,6 +286,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthError(parsed.message);
         setAuthErrorHint(parsed.detailHint || null);
         setCanRetryWithRedirect(false);
+        setUnauthorizedHostname(parsed.unauthorizedHostname || null);
       });
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -387,11 +392,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthError(parsed.message);
       setAuthErrorHint(parsed.detailHint || null);
       setCanRetryWithRedirect(parsed.canRetryWithRedirect);
+      setUnauthorizedHostname(parsed.unauthorizedHostname || null);
       return {
         success: false,
         error: parsed.message,
         hint: parsed.detailHint,
         canRetryWithRedirect: parsed.canRetryWithRedirect,
+        unauthorizedHostname: parsed.unauthorizedHostname,
       };
     }
   };
@@ -416,6 +423,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthError(parsed.message);
       setAuthErrorHint(parsed.detailHint || null);
       setCanRetryWithRedirect(false);
+      setUnauthorizedHostname(parsed.unauthorizedHostname || null);
     }
   };
 
@@ -548,6 +556,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authError,
         authErrorHint,
         canRetryWithRedirect,
+        unauthorizedHostname,
         isDeactivated,
         isDemoMode,
         canUseDevDemo: CAN_USE_DEV_DEMO,

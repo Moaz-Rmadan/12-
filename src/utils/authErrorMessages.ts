@@ -11,6 +11,7 @@ export interface ParsedAuthError {
   message: string;
   canRetryWithRedirect: boolean;
   detailHint?: string;
+  unauthorizedHostname?: string;
 }
 
 export function extractFirebaseErrorCode(err: unknown): string {
@@ -57,6 +58,7 @@ export function parseFirebaseAuthError(
         code,
         message: `النطاق الحالي (${hostname}) غير مضاف في قائمة النطاقات المصرح بها في Firebase Auth.`,
         canRetryWithRedirect: false,
+        unauthorizedHostname: hostname,
         detailHint:
           'أضف هذا النطاق في Firebase Console ← Authentication ← Settings ← Authorized domains، أو افتح التطبيق عبر الرابط الرسمي.',
       };

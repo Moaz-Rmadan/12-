@@ -255,8 +255,8 @@ export const UserManagementView: React.FC = () => {
           return;
         }
 
-        // Fall back cleanly to Firestore Invite when Admin SDK credentials aren't configured
-        if (apiRes.status !== 501) {
+        // Fall back cleanly to Firestore Invite when Admin SDK credentials or Express API route aren't configured (e.g. static hosting)
+        if (![404, 405, 501, 502, 503].includes(apiRes.status)) {
           const errJson = await apiRes.json().catch(() => ({}));
           throw new Error(errJson.message || 'فشل إنشاء المستخدم عبر الخادم');
         }

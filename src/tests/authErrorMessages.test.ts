@@ -36,9 +36,10 @@ test('parseFirebaseAuthError distinguishes disabled provider and unauthorized do
 
   const unauthDomain = parseFirebaseAuthError(
     { code: 'auth/unauthorized-domain' },
-    { provider: 'google', hostname: '192.168.1.15' }
+    { provider: 'google', hostname: '12-one-lovat.vercel.app' }
   );
-  assert.match(unauthDomain.message, /192\.168\.1\.15/);
+  assert.equal(unauthDomain.unauthorizedHostname, '12-one-lovat.vercel.app');
+  assert.match(unauthDomain.message, /12-one-lovat\.vercel\.app/);
   assert.match(unauthDomain.detailHint || '', /Authorized domains/);
 });
 

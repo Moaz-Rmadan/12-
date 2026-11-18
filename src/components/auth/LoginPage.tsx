@@ -13,8 +13,11 @@ import {
   RefreshCw,
   LogOut,
   ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useAuth, BOOTSTRAP_ADMIN_EMAIL } from '../../contexts/AuthContext';
+import firebaseConfig from '../../../firebase-applet-config.json';
 
 const GoogleLogoIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
   <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
@@ -52,6 +55,7 @@ export const LoginPage: React.FC = () => {
     authError,
     authErrorHint,
     canRetryWithRedirect,
+    unauthorizedHostname,
     isDeactivated,
     isStandalonePwa,
   } = useAuth();
@@ -63,6 +67,8 @@ export const LoginPage: React.FC = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localHint, setLocalHint] = useState<string | null>(null);
+  const [localUnauthHost, setLocalUnauthHost] = useState<string | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState(false);
 
   // Password reset modal state
   const [isResetOpen, setIsResetOpen] = useState(false);
@@ -73,6 +79,7 @@ export const LoginPage: React.FC = () => {
   const handleGoogleSignIn = async () => {
     setLocalError(null);
     setLocalHint(null);
+    setLocalUnauthHost(null);
     setGoogleLoading(true);
     const res = await loginWithGoogle();
     setGoogleLoading(false);
@@ -80,6 +87,7 @@ export const LoginPage: React.FC = () => {
     if (!res.success && res.error) {
       setLocalError(res.error);
       setLocalHint(res.hint || null);
+      setLocalUnauthHost(res.unauthorizedHostname || null);
     }
   };
 
@@ -87,6 +95,7 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     setLocalError(null);
     setLocalHint(null);
+    setLocalUnauthHost(null);
 
     if (!email.trim() || !password) {
       setLocalError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
@@ -119,7 +128,20 @@ export const LoginPage: React.FC = () => {
 
   const activeError = localError || authError;
   const activeHint = localHint || authErrorHint;
+  const activeUnauthHost = localUnauthHost || unauthorizedHostname;
   const isSignedInWithoutProfile = Boolean(currentUser && !userProfile && !isDeactivated);
+  const firebaseAuthSettingsUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`;
+
+  const handleCopyDomain = async () => {
+    if (!activeUnauthHost) return;
+    try {
+      await navigator.clipboard.writeText(activeUnauthHost);
+      setCopiedDomain(true);
+      setTimeout(() => setCopiedDomain(false), 2500);
+    } catch {
+      // ignore clipboard errors in restricted environments
+    }
+  };
 
   return (
     <div
@@ -241,6 +263,36 @@ export const LoginPage: React.FC = () => {
                 <ExternalLink className="w-3.5 h-3.5" />
                 <span>المتابعة عبر التوجيه المباشر (بدون نافذة منبثقة)</span>
               </button>
+            )}
+            {activeUnauthHost && (
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleCopyDomain}
+                  className="flex-1 h-9 px-3 rounded-xl bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-700 text-rose-800 dark:text-rose-200 text-[11px] font-black flex items-center justify-center gap-1.5 cursor-pointer hover:bg-rose-100/60 dark:hover:bg-rose-900/30 transition-colors"
+                >
+                  {copiedDomain ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>تم نسخ النطاق!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>نسخ: <span dir="ltr" className="font-mono">{activeUnauthHost}</span></span>
+                    </>
+                  )}
+                </button>
+                <a
+                  href={firebaseAuthSettingsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 h-9 px-3 rounded-xl bg-[#233B5D] hover:bg-[#1E3352] text-white text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>فتح إعدادات Firebase Auth</span>
+                </a>
+              </div>
             )}
           </div>
         )}
