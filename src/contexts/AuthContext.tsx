@@ -14,7 +14,7 @@ import {
   signOut,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db, googleAuthProvider, testFirestoreConnection } from '../lib/firebase';
 import { UserProfile, PermissionKey, UserRole } from '../types/auth';
 import { hasPermission } from '../lib/permissions';
@@ -139,8 +139,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userDocRef = doc(db, 'users', user.uid);
     const emailLower = (user.email || '').toLowerCase().trim();
 
+    const getFreshDoc = async (ref: typeof userDocRef) => {
+      try {
+        return await getDocFromServer(ref);
+      } catch {
+        return await getDoc(ref);
+      }
+    };
+
     try {
-      const snap = await getDoc(userDocRef);
+      const snap = await getFreshDoc(userDocRef);
 
       if (!snap.exists()) {
         // 1. Primary owner automatic bootstrap
@@ -176,7 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (emailLower) {
           // 2. Check for pending admin-provisioned invite keyed by email
           const inviteRef = doc(db, 'user_invites', emailLower);
-          const inviteSnap = await getDoc(inviteRef);
+          const inviteSnap = await getFreshDoc(inviteRef);
 
           if (inviteSnap.exists()) {
             const invite = inviteSnap.data() as Partial<UserProfile>;

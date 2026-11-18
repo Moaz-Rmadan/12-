@@ -48,7 +48,7 @@ interface PendingInvite {
 }
 
 export const UserManagementView: React.FC = () => {
-  const { currentUser, userProfile: currentUserProfile, sendPasswordReset, isDemoMode } = useAuth();
+  const { currentUser, userProfile: currentUserProfile, sendPasswordReset, isDemoMode, logout } = useAuth();
   const { showToast, confirmAction } = useFeedback();
   const [activeSubTab, setActiveSubTab] = useState<'users' | 'matrix' | 'audit'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -302,6 +302,7 @@ export const UserManagementView: React.FC = () => {
 
       const nowIso = new Date().toISOString();
       let restrictedToConsoleUsers = false;
+      let existingAuthUserInvite = false;
 
       // Path A: Admin supplied an initial password -> provision Auth user using an isolated secondary Firebase App
       // so the Admin stays logged in on the primary Firebase Auth instance, then save users/{uid} under Admin rules.
@@ -370,11 +371,8 @@ export const UserManagementView: React.FC = () => {
             // so the Admin only needs to add the email+password once in Firebase Console -> Authentication -> Users.
             restrictedToConsoleUsers = true;
           } else if (code === 'auth/email-already-in-use') {
-            setCreateMsg({
-              type: 'error',
-              text: `البريد (${emailLower}) مسجل مسبقاً في Firebase Auth. اترك حقل كلمة المرور فارغاً لإرسال دعوة صلاحيات، أو يدخل الموظف بجوجل ويربط كلمة مرور من ملفه الشخصي.`,
-            });
-            return;
+            // User already signed in (e.g. via Google) without a Firestore profile; save the invite directly so they can claim it immediately.
+            existingAuthUserInvite = true;
           } else {
             throw provisionErr;
           }
@@ -407,6 +405,8 @@ export const UserManagementView: React.FC = () => {
           after: inviteRecord,
           reason: restrictedToConsoleUsers
             ? 'Admin provisioned invite (client signup restricted; add Email/Password user in Firebase Console Users)'
+            : existingAuthUserInvite
+            ? 'Admin provisioned invite for already-registered Firebase Auth user'
             : 'Admin provisioned invite awaiting first Firebase Auth sign-in',
         });
       }
@@ -420,6 +420,8 @@ export const UserManagementView: React.FC = () => {
         showUsersLink: restrictedToConsoleUsers,
         text: restrictedToConsoleUsers
           ? `تم حفظ صلاحيات (${trimmedName}) للبريد (${emailLower}) في قاعدة البيانات! لأن إنشاء الحسابات من المتصفح مقيّد أمنياً في Firebase، أضف هذا البريد وكلمة المرور من Firebase Console ← Authentication ← Users ← Add user وسيفتح فوراً من أي جهاز.`
+          : existingAuthUserInvite
+          ? `البريد (${emailLower}) مسجل مسبقاً في المصادقة، وتم حفظ دعوة الصلاحيات له بنجاح! يمكنه الآن الضغط على «إعادة التحقق من الصلاحيات» أو الدخول بحساب جوجل فوراً.`
           : trimmedPassword
           ? `تم إنشاء سجل معاينة الحساب (${emailLower}) في الوضع المحلي بنجاح.`
           : `تم تسجيل دعوة الصلاحيات للبريد (${emailLower}). يمكن للموظف الآن الضغط على «تسجيل الدخول بحساب جوجل (Google)» بنفس البريد وسيتم تفعيل دوره وصلاحياته تلقائياً.`,
@@ -557,6 +559,30 @@ export const UserManagementView: React.FC = () => {
         </div>
       </div>
 
+      {/* Demo Mode Warning Banner */}
+      {isDemoMode && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/80 text-amber-950 dark:text-amber-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1 text-xs">
+              <p className="font-black text-sm">
+                تنبيه: أنت الآن داخل «معاينة التطوير (حفظ محلي)» ولست متصلاً بالسحابة!
+              </p>
+              <p className="font-semibold text-amber-800 dark:text-amber-200 leading-relaxed">
+                أي مستخدم أو دعوة يتم إضافتها في هذا الوضع تُحفظ محلياً للمعاينة فقط ولا تُسجّل في قاعدة البيانات السحابية Firestore أو Firebase Auth، ولن يتمكن الموظفون من الدخول بها. لتفعيل الدعوات فعلياً، اخرج من المعاينة وسجّل الدخول بحساب جوجل الحقيقي ({currentUserProfile?.email}).
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="shrink-0 px-4 h-10 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black transition-colors cursor-pointer shadow-xs"
+          >
+            الخروج والدخول بحساب Google الحقيقي
+          </button>
+        </div>
+      )}
+
       {/* SUB-TAB 1: USERS DIRECTORY */}
       {activeSubTab === 'users' && (
         <div className="space-y-4">
@@ -584,7 +610,10 @@ export const UserManagementView: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setIsCreateModalOpen(true)}
+                onClick={() => {
+                  setCreateMsg(null);
+                  setIsCreateModalOpen(true);
+                }}
                 className="flex items-center gap-2 px-4 h-11 rounded-2xl bg-[#233B5D] hover:bg-[#1E3352] text-white text-xs font-black transition-all shadow-sm cursor-pointer"
               >
                 <UserPlus className="w-4 h-4 stroke-[2.5]" />
